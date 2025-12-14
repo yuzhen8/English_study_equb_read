@@ -31,12 +31,15 @@ Implement the "Exercise" (锻炼) feature, enabling users to review words using 
 - Fetch real stats for "Exercise Statistics" section (implement lines 80-82 of task.md).
 - Navigate to specific routes on click (e.g., `/exercise/session/mixed` or `/exercise/session/flashcard`).
 
-#### [NEW] [src/pages/Exercise/ExerciseSession.tsx](file:///f:/equb_English_learning/windows/src/pages/Exercise/ExerciseSession.tsx)
-- A container page that handles the study session logic:
-    - Loads a batch of words (Due words + New words).
-    - Manages the queue.
-    - Renders the specific "Mode" component (Flashcard, Choice, etc.).
-    - Handles "Session Complete" summary.
+#### [MODIFY] [src/pages/Exercise/ExerciseSession.tsx](file:///f:/equb_English_learning/windows/src/pages/Exercise/ExerciseSession.tsx)
+- Enhance `mixed` mode logic to include `SpellingMode`.
+- Ensure proper fallback if `SpellingMode` is too difficult for new words (optional).
+
+#### [NEW] [src/pages/Exercise/modes/SpellingMode.tsx](file:///f:/equb_English_learning/windows/src/pages/Exercise/modes/SpellingMode.tsx)
+- UI: Audio/Definition prompt.
+- Interaction: Input field or character tiles to spell the word.
+- Validation: Check spelling against `word.text`.
+- Feedback: Success/Failure animations.
 
 #### [NEW] [src/pages/Exercise/modes/FlashcardMode.tsx](file:///f:/equb_English_learning/windows/src/pages/Exercise/modes/FlashcardMode.tsx)
 - UI: Card front (Word), Back (Definition + Context).

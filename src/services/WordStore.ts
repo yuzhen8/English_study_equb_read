@@ -111,7 +111,7 @@ export const WordStore = {
 
         const total = words.length;
 
-        // Group by day for chart (Last 7 days)
+        // Group by day for chart (Last 7 days - Added Words)
         const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const chartData = [];
 
@@ -119,15 +119,26 @@ export const WordStore = {
             const d = new Date(now - i * oneDay); // approximate days
             const date = new Date(d);
             const dayStr = dayLabels[date.getDay()];
-
-            // Count words added on this day (simple approximation by checking 24h chunks backwards)
-            // Ideally we check calendar day
             const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
             const endOfDay = startOfDay + oneDay;
 
             const count = words.filter(w => w.addedAt >= startOfDay && w.addedAt < endOfDay).length;
-
             chartData.push({ name: dayStr, words: count });
+        }
+
+        // Forecast (Next 7 days - Due Words)
+        const futureReviews = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(now + i * oneDay);
+            const date = new Date(d);
+            const dayStr = dayLabels[date.getDay()];
+            const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+            const endOfDay = startOfDay + oneDay;
+
+            // Count words due on this day
+            // Note: Words strictly due *on* this day (not cumulative overdue)
+            const count = words.filter(w => w.nextReviewAt && w.nextReviewAt >= startOfDay && w.nextReviewAt < endOfDay).length;
+            futureReviews.push({ name: dayStr, count });
         }
 
         return {
@@ -136,7 +147,8 @@ export const WordStore = {
             newToday,
             dueCount,
             reviewedToday,
-            chartData
+            chartData,
+            futureReviews // [NEW] For Exercise Forecast
         };
     },
 
@@ -145,6 +157,15 @@ export const WordStore = {
         const words = await WordStore.getWords();
         const now = Date.now();
         return words.filter(w => w.nextReviewAt && w.nextReviewAt <= now);
+    },
+
+    getDistractors: async (correctId: string, count: number): Promise<Word[]> => {
+        const words = await WordStore.getWords();
+        const otherWords = words.filter(w => w.id !== correctId && w.translation);
+
+        // Shuffle and take first n
+        const shuffled = otherWords.sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, count);
     },
 
     submitReview: async (id: string, quality: number) => {

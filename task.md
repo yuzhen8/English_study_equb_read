@@ -48,6 +48,16 @@
         - [x] 底部悬浮 "添加单词" 按钮 (FAB)
     - [x] **[NEW]** 实现单词详情/查询弹窗 (Popup)
         - [x] **重构**: 从单纯显示 WordStore 数据升级为支持 HybridDictionaryResult
+        - [x] **单词详情页 UI 重构 (New Design)**
+            - [x] **设计规范**:
+                - [x] **布局结构**: 采用 Card-based (卡片式) 布局，利用圆角 (rounded-2xl) 和阴影 (shadow-2xl) 营造层次感。头部固定（单词、音标、发音、全局来源切换），底部固定（操作按钮）。
+                - [x] **内容板块 (DetailSection)**: 统一采用 左侧装饰线 + 标题栏 + 内容区 的结构。标题栏高度固定 (h-6)，包含图标、标题名称和可选的来源标签 (Badge)。来源标签设计紧凑，不影响高度。支持折叠交互。
+                - [x] **信息展示顺序**:
+                    - [x] 中文释义 (默认展开，绿色系 bg-green-500)
+                    - [x] 英文释义 (默认折叠，紫色系 bg-purple-500)
+                    - [x] 原句 (默认折叠，蓝色系 bg-blue-500)
+                    - [x] AI 深度解析 (默认折叠，琥珀色系 bg-amber-500)
+                - [x] **间距与排版**: 内容区域垂直间距紧凑 (space-y-5)，字体清晰分层。
         - [x] **核心头部**: 显示单词原型, 音标, 词性, 频率标签
         - [x] **音频功能**: 优先播放本地缓存, 无缓存则联网播放并保存
         - [x] **基本释义**: 显示 ECDICT 中文解释
@@ -74,20 +84,20 @@
     - [x] 阅读器核心功能 (翻页、进度)
     - [x] 阅读器交互 (点击查词 -> 触发上述单词详情弹窗)
 
-    - [/] 核心功能: 锻炼 (Exercise)
+- [/] 核心功能: 锻炼 (Exercise)
     - [x] **[NEW]** 实现锻炼页 "混合练习" 顶部大卡片
     - [x] **[NEW]** 实现练习模式列表 (闪卡, 多项选择等)
-    - [ ] **[NEW]** 锻炼页面统计 (Exercise Statistics) [参考词典页]
-        - [ ] **统计概览卡片**: 实现类似词典页的统计卡片 (如: 今日复习数, 累计学习时长, 记忆曲线状态)
-        - [ ] **可视化图表**: 增加学习趋势图/热力图，展示每日复习活跃度
-    - [ ] **[NEW]** SRS 核心逻辑 (Spaced Repetition System)
-        - [ ] **WordStore 升级**: 添加 lastReviewedAt, reviewCount, easeFactor, interval 字段
-        - [ ] **复习算法**: 实现 SM-2 简易版算法 (submitReview)
-        - [ ] **获取待复习**: 实现 getDueWords 方法
-    - [ ] **[NEW]** 练习会话 UI (Exercise Session)
-        - [ ] 会话容器 (ExerciseSession.tsx) - 负责加载单词和进度管理
-        - [ ] 闪卡模式 (FlashcardMode.tsx)
-        - [ ] 多项选择模式 (ChoiceMode.tsx)
+    - [/] **[NEW]** 锻炼页面统计 (Exercise Statistics) [参考词典页]
+        - [/] **统计概览卡片**: 实现类似词典页的统计卡片 (如: 今日复习数, 累计学习时长, 记忆曲线状态)
+        - [/] **可视化图表**: 增加学习趋势图/热力图，展示每日复习活跃度
+    - [x] **[NEW]** SRS 核心逻辑 (Spaced Repetition System)
+        - [x] **WordStore 升级**: 添加 lastReviewedAt, reviewCount, easeFactor, interval 字段
+        - [x] **复习算法**: 实现 SM-2 简易版算法 (submitReview)
+        - [x] **获取待复习**: 实现 getDueWords 方法
+    - [x] **[NEW]** 练习会话 UI (Exercise Session)
+        - [x] 会话容器 (ExerciseSession.tsx) - 负责加载单词和进度管理
+        - [x] 闪卡模式 (FlashcardMode.tsx)
+        - [x] 多项选择模式 (ChoiceMode.tsx)
     - [ ] 练习逻辑: 单词构建
     - [ ] 练习逻辑: 混合模式
 

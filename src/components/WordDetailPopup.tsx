@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { X, ChevronDown, ChevronUp, Search, Info } from 'lucide-react';
-import { WordStore, Word } from '../services/WordStore';
-import { hybridDictionary, DictionaryResult } from '../services/DictionaryService';
-
+import { X, ChevronDown, ChevronUp, Search, Info, BookOpen, Sparkles, Globe, Volume2, Book, BrainCircuit } from 'lucide-react';
+import { WordStore, type Word } from '../services/WordStore';
+import { hybridDictionary, type DictionaryResult } from '../services/DictionaryService';
 import AudioPlayer from './AudioPlayer';
 import { cn } from '../lib/utils';
 
@@ -15,97 +14,183 @@ interface WordDetailPopupProps {
     onClose: () => void;
 }
 
+// 统一的 Section 组件，支持折叠功能和来源显示
+const DetailSection: React.FC<{
+    title: string;
+    icon: React.ReactNode;
+    colorClass: string; // e.g., "bg-blue-500"
+    children: React.ReactNode;
+    collapsible?: boolean;
+    defaultOpen?: boolean;
+    source?: string; // 来源文本
+    showSource?: boolean; // 控制是否显示来源
+}> = ({ title, icon, colorClass, children, collapsible = false, defaultOpen = true, source, showSource = false }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+
+    return (
+        <div className="relative pl-5">
+            {/* 左侧装饰线 - 根据折叠状态调整高度 */}
+            <div
+                className={cn(
+                    "absolute left-0 top-1 w-1 rounded-full opacity-60 transition-all duration-300",
+                    colorClass,
+                    isOpen ? "bottom-1" : "h-4"
+                )}
+            />
+
+            {/* 标题 - 可点击折叠 */}
+            <div
+                className={cn(
+                    "flex items-center justify-between mb-1.5 select-none transition-colors h-6",
+                    collapsible && "cursor-pointer hover:text-gray-600"
+                )}
+                onClick={() => collapsible && setIsOpen(!isOpen)}
+            >
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                        {icon} {title}
+                    </span>
+                    {/* 根据 showSource 属性决定是否显示来源徽章 */}
+                    {showSource && source && (
+                        <span className="px-1.5 py-[1px] rounded-[4px] text-[9px] leading-none font-medium bg-gray-100 text-gray-500 border border-gray-200 animate-in fade-in zoom-in duration-200 ml-1">
+                            {source}
+                        </span>
+                    )}
+                </div>
+
+                {collapsible && (
+                    <span className="text-gray-400">
+                        {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </span>
+                )}
+            </div>
+
+            {/* 内容 */}
+            {(!collapsible || isOpen) && (
+                <div className="text-sm text-gray-800 leading-relaxed animate-in slide-in-from-top-1 fade-in duration-200">
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, onClose }) => {
     const [dictionaryResult, setDictionaryResult] = useState<DictionaryResult | null>(null);
     const [savedWord, setSavedWord] = useState<Word | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
-    const [expandedSections, setExpandedSections] = useState<{
-        ai: boolean;
-        examples: boolean;
-    }>({ ai: false, examples: false });
+
     const [audioUrl, setAudioUrl] = useState<string>('');
     const [searchInput, setSearchInput] = useState<string>('');
     const [showSearch, setShowSearch] = useState<boolean>(false);
-    const [showSources, setShowSources] = useState<boolean>(false);
 
+    // 控制是否全局显示来源标签 (默认开启)
+    const [showSources, setShowSources] = useState<boolean>(true);
+
+    // 加载数据逻辑
     useEffect(() => {
+        let isMounted = true;
+
         const load = async () => {
             setLoading(true);
             try {
                 let wordText = '';
 
-                // Determine word text and context
+                // 1. 确定查询文本
                 if (wordId) {
                     const w = await WordStore.getWord(wordId);
-                    if (w) {
+                    if (isMounted && w) {
                         wordText = w.text;
                         setSavedWord(w);
                     }
                 } else if (initialData) {
                     wordText = initialData.text;
-                    // Check if word already exists in DB
                     const allWords = await WordStore.getWords();
                     const existing = allWords.find(w => w.text.toLowerCase() === wordText.toLowerCase());
-                    if (existing) {
+                    if (isMounted && existing) {
                         setSavedWord(existing);
                     }
                 } else {
-                    // No wordId or initialData - show search input
-                    setShowSearch(true);
-                    setLoading(false);
+                    // 无参数时显示搜索框
+                    if (isMounted) {
+                        setShowSearch(true);
+                        setLoading(false);
+                    }
                     return;
                 }
 
-                if (wordText) {
-                    // 1. Query Local Dictionary (Fast)
-                    const localResult = await hybridDictionary.queryLocal(wordText);
-                    if (localResult) {
-                        setDictionaryResult(localResult);
-                        setLoading(false); // Stop loading immediately if local found
-                    }
+                if (!wordText) {
+                    if (isMounted) setLoading(false);
+                    return;
+                }
 
-                    // 2. Query Online Dictionary (Async Update)
+                // 2. 执行查询 (本地优先策略)
+                const localResult = await hybridDictionary.queryLocal(wordText);
+
+                if (!isMounted) return;
+
+                if (localResult) {
+                    // A. 本地命中：立即显示，后台更新
+                    setDictionaryResult(localResult);
+                    setLoading(false);
+
                     hybridDictionary.queryOnline(wordText).then(onlineResult => {
-                        if (onlineResult) {
+                        if (isMounted && onlineResult) {
                             setDictionaryResult(prev => {
                                 if (!prev) return onlineResult;
                                 return hybridDictionary.mergeResults(prev, onlineResult);
                             });
-
-                            // Audio cache is handled inside queryOnline, but we need to update URL if available
+                            // 音频处理
                             if (onlineResult.phonetics.length > 0) {
                                 const audioPhonetic = onlineResult.phonetics.find(p => p.audio);
                                 if (audioPhonetic && audioPhonetic.audio) {
                                     hybridDictionary.getAudioUrl(wordText, audioPhonetic.audio)
-                                        .then(url => setAudioUrl(url))
-                                        .catch(err => console.warn('Failed to load audio:', err));
+                                        .then(url => { if (isMounted) setAudioUrl(url); })
+                                        .catch(console.warn);
                                 }
                             }
                         }
-                    }).catch(err => console.warn('Online query failed', err));
-
-                    // If no local result, keep loading true until online finishes (or handle via empty state)
-                    if (!localResult) {
-                        // If no local, we must wait for online or at least show loading
-                        // We do nothing here, let the promise chain handle it or user sees loading
+                    }).catch(err => console.warn('Background online query failed', err));
+                } else {
+                    // B. 本地未命中：等待在线结果
+                    try {
+                        const onlineResult = await hybridDictionary.queryOnline(wordText);
+                        if (isMounted && onlineResult) {
+                            setDictionaryResult(onlineResult);
+                            if (onlineResult.phonetics.length > 0) {
+                                const audioPhonetic = onlineResult.phonetics.find(p => p.audio);
+                                if (audioPhonetic && audioPhonetic.audio) {
+                                    hybridDictionary.getAudioUrl(wordText, audioPhonetic.audio)
+                                        .then(url => { if (isMounted) setAudioUrl(url); })
+                                        .catch(console.warn);
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.warn('Online query failed', err);
+                    } finally {
+                        if (isMounted) setLoading(false);
                     }
                 }
+
             } catch (e) {
                 console.error("Failed to load word details", e);
-            } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
+
         load();
+        return () => { isMounted = false; };
     }, [wordId, initialData]);
 
     const handleAdd = async () => {
         if (!dictionaryResult) return;
         try {
+            // 优先使用简明释义，没有则使用第一条详细释义
             const translation = dictionaryResult.translations?.[0] ||
-                dictionaryResult.meanings[0]?.definitions[0]?.definition ||
-                '';
+                dictionaryResult.meanings[0]?.definitions[0]?.definition || '';
             const context = initialData?.context || '';
+
             const newWord = await WordStore.addWord(
                 dictionaryResult.word,
                 translation,
@@ -127,87 +212,71 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
         }
     };
 
-    const toggleSection = (section: 'ai' | 'examples') => {
-        setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-    };
-
     const handleSearch = async () => {
         if (!searchInput.trim()) return;
         setShowSearch(false);
         setLoading(true);
+        setSavedWord(null);
+        setAudioUrl('');
+        setDictionaryResult(null);
+
         try {
             const wordText = searchInput.trim();
-            // Check if word already exists in DB
+            // 检查是否已存在
             const allWords = await WordStore.getWords();
             const existing = allWords.find(w => w.text.toLowerCase() === wordText.toLowerCase());
-            if (existing) {
-                setSavedWord(existing);
-            }
+            if (existing) setSavedWord(existing);
 
-            // 1. Query Local (Fast)
+            // 复用查询逻辑 (简化版)
             const localResult = await hybridDictionary.queryLocal(wordText);
             if (localResult) {
                 setDictionaryResult(localResult);
                 setLoading(false);
-            }
-
-            // 2. Query Online (Async)
-            hybridDictionary.queryOnline(wordText).then(onlineResult => {
-                if (onlineResult) {
-                    setDictionaryResult(prev => {
-                        if (!prev) return onlineResult;
-                        return hybridDictionary.mergeResults(prev, onlineResult);
-                    });
-                    // Audio
-                    if (onlineResult.phonetics.length > 0) {
-                        const audioPhonetic = onlineResult.phonetics.find(p => p.audio);
-                        if (audioPhonetic && audioPhonetic.audio) {
-                            hybridDictionary.getAudioUrl(wordText, audioPhonetic.audio)
-                                .then(url => setAudioUrl(url))
-                                .catch(console.warn);
-                        }
+                hybridDictionary.queryOnline(wordText).then(onlineResult => {
+                    if (onlineResult) {
+                        setDictionaryResult(prev => prev ? hybridDictionary.mergeResults(prev, onlineResult) : onlineResult);
+                        const audio = onlineResult.phonetics.find(p => p.audio)?.audio;
+                        if (audio) hybridDictionary.getAudioUrl(wordText, audio).then(setAudioUrl);
                     }
+                });
+            } else {
+                const onlineResult = await hybridDictionary.queryOnline(wordText);
+                if (onlineResult) {
+                    setDictionaryResult(onlineResult);
+                    const audio = onlineResult.phonetics.find(p => p.audio)?.audio;
+                    if (audio) hybridDictionary.getAudioUrl(wordText, audio).then(setAudioUrl);
                 }
-            });
+                setLoading(false);
+            }
         } catch (e) {
             console.error("Failed to search word", e);
-        } finally {
             setLoading(false);
         }
     };
 
+    // 搜索视图
     if (showSearch) {
         return (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50" onClick={onClose}>
-                <div
-                    className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-bold text-gray-900">添加单词</h2>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                        >
+            <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50 animate-in fade-in duration-200" onClick={onClose}>
+                <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-bold text-gray-900">查找单词</h2>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
                             <X size={20} />
                         </button>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="relative">
                         <input
                             type="text"
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                            placeholder="输入单词..."
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                            placeholder="输入想要查询的单词..."
+                            className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-lg"
                             autoFocus
                         />
-                        <button
-                            onClick={handleSearch}
-                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                        >
-                            <Search size={18} />
-                            <span>搜索</span>
+                        <button onClick={handleSearch} className="absolute right-2 top-2 p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            <Search size={20} />
                         </button>
                     </div>
                 </div>
@@ -215,261 +284,223 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
         );
     }
 
+    // Loading 视图
     if (loading) {
         return (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50" onClick={onClose}>
-                <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
-                    <div className="text-center">加载中...</div>
+            <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50" onClick={onClose}>
+                <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center gap-3 animate-in zoom-in-95">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="text-gray-500 font-medium">正在查询...</span>
                 </div>
             </div>
         );
     }
 
-    if (!dictionaryResult) return null;
+    // 未找到结果视图
+    if (!dictionaryResult) {
+        return (
+            <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50" onClick={onClose}>
+                <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center gap-4 animate-in zoom-in-95 max-w-sm text-center">
+                    <div className="p-3 bg-gray-100 rounded-full text-gray-400">
+                        <Search size={32} />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold text-gray-900">未找到单词</h3>
+                        <p className="text-gray-500 mt-1">抱歉，无法找到该单词的释义。</p>
+                    </div>
+                    <button onClick={onClose} className="px-6 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-black transition-colors">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
-    const formatDate = (ts: number) => new Date(ts).toLocaleString();
-    const isSaved = savedWord !== null;
-
-    // Get primary phonetic text
     const primaryPhonetic = dictionaryResult.phonetics.find(p => p.text)?.text || '';
 
     return (
         <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-            {/* Click outside handler - transparent layer */}
-            <div
-                className="absolute inset-0 bg-transparent pointer-events-auto"
-                onClick={onClose}
-            />
+            {/* 点击背景关闭 */}
+            <div className="absolute inset-0 bg-transparent pointer-events-auto" onClick={onClose} />
 
+            {/* 卡片主体 */}
             <div
-                className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-2xl w-full mx-4 max-h-[85vh] flex flex-col relative pointer-events-auto"
+                className="bg-white rounded-2xl shadow-2xl border border-gray-200/80 w-full max-w-xl mx-4 max-h-[85vh] flex flex-col pointer-events-auto animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header */}
-                <div className="p-6 border-b border-gray-100 flex-shrink-0">
-                    <div className="absolute top-4 right-4 flex items-center gap-2">
-                        <button
-                            onClick={() => setShowSources(!showSources)}
-                            className={cn(
-                                "p-1 rounded-full transition-colors",
-                                showSources ? "text-blue-600 bg-blue-50" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                            )}
-                            title="显示/隐藏数据来源"
-                        >
-                            <Info size={20} />
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                        >
-                            <X size={20} />
-                        </button>
-                    </div>
-
-                    <div className="pr-20">
-                        <div className="flex items-center gap-2 mb-2">
-                            <h2 className="text-3xl font-bold text-gray-900">{dictionaryResult.word}</h2>
-                            {showSources && dictionaryResult.source.local && (
-                                <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded border border-gray-200">{dictionaryResult.source.local}</span>
+                {/* 1. 头部区域 */}
+                <div className="px-6 pt-6 pb-4 border-b border-gray-100 bg-white rounded-t-2xl z-10">
+                    <div className="flex justify-between items-start mb-1">
+                        <div className="flex flex-col gap-1">
+                            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight leading-none">
+                                {dictionaryResult.word}
+                            </h2>
+                            {dictionaryResult.lemma && dictionaryResult.lemma.toLowerCase() !== dictionaryResult.word.toLowerCase() && (
+                                <span className="text-xs text-gray-400 font-medium mt-1">
+                                    原型: {dictionaryResult.lemma}
+                                </span>
                             )}
                         </div>
-                        {/* Lemma / Prototype */}
-                        {dictionaryResult.lemma && dictionaryResult.lemma.toLowerCase() !== dictionaryResult.word.toLowerCase() && (
-                            <p className="text-sm text-gray-500 mb-2">
-                                原型: <span className="font-semibold text-blue-600">{dictionaryResult.lemma}</span>
-                            </p>
-                        )}
 
-                        <div className="flex items-center gap-3 mb-3">
-                            {primaryPhonetic && (
-                                <div className="flex items-center gap-1">
-                                    <span className="text-gray-600 text-lg">/{primaryPhonetic}/</span>
-                                    {showSources && dictionaryResult.source.online && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded border border-green-100">{dictionaryResult.source.online}</span>
-                                    )}
-                                </div>
-                            )}
-                            {audioUrl && (
+                        <div className="flex items-center gap-2">
+                            {/* 来源切换按钮 */}
+                            <button
+                                onClick={() => setShowSources(!showSources)}
+                                className={cn(
+                                    "p-2 rounded-full transition-all duration-200",
+                                    showSources ? "text-blue-600 bg-blue-50" : "text-gray-300 hover:text-gray-500 hover:bg-gray-50"
+                                )}
+                                title={showSources ? "隐藏来源" : "显示来源"}
+                            >
+                                <Info size={18} strokeWidth={2.5} />
+                            </button>
+
+                            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
+                                <X size={24} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 mt-2">
+                        {primaryPhonetic && (
+                            <span className="font-mono text-gray-500 text-sm bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                                /{primaryPhonetic}/
+                            </span>
+                        )}
+                        {audioUrl && (
+                            <div className="scale-90 origin-left">
                                 <AudioPlayer src={audioUrl} />
-                            )}
-                        </div>
-
-                        {/* Tags */}
-                        <div className="flex flex-wrap gap-2">
-                            {dictionaryResult.meanings.map((m, idx) => (
-                                <span
-                                    key={idx}
-                                    className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full"
-                                >
-                                    {m.partOfSpeech}
-                                </span>
-                            ))}
-                        </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Body (Scrollable) */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                    {/* Context Section */}
-                    {(initialData?.context || savedWord?.context) && (
-                        <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
-                            <p className="text-sm text-gray-500 font-bold uppercase tracking-wide mb-1">上下文</p>
-                            <p className="text-gray-900 italic leading-relaxed">{initialData?.context || savedWord?.context}</p>
-                        </div>
-                    )}
+                {/* 2. 内容区域 */}
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
 
-                    {/* Basic Translation */}
+                    {/* 中文释义 */}
                     {dictionaryResult.translations && dictionaryResult.translations.length > 0 && (
-                        <div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <p className="text-sm text-gray-500 font-bold uppercase tracking-wide">中文释义</p>
-                                {showSources && dictionaryResult.source.local && (
-                                    <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded border border-gray-200">{dictionaryResult.source.local}</span>
-                                )}
-                            </div>
-                            <p className="text-gray-900 text-lg leading-relaxed">{dictionaryResult.translations[0]}</p>
-                        </div>
+                        <DetailSection
+                            title="中文释义"
+                            icon={<Globe size={14} />}
+                            colorClass="bg-green-500"
+                            source={dictionaryResult.source.local}
+                            showSource={showSources}
+                        >
+                            <p className="font-medium text-gray-900 leading-relaxed">
+                                {dictionaryResult.translations.join('；')}
+                            </p>
+                        </DetailSection>
                     )}
 
-                    {/* Meanings from Online Dictionary */}
+                    {/* 英文释义 */}
                     {dictionaryResult.meanings.length > 0 && (
-                        <div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <p className="text-sm text-gray-500 font-bold uppercase tracking-wide">英文释义</p>
-                                {showSources && dictionaryResult.source.online && (
-                                    <span className="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded border border-green-100">{dictionaryResult.source.online}</span>
-                                )}
+                        <DetailSection
+                            title="英文释义"
+                            icon={<Book size={14} />}
+                            colorClass="bg-purple-500"
+                            collapsible={true}
+                            defaultOpen={false}
+                            source={dictionaryResult.source.online ? "Online" : undefined}
+                            showSource={showSources}
+                        >
+                            <div className="space-y-3">
+                                {dictionaryResult.meanings.map((meaning, idx) => (
+                                    <div key={idx} className="group">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-semibold rounded italic font-serif">
+                                                {meaning.partOfSpeech}
+                                            </span>
+                                        </div>
+                                        <ul className="space-y-2">
+                                            {meaning.definitions.slice(0, 3).map((def, defIdx) => (
+                                                <li key={defIdx} className="text-sm">
+                                                    <span className="text-gray-900 block">
+                                                        <span className="text-gray-400 font-medium mr-1.5">{defIdx + 1}.</span>
+                                                        {def.definition}
+                                                    </span>
+                                                    {def.example && (
+                                                        <span className="text-gray-500 block pl-5 mt-1 text-xs italic border-l-2 border-gray-100">
+                                                            "{def.example}"
+                                                        </span>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ))}
                             </div>
-                            {/* Limit to 2 meanings */}
-                            {dictionaryResult.meanings.slice(0, 2).map((meaning, idx) => (
-                                <div key={idx} className="mb-4 last:mb-0">
-                                    <span className="text-sm font-semibold text-blue-600 italic">
-                                        {meaning.partOfSpeech}
-                                    </span>
-                                    <ul className="mt-2 space-y-2">
-                                        {/* Limit definitions to 3 per meaning */}
-                                        {meaning.definitions.slice(0, 3).map((def, defIdx) => (
-                                            <li key={defIdx} className="text-gray-900">
-                                                <span className="text-gray-700">{def.definition}</span>
-                                                {def.example && (
-                                                    <p className="text-gray-500 italic text-sm mt-1 ml-4 border-l-2 border-gray-200 pl-2">
-                                                        "{def.example}"
-                                                    </p>
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            ))}
-                        </div>
+                        </DetailSection>
                     )}
 
-                    {/* Expandable Examples Section */}
-                    {dictionaryResult.meanings.some(m => m.definitions.some(d => d.example)) && (
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                            <button
-                                onClick={() => toggleSection('examples')}
-                                className="w-full p-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
-                            >
-                                <span className="text-sm font-medium text-gray-700">更多例句</span>
-                                {expandedSections.examples ? (
-                                    <ChevronUp size={18} className="text-gray-500" />
-                                ) : (
-                                    <ChevronDown size={18} className="text-gray-500" />
-                                )}
-                            </button>
-                            {expandedSections.examples && (
-                                <div className="p-4 space-y-3">
-                                    {dictionaryResult.meanings.map((meaning, idx) =>
-                                        meaning.definitions
-                                            .filter(def => def.example)
-                                            .map((def, defIdx) => (
-                                                <div key={`${idx}-${defIdx}`} className="text-sm">
-                                                    <p className="text-gray-700 italic">"{def.example}"</p>
-                                                    <p className="text-gray-500 mt-1">{def.definition}</p>
-                                                </div>
-                                            ))
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                    {/* 原句 */}
+                    {(initialData?.context || savedWord?.context) && (
+                        <DetailSection
+                            title="原句"
+                            icon={<BookOpen size={14} />}
+                            colorClass="bg-blue-500"
+                            collapsible={true}
+                            defaultOpen={false}
+                            source="Context"
+                            showSource={showSources}
+                        >
+                            <p className="italic text-gray-700 bg-blue-50/50 p-3 rounded-lg border border-blue-50/50 text-sm leading-relaxed">
+                                "{initialData?.context || savedWord?.context}"
+                            </p>
+                        </DetailSection>
                     )}
 
-                    {/* AI Section (Collapsible) */}
-                    {dictionaryResult.source.ai && (
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                            <button
-                                onClick={() => toggleSection('ai')}
-                                className="w-full p-3 flex items-center justify-between bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 transition-colors"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-gray-700">AI 深度解析</span>
-                                    {showSources && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded border border-purple-100">AI</span>
-                                    )}
+                    {/* AI 深度解析 */}
+                    <DetailSection
+                        title="AI 深度解析"
+                        icon={<BrainCircuit size={14} />}
+                        colorClass="bg-amber-500"
+                        collapsible={true}
+                        defaultOpen={false}
+                        source="Gemini"
+                        showSource={showSources}
+                    >
+                        <div className="bg-amber-50/50 p-3 rounded-lg border border-amber-100/50 text-gray-700 text-sm">
+                            <div className="flex items-start gap-2">
+                                <Sparkles size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <p className="font-medium text-amber-900 mb-1">Coming Soon</p>
+                                    <p className="opacity-90">AI 深度解析功能正在开发中，未来将提供词源、记忆法及同义词辨析。</p>
                                 </div>
-                                {expandedSections.ai ? (
-                                    <ChevronUp size={18} className="text-gray-500" />
-                                ) : (
-                                    <ChevronDown size={18} className="text-gray-500" />
-                                )}
-                            </button>
-                            {expandedSections.ai && (
-                                <div className="p-4 text-gray-700 text-sm">
-                                    <p>AI 翻译和词源解释功能正在开发中...</p>
-                                </div>
-                            )}
+                            </div>
                         </div>
-                    )}
+                    </DetailSection>
 
-                    {/* Source Indicators */}
-                    <div className="flex gap-2 text-xs text-gray-400 pt-2 border-t border-gray-50 mt-2">
-                        {dictionaryResult.source.local && (
-                            <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">{dictionaryResult.source.local}</span>
-                        )}
-                        {dictionaryResult.source.online && (
-                            <span className="px-1.5 py-0.5 bg-green-50 text-green-600 rounded">{dictionaryResult.source.online}</span>
-                        )}
-                        {dictionaryResult.source.ai && (
-                            <span className="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded">{dictionaryResult.source.ai}</span>
-                        )}
-                    </div>
                 </div>
 
-                {/* Footer (Fixed) */}
-                <div className="p-6 border-t border-gray-100 flex-shrink-0">
-                    {isSaved ? (
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">状态</span>
-                                <span className={cn(
-                                    "px-3 py-1 text-xs font-semibold rounded-full uppercase",
-                                    savedWord.status === 'new' && "bg-blue-100 text-blue-800",
-                                    savedWord.status === 'learning' && "bg-yellow-100 text-yellow-800",
-                                    savedWord.status === 'reviewed' && "bg-green-100 text-green-800",
-                                    savedWord.status === 'mastered' && "bg-purple-100 text-purple-800"
-                                )}>
-                                    {savedWord.status}
-                                </span>
+                {/* 3. 底部操作栏 */}
+                <div className="p-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl">
+                    {savedWord ? (
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-sm">
+                                <div className={cn(
+                                    "w-2 h-2 rounded-full",
+                                    savedWord.status === 'new' && "bg-blue-500",
+                                    savedWord.status === 'learning' && "bg-yellow-500",
+                                    savedWord.status === 'reviewed' && "bg-green-500",
+                                    savedWord.status === 'mastered' && "bg-purple-500"
+                                )} />
+                                <span className="text-xs font-medium text-gray-600 capitalize">{savedWord.status}</span>
                             </div>
-                            {savedWord.addedAt && (
-                                <p className="text-xs text-gray-500 text-right">
-                                    添加于 {formatDate(savedWord.addedAt)}
-                                </p>
-                            )}
+
                             <button
                                 onClick={handleRemove}
-                                className="w-full bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg font-medium transition-colors"
+                                className="flex-1 bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow active:scale-[0.98]"
                             >
-                                从生词本移除
+                                移除单词
                             </button>
                         </div>
                     ) : (
                         <button
                             onClick={handleAdd}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center justify-center gap-2"
+                            className="w-full bg-gray-900 hover:bg-black text-white px-4 py-3 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                         >
-                            <span>+ 添加到生词本</span>
+                            <span>添加到生词本</span>
                         </button>
                     )}
                 </div>
