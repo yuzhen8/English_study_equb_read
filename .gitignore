@@ -118,3 +118,10 @@ dist
 # Electron
 dist-electron
 win-unpacked
+
+#big file
+node_modules/
+resources/dict.db
+stardict/stardict.csv
+
+

@@ -1,21 +1,31 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { Plus, MoreHorizontal, ChevronRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-const data = [
-    { name: 'Mon', words: 10 },
-    { name: 'Tue', words: 25 },
-    { name: 'Wed', words: 15 },
-    { name: 'Thu', words: 35 },
-    { name: 'Fri', words: 20 },
-    { name: 'Sat', words: 45 },
-    { name: 'Sun', words: 30 },
-];
+import { WordStore } from '../../services/WordStore';
+import WordDetailPopup from '../../components/WordDetailPopup';
 
 const DictionaryDashboard: React.FC = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'my-words' | 'groups'>('my-words');
     const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'year'>('week');
+    const [showWordPopup, setShowWordPopup] = useState(false);
+    const [stats, setStats] = useState({
+        total: 0,
+        statusCounts: { new: 0, learning: 0, reviewed: 0, mastered: 0 },
+        newToday: 0,
+        chartData: [] as { name: string; words: number }[]
+    });
+
+    React.useEffect(() => {
+        const loadStats = async () => {
+            const data = await WordStore.getStats();
+            setStats(data);
+        };
+        loadStats();
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -60,11 +70,11 @@ const DictionaryDashboard: React.FC = () => {
             <div className="px-4 mt-2 mb-2">
                 <button
                     className="w-full bg-white rounded-xl p-4 flex justify-between items-center shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors"
-                    onClick={() => console.log("Navigate to word list")}
+                    onClick={() => navigate('/dictionary/list')}
                 >
                     <span className="font-bold text-gray-900">所有单词</span>
                     <div className="flex items-center gap-2">
-                        <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs font-bold">12</span>
+                        <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs font-bold">{stats.total}</span>
                         <ChevronRight size={20} className="text-gray-400" />
                     </div>
                 </button>
@@ -82,7 +92,7 @@ const DictionaryDashboard: React.FC = () => {
                             </div>
                         </div>
                         <div>
-                            <span className="text-4xl font-bold">12</span>
+                            <span className="text-4xl font-bold">{stats.newToday}</span>
                             <p className="text-blue-100 text-xs mt-1">+2 比昨天</p>
                         </div>
                     </div>
@@ -92,14 +102,14 @@ const DictionaryDashboard: React.FC = () => {
                         <div className="bg-white rounded-2xl p-3 flex-1 flex flex-col justify-center shadow-sm border border-gray-100">
                             <span className="text-gray-400 text-xs mb-1">进行中</span>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-xl font-bold text-gray-900">48</span>
+                                <span className="text-xl font-bold text-gray-900">{stats.statusCounts.learning + stats.statusCounts.reviewed}</span>
                                 <span className="text-xs text-orange-500 font-medium">待复习</span>
                             </div>
                         </div>
                         <div className="bg-white rounded-2xl p-3 flex-1 flex flex-col justify-center shadow-sm border border-gray-100">
                             <span className="text-gray-400 text-xs mb-1">已学习</span>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-xl font-bold text-gray-900">852</span>
+                                <span className="text-xl font-bold text-gray-900">{stats.total}</span>
                                 <span className="text-xs text-green-500 font-medium">个单词</span>
                             </div>
                         </div>
@@ -128,7 +138,7 @@ const DictionaryDashboard: React.FC = () => {
 
                     <div className="h-48 w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={data}>
+                            <AreaChart data={stats.chartData}>
                                 <defs>
                                     <linearGradient id="colorWords" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
@@ -157,10 +167,20 @@ const DictionaryDashboard: React.FC = () => {
                 </div>
             </div>
             {/* FAB */}
-            <button className="fixed bottom-24 right-4 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 hover:bg-black transition-colors z-20">
+            <button 
+                onClick={() => setShowWordPopup(true)}
+                className="fixed bottom-24 right-4 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 hover:bg-black transition-colors z-20"
+            >
                 <Plus size={20} />
                 <span className="font-bold">添加单词</span>
             </button>
+
+            {/* Word Detail Popup */}
+            {showWordPopup && (
+                <WordDetailPopup
+                    onClose={() => setShowWordPopup(false)}
+                />
+            )}
         </div>
     );
 };

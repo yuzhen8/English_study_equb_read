@@ -17,5 +17,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     translateMicrosoft: (text: string, targetLang: string) => ipcRenderer.invoke('translate-microsoft', { text, targetLang }),
     setProxy: (proxyRules: string) => ipcRenderer.invoke('set-proxy', proxyRules),
     getSettings: () => ipcRenderer.invoke('get-settings'),
-    saveSettings: (settings: any) => ipcRenderer.invoke('save-settings', settings)
+    saveSettings: (settings: any) => ipcRenderer.invoke('save-settings', settings),
+    readFile: (path: string) => ipcRenderer.invoke('read-file', path),
+    selectFile: () => ipcRenderer.invoke('select-file'),
+    getAudio: (url: string, word: string) => ipcRenderer.invoke('dict:get-audio', { url, word }),
+    searchLocal: (word: string) => ipcRenderer.invoke('dict:search-local', word)
 })

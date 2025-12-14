@@ -1,7 +1,12 @@
-import { app, BrowserWindow, ipcMain, net, session } from 'electron'
+import { app, BrowserWindow, ipcMain, net, session, dialog } from 'electron'
 import path from 'path'
+import fs from 'fs/promises'
+
+
 
 import { ConfigManager } from './store';
+import { setupDictionaryHandlers } from './dictionary';
+
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -40,6 +45,8 @@ app.on('ready', async () => {
             console.error('Failed to set proxy:', err);
         }
     }
+
+    setupDictionaryHandlers();
 
     ipcMain.handle('translate-text', (event, { text, targetLang }) => {
         return new Promise((resolve) => {
@@ -211,6 +218,27 @@ app.on('ready', async () => {
             tokenRequest.on('error', (e: any) => resolve({ success: false, error: String(e) }));
             tokenRequest.end();
         });
+    });
+
+    ipcMain.handle('read-file', async (event, filePath) => {
+        try {
+            const data = await fs.readFile(filePath);
+            return { success: true, data: data.buffer };
+        } catch (error) {
+            console.error('Read file error:', error);
+            return { success: false, error: String(error) };
+        }
+    });
+
+    ipcMain.handle('select-file', async () => {
+        const result = await dialog.showOpenDialog({
+            properties: ['openFile'],
+            filters: [{ name: 'EPUB Books', extensions: ['epub'] }]
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            return null;
+        }
+        return result.filePaths[0]; // Return the first selected file path
     });
 });
 

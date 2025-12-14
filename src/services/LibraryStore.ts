@@ -1,37 +1,41 @@
 import ePub from 'epubjs';
+import { dbOperations, STORE_BOOKS, STORE_BOOK_DATA } from './db';
 
 export interface Book {
     id: string;
     title: string;
     author: string;
-    cover?: string; // Base64 or Blob URL (if referencing local file)
+    cover?: string; // Base64
     path?: string; // File path for Electron
     addedAt: number;
     progress?: number; // 0-100 or cfi
 }
 
-const STORAGE_KEY = 'linga_library_books';
-
 export const LibraryStore = {
-    getBooks: (): Book[] => {
+    getBooks: async (): Promise<Book[]> => {
         try {
-            const data = localStorage.getItem(STORAGE_KEY);
-            return data ? JSON.parse(data) : [];
+            return await dbOperations.getAll<Book>(STORE_BOOKS);
         } catch (e) {
             console.error("Failed to load books", e);
             return [];
         }
     },
 
-    saveBooks: (books: Book[]) => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(books));
+    getBookData: async (id: string): Promise<ArrayBuffer | undefined> => {
+        try {
+            return await dbOperations.get<ArrayBuffer>(STORE_BOOK_DATA, id);
+        } catch (e) {
+            console.error("Failed to load book data", e);
+            return undefined;
+        }
     },
 
-    addBook: async (file: File): Promise<Book> => {
-        const arrayBuffer = await file.arrayBuffer();
-        const book = ePub(arrayBuffer);
+    addBook: async (filePath: string, arrayBuffer: ArrayBuffer): Promise<Book> => {
+        // @ts-ignore
+        const book: any = new ePub(arrayBuffer);
 
         // Wait for metadata
+        await book.ready;
         const metadata = await book.loaded.metadata;
 
         // Get cover
@@ -39,7 +43,6 @@ export const LibraryStore = {
         try {
             const coverUrl = await book.coverUrl();
             if (coverUrl) {
-                // Fetch the blob and convert to base64 for persistence
                 const response = await fetch(coverUrl);
                 const blob = await response.blob();
                 coverBase64 = await new Promise((resolve) => {
@@ -52,40 +55,53 @@ export const LibraryStore = {
             console.warn("Failed to extract cover", e);
         }
 
+        const id = crypto.randomUUID();
+
         const newBook: Book = {
-            id: crypto.randomUUID(),
-            title: metadata.title || file.name.replace(/\.epub$/i, ''),
+            id,
+            title: metadata.title || filePath.split(/[\\/]/).pop()?.replace(/\.epub$/i, '') || 'Unknown',
             author: metadata.creator || 'Unknown Author',
             cover: coverBase64,
-            path: (file as any).path, // Electron specific
+            path: filePath,
             addedAt: Date.now(),
             progress: 0
         };
 
-        const books = LibraryStore.getBooks();
-        // Avoid duplicates by path if available
-        if (newBook.path && books.some(b => b.path === newBook.path)) {
-            // Update existing? Or throw? Let's just return the existing one.
-            const existing = books.find(b => b.path === newBook.path);
-            if (existing) return existing;
+        const currentBooks = await LibraryStore.getBooks();
+        // Avoid duplicates by path if available (Optional: maybe allow duplicates if content stored?)
+        // For now, if path matches, replace content? Or skip?
+        // Let's allow creating new entry if user re-imports, or update if exists.
+        // But logic below was: if exists return existing.
+        // If we want to support "Update content", we should update.
+        // Let's keeping "return existing" logic for metadata, but maybe update data?
+        // Simple approach: Always add as new logic or overwrite.
+        // Existing logic:
+        if (newBook.path) {
+            const existing = currentBooks.find(b => b.path === newBook.path);
+            if (existing) {
+                // Update data just in case
+                await dbOperations.put(STORE_BOOK_DATA, arrayBuffer, existing.id);
+                return existing;
+            }
         }
 
-        books.push(newBook);
-        LibraryStore.saveBooks(books);
+        await dbOperations.add(STORE_BOOKS, newBook);
+        await dbOperations.add(STORE_BOOK_DATA, arrayBuffer, id);
+
         return newBook;
     },
 
-    deleteBook: (id: string) => {
-        const books = LibraryStore.getBooks().filter(b => b.id !== id);
-        LibraryStore.saveBooks(books);
+    deleteBook: async (id: string) => {
+        await dbOperations.delete(STORE_BOOKS, id);
+        await dbOperations.delete(STORE_BOOK_DATA, id);
     },
 
-    updateProgress: (id: string, progress: number) => {
-        const books = LibraryStore.getBooks();
+    updateProgress: async (id: string, progress: number) => {
+        const books = await LibraryStore.getBooks();
         const book = books.find(b => b.id === id);
         if (book) {
             book.progress = progress;
-            LibraryStore.saveBooks(books);
+            await dbOperations.put(STORE_BOOKS, book);
         }
     }
 };

@@ -10,7 +10,7 @@ export interface TranslationResult {
 
 export interface TranslationProvider {
     name: string;
-    translate(text: string, targetLang?: string): Promise<TranslationResult>;
+    translate(text: string, targetLang?: string, context?: string): Promise<TranslationResult>;
 }
 
 export class TranslationService {
@@ -27,16 +27,20 @@ export class TranslationService {
         }
     }
 
-    async translate(text: string, targetLang: string = 'zh-CN'): Promise<TranslationResult> {
+    async translate(text: string, targetLang: string = 'zh-CN', context?: string): Promise<TranslationResult> {
         const provider = this.providers.get(this.activeProvider);
         if (!provider) {
             throw new Error(`Provider ${this.activeProvider} not found`);
         }
-        return provider.translate(text, targetLang);
+        return provider.translate(text, targetLang, context);
     }
 
     getAvailableProviders(): string[] {
         return Array.from(this.providers.keys());
+    }
+
+    getProvider(name: string): TranslationProvider | undefined {
+        return this.providers.get(name);
     }
 }
 

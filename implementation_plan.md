@@ -3,8 +3,53 @@
 ## 目标描述
 1.  **词典页**: 严格还原上传的 UI 设计图，包含复合统计卡片、波浪图和浮动操作按钮。
 2.  **书库页**: 实现类似“书架”的功能，支持导入图书后持久保存，并可进行删除管理。
+3.  **质量保证**: 建立自动化测试基础设施，确保核心业务逻辑的稳定性。
 
 ## 拟议变更
+
+### [Hybrid Dictionary Service (混合词典服务)]
+*详细设计参考: `hybrid_dictionary_plan.md`*
+
+#### [NEW] [electron/main.ts]
+- **IPC Handlers**:
+  - `dict:get-audio(url, word)`: 下载并缓存音频，返回本地文件路径。
+  - `dict:search-local(word)`: (暂缓/Mock) 本地词典查询接口，预留 SQLite 调用位置。
+
+#### [NEW] [src/services/DictionaryService.ts]
+- **HybridDictionaryService**:
+  - `search(word)`: 聚合 Local + Online + AI 结果。
+  - `getAudio(audioUrl, word)`: 调用 IPC 获取可播放路径。
+
+#### [NEW] [src/services/LocalDictionary.ts]
+- (Placeholder) 本地词典的简单实现或 Mock，用于测试聚合逻辑。
+
+### [UI] WordDetailPopup Refactoring
+
+Refactor `WordDetailPopup` to become the central "Smart Word Card" of the application.
+
+#### [MODIFY] [WordDetailPopup.tsx](file:///f:/equb_English_learning/windows/src/components/WordDetailPopup.tsx)
+-   **Data Source**: Switch from `WordStore.getWord` to `HybridDictionaryService.query`.
+    -   `const [result, setResult] = useState<DictionaryResult | null>(null);`
+-   **UI Layout**:
+    -   **Header**:
+        -   Word text (Bold, Large)
+        -   Phonetic script (IPA) with **Audio Button** (Speaker icon).
+        -   Tags bubbles (e.g., "ZK/GK", "Frq: 1200").
+    -   **Body (Scrollable)**:
+        -   **Context Section**: Display the sentence where the word was clicked (if available).
+        -   **Meaning Section**:
+            -   **Local**: Concise Chinese definition.
+            -   **Online/AI**: Collapsible section ("Deep Dive") showing English definition, details, and AI explanation.
+    -   **Footer (Fixed)**:
+        -   Action Button: "Add to Dictionary" (if new) / "Mark as Mastered" / "Remove" (if existing).
+        -   Status Indicator: Current status icon.
+
+#### [MODIFY] [DictionaryDashboard.tsx](file:///f:/equb_English_learning/windows/src/pages/Dictionary/DictionaryDashboard.tsx)
+-   Connect functionality: The floating "Add Word" button should trigger `WordDetailPopup` with an empty/search state or a pre-filled input.
+
+#### [NEW] [AudioPlayer.tsx](file:///f:/equb_English_learning/windows/src/components/AudioPlayer.tsx)
+-   Simple functional component to handle playing audio from URL or Local Path.
+-   Logic: `new Audio(src).play()`. Handle errors.
 
 ### [UI 组件: 词典页 (Dictionary)]
 *参考图片: image_acde20.png*
@@ -53,6 +98,31 @@
 - 确保图标顺序符合最新需求：首页/词典/书库/锻炼/个人。
 - (根据图片，书库似乎是一个单独的入口，或者集成在首页，此处暂定为独立 Tab)。
 
+### [测试与验证 (Testing & Verification)]
+*详细计划参考: `test_plan.md`*
+
+#### [NEW] 测试基础设施
+- **技术栈**: Vitest + React Testing Library + JSDOM。
+- **配置**:
+  - `vitest.config.ts`: 集成 Vite 配置。
+  - `src/test/setup.ts`: 配置全局 Mock (尤其是 Electron IPC)。
+
+#### [NEW] 单元测试 (Services)
+- `src/services/__tests__/WordStore.test.ts`: 测试单词的 CRUD 和统计生成。
+- `src/services/__tests__/HybridDictionaryService.test.ts`: 测试多源数据聚合逻辑 (Mock fetch 和 IPC)。
+
+#### [NEW] 集成测试 (Components)
+- `src/pages/Dictionary/__tests__/DictionaryDashboard.test.tsx`: 测试数据加载状态和交互。
+
+### [Optimization] Dictionary Performance & UI
+#### [MODIFY] [WordDetailPopup.tsx](file:///f:/equb_English_learning/windows/src/components/WordDetailPopup.tsx)
+- **Async Audio Loading**: 
+  - 确保 `hybridDictionary.query` 返回基础数据后立即渲染 UI。
+  - 音频获取 (Audio Fetch) 应在后台异步执行，不阻塞界面显示。
+- **UI Refinement**:
+  - 调整弹窗样式，避免"全屏占用"感 (优化 Modal 尺寸或样式)。
+  - 移除长时间的 "Loading" 遮罩，替换为局部 Loading 或即时响应。
+
 ### [路由配置 update]
 ```jsx
 <Routes>
@@ -62,6 +132,8 @@
     <Route path="library" element={<LibraryHome />} />
     <Route path="exercise" element={<ExerciseHub />} />
     <Route path="profile" element={<Profile />} />
+    <Route path="settings" element={<SettingsPage />} /> {/* NEW */}
   </Route>
   <Route path="reader/:bookId" element={<ReaderView />} />
 </Routes>
+```

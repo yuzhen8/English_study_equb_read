@@ -1,7 +1,10 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Settings, Bell, Shield } from 'lucide-react';
 
 const Profile: React.FC = () => {
+    const navigate = useNavigate();
+
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             <div className="bg-white px-4 pt-12 pb-6 mb-4 shadow-sm">
@@ -18,7 +21,11 @@ const Profile: React.FC = () => {
 
             <div className="p-4 space-y-4">
                 <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
-                    <MenuItem icon={Settings} label="设置" />
+                    <MenuItem
+                        icon={Settings}
+                        label="设置"
+                        onClick={() => navigate('/settings')}
+                    />
                     <MenuItem icon={Bell} label="通知" />
                     <MenuItem icon={Shield} label="隐私" border={false} />
                 </div>
@@ -27,8 +34,11 @@ const Profile: React.FC = () => {
     );
 };
 
-const MenuItem: React.FC<{ icon: React.ElementType, label: string, border?: boolean }> = ({ icon: Icon, label, border = true }) => (
-    <button className={`w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left ${border ? 'border-b border-gray-100' : ''}`}>
+const MenuItem: React.FC<{ icon: React.ElementType, label: string, border?: boolean, onClick?: () => void }> = ({ icon: Icon, label, border = true, onClick }) => (
+    <button
+        className={`w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left ${border ? 'border-b border-gray-100' : ''}`}
+        onClick={onClick}
+    >
         <Icon size={20} className="text-gray-400" />
         <span className="font-medium text-gray-700 flex-1">{label}</span>
     </button>

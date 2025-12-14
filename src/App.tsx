@@ -10,6 +10,7 @@ import LibraryList from './pages/Library/LibraryList';
 import Profile from './pages/Profile/Profile';
 import ReaderView from './pages/Reader/ReaderView';
 import WordList from './pages/Dictionary/WordList';
+import OllamaSettings from './pages/Settings/OllamaSettings';
 
 function App() {
     useEffect(() => {
@@ -24,6 +25,7 @@ function App() {
                 <Route path="library" element={<LibraryList />} />
                 <Route path="exercise" element={<ExerciseHub />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="settings" element={<OllamaSettings />} />
                 <Route path="stats" element={<div className="p-8 text-center text-gray-500">Statistics (Coming Soon)</div>} />
             </Route>
 

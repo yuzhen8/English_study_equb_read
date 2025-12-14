@@ -1,14 +1,55 @@
-import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Reader from '../../components/Reader';
 import { ArrowLeft } from 'lucide-react';
+import { LibraryStore } from '../../services/LibraryStore';
 
 const ReaderView: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const { bookId } = useParams<{ bookId: string }>();
+
     // Retrieve bookData or bookUrl from state
-    const { bookData, bookUrl } = location.state || {};
-    const data = bookData || bookUrl;
+    const { bookData, bookUrl, bookPath } = location.state || {};
+    const [data, setData] = useState<ArrayBuffer | string | null>(bookData || bookUrl || null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const load = async () => {
+            if (data) return;
+            setLoading(true);
+
+            // 1. Try loading from DB if bookId is present (it should be in URL)
+            if (bookId) {
+                const dbData = await LibraryStore.getBookData(bookId);
+                if (dbData) { // Check if we got valid array buffer
+                    setData(dbData);
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            // 2. Fallback to file path if provided (e.g. from Library state)
+            if (bookPath) {
+                const result = await window.electronAPI.readFile(bookPath);
+                if (result.success && result.data) {
+                    setData(result.data);
+                } else {
+                    console.error("Failed to read book file:", result.error);
+                }
+            }
+            setLoading(false);
+        };
+        load();
+    }, [bookId, bookPath, data]);
+
+    if (loading) {
+        return (
+            <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+        );
+    }
 
     if (!data) {
         return (
@@ -36,6 +77,7 @@ const ReaderView: React.FC = () => {
             >
                 <ArrowLeft size={20} />
             </button>
+            {/* Verify data is not null before passing, though check above handles it */}
             <Reader data={data} />
         </div>
     );
