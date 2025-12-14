@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ePub from 'epubjs';
 import './Reader.css';
-import { translationService } from '../services/TranslationService';
+
 import WordDetailPopup from './WordDetailPopup';
 
 interface ReaderProps {
@@ -23,7 +23,7 @@ const Reader: React.FC<ReaderProps> = ({ data }) => {
         translation: string;
         context?: string;
     } | null>(null);
-    const [isTranslating, setIsTranslating] = useState(false);
+    // const [isTranslating, setIsTranslating] = useState(false); // Removed for immediate popup
 
     useEffect(() => {
         if (!viewerRef.current || !data) return;
@@ -53,29 +53,72 @@ const Reader: React.FC<ReaderProps> = ({ data }) => {
                 const text = range.toString();
 
                 if (text && text.trim().length > 0) {
-                    // Extract sentence context (simple approximation)
+                    // Extract sentence context
                     let context = text.trim();
-                    // TODO: Improve context extraction (e.g. Expand selection to sentence)
+                    try {
+                        const container = range.commonAncestorContainer;
+                        // Get the block element (usually <p>)
+                        const block = (container.nodeType === Node.TEXT_NODE ? container.parentNode : container) as HTMLElement;
 
-                    // Translate
-                    setIsTranslating(true);
-                    // Pass context if available (Reader extracts it)
-                    translationService.translate(text.trim(), 'zh-CN', context)
-                        .then(result => {
-                            setPopupData({
-                                text: result.text,
-                                translation: result.translation,
-                                context: context
-                            });
-                            setShowPopup(true);
-                        })
-                        .catch(err => {
-                            console.error('Translation error:', err);
-                            alert('翻译失败，请检查网络或设置');
-                        })
-                        .finally(() => {
-                            setIsTranslating(false);
-                        });
+                        if (block && block.textContent) {
+                            const fullText = block.textContent;
+
+                            // Calculate offset of range within block
+                            let offset = 0;
+                            let found = false;
+
+                            // Traverse to find the offset of startContainer
+                            const traverse = (node: Node) => {
+                                if (found) return;
+                                if (node === range.startContainer) {
+                                    offset += range.startOffset;
+                                    found = true;
+                                    return;
+                                }
+                                if (node.nodeType === Node.TEXT_NODE) {
+                                    offset += node.textContent?.length || 0;
+                                } else {
+                                    for (let i = 0; i < node.childNodes.length; i++) {
+                                        traverse(node.childNodes[i]);
+                                        if (found) return;
+                                    }
+                                }
+                            };
+
+                            traverse(block);
+
+                            if (found) {
+                                // Expand to sentence boundaries
+                                const EndChars = /[.!?。！？]/; // Include Chinese punctuation
+                                let start = offset;
+                                let end = offset + text.length;
+
+                                // Walk backwards
+                                while (start > 0) {
+                                    if (EndChars.test(fullText[start - 1])) break;
+                                    start--;
+                                }
+
+                                // Walk forwards
+                                while (end < fullText.length) {
+                                    end++;
+                                    if (EndChars.test(fullText[end - 1])) break;
+                                }
+
+                                context = fullText.slice(start, end).trim();
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Context extraction error:", e);
+                    }
+
+                    // Immediate Popup (Non-blocking)
+                    setPopupData({
+                        text: text.trim(), // Use original text
+                        translation: '', // Will be loaded in popup
+                        context: context
+                    });
+                    setShowPopup(true);
                 }
             }
         });
@@ -153,12 +196,7 @@ const Reader: React.FC<ReaderProps> = ({ data }) => {
                 />
             )}
 
-            {isTranslating && (
-                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-900 bg-opacity-80 text-white px-6 py-4 rounded-lg shadow-xl z-50 flex items-center space-x-3">
-                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                    <span>正在翻译...</span>
-                </div>
-            )}
+
         </div>
     );
 };

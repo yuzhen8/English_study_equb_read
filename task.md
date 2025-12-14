@@ -26,9 +26,20 @@
         - [x] **Online API**: 集成 Free Dictionary API (获取英英释义/音频)
         - [x] **音频缓存系统**: 实现发音文件的自动下载与本地持久化 (Cache)
         - [x] **聚合逻辑**: 实现查询分发 (本地优先 -> 在线补充 -> AI 兜底)
-    - [x] **性能优化 (Performance)**:
+    - [/] **性能优化 (Performance)**:
         - [x] 异步加载音频，避免阻塞 UI
-        - [x] 优化查询弹窗样式，移除全屏遮挡感
+        - [ ] **[NEW]** 优化查词响应速度 (UI 优先策略)
+            - [x] **阅读器即时弹窗**: 移除 Reader 中的阻塞式翻译等待，点击后立即打开弹窗，将翻译任务移至弹窗内部异步执行
+            - [x] **渐进式数据加载**: 优化 `hybridDictionary.query` 逻辑，优先返回并显示本地结果 (ECDICT 中文释义)，随后后台加载 Free Dictionary API (英英/音频) 并更新 UI
+    - [x] **[NEW]** UI/UX 交互优化 (查词体验) - **方案 C: 无遮罩浮窗**
+        - [x] **移除模态遮罩**: 修改 `WordDetailPopup`，移除全屏黑色背景 (`bg-black bg-opacity-30`)，允许用户看到背后的文本
+        - [x] **实现点击外部关闭**: 添加点击监听 (Click Outside)，在点击弹窗外部区域时自动关闭详情页
+        - [x] **样式增强**: 增加弹窗的阴影 (`shadow-2xl`) 和边框，确保在复杂背景下的视觉辨识度
+        - [x] **[NEW]** 数据溯源开关 (Source Visibility Toggle):
+            - [x] **来源切换按钮**: 在弹窗头部（如单词旁或右上角）增加一个 "Info/Source" 样式的切换图标 (默认为关闭状态)
+            - [x] **细粒度来源标签**: 当开关开启时，在单词原型、中文释义、英文释义、音标、音频播放器旁边分别显示微型标签 (Badges)，明确标识其来源 (如 "Local", "Online", "AI")
+        - [x] **[NEW]** 优化上下文提取 (Context Extraction):
+            - [x] **精准截取单句 (Sentence Only)**: 在 `Reader.tsx` 中，通过正则 (Regex) 匹配句号、问号、感叹号等结束符，**仅截取并显示包含选中单词的那一个完整句子**，严格过滤掉段落中的其他内容。
     - [/] **[NEW]** 词典主页 UI 还原 (严格参考 image_acde20)
         - [x] 顶部 Tabs (我的单词 / 群组)
         - [x] "所有单词" 跳转条组件
@@ -63,11 +74,22 @@
     - [x] 阅读器核心功能 (翻页、进度)
     - [x] 阅读器交互 (点击查词 -> 触发上述单词详情弹窗)
 
-- [ ] 核心功能: 锻炼 (Exercise)
+    - [/] 核心功能: 锻炼 (Exercise)
     - [x] **[NEW]** 实现锻炼页 "混合练习" 顶部大卡片
     - [x] **[NEW]** 实现练习模式列表 (闪卡, 多项选择等)
-    - [ ] 练习逻辑: 闪卡模式实现
-    - [ ] 练习逻辑: 多项选择模式实现
+    - [ ] **[NEW]** 锻炼页面统计 (Exercise Statistics) [参考词典页]
+        - [ ] **统计概览卡片**: 实现类似词典页的统计卡片 (如: 今日复习数, 累计学习时长, 记忆曲线状态)
+        - [ ] **可视化图表**: 增加学习趋势图/热力图，展示每日复习活跃度
+    - [ ] **[NEW]** SRS 核心逻辑 (Spaced Repetition System)
+        - [ ] **WordStore 升级**: 添加 lastReviewedAt, reviewCount, easeFactor, interval 字段
+        - [ ] **复习算法**: 实现 SM-2 简易版算法 (submitReview)
+        - [ ] **获取待复习**: 实现 getDueWords 方法
+    - [ ] **[NEW]** 练习会话 UI (Exercise Session)
+        - [ ] 会话容器 (ExerciseSession.tsx) - 负责加载单词和进度管理
+        - [ ] 闪卡模式 (FlashcardMode.tsx)
+        - [ ] 多项选择模式 (ChoiceMode.tsx)
+    - [ ] 练习逻辑: 单词构建
+    - [ ] 练习逻辑: 混合模式
 
 - [ ] 数据与设置
     - [ ] 设置 SQLite/Store 数据库 (用于单词和图书记录)

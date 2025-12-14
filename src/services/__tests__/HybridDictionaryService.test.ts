@@ -55,8 +55,8 @@ describe('HybridDictionaryService', () => {
 
         // Verify
         expect(result.word).toBe('test');
-        expect(result.source.online).toBe(true);
-        expect(result.source.local).toBe(false);
+        expect(result.source.online).toBe('Free Dictionary');
+        expect(result.source.local).toBeNull();
         expect(result.meanings[0].definitions[0].definition).toContain('A procedure');
 
         // Verify audio caching triggered
@@ -80,7 +80,7 @@ describe('HybridDictionaryService', () => {
 
         const result = await service.query('test');
 
-        expect(result.source.ai).toBe(true);
+        expect(result.source.ai).toBe('AI');
         expect(result.translations).toContain('测试');
         expect(aiMock).toHaveBeenCalledWith('test', 'zh-CN', expect.any(String));
     });

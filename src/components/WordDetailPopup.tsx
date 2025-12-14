@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { X, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Search, Info } from 'lucide-react';
 import { WordStore, Word } from '../services/WordStore';
 import { hybridDictionary, DictionaryResult } from '../services/DictionaryService';
+
 import AudioPlayer from './AudioPlayer';
 import { cn } from '../lib/utils';
 
@@ -25,6 +26,7 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
     const [audioUrl, setAudioUrl] = useState<string>('');
     const [searchInput, setSearchInput] = useState<string>('');
     const [showSearch, setShowSearch] = useState<boolean>(false);
+    const [showSources, setShowSources] = useState<boolean>(false);
 
     useEffect(() => {
         const load = async () => {
@@ -55,19 +57,37 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                 }
 
                 if (wordText) {
-                    // Query hybrid dictionary
-                    const result = await hybridDictionary.query(wordText);
-                    setDictionaryResult(result);
+                    // 1. Query Local Dictionary (Fast)
+                    const localResult = await hybridDictionary.queryLocal(wordText);
+                    if (localResult) {
+                        setDictionaryResult(localResult);
+                        setLoading(false); // Stop loading immediately if local found
+                    }
 
-                    // Async audio loading - don't block UI
-                    if (result.phonetics.length > 0) {
-                        const audioPhonetic = result.phonetics.find(p => p.audio);
-                        if (audioPhonetic && audioPhonetic.audio) {
-                            // Load audio in background
-                            hybridDictionary.getAudioUrl(wordText, audioPhonetic.audio)
-                                .then(url => setAudioUrl(url))
-                                .catch(err => console.warn('Failed to load audio:', err));
+                    // 2. Query Online Dictionary (Async Update)
+                    hybridDictionary.queryOnline(wordText).then(onlineResult => {
+                        if (onlineResult) {
+                            setDictionaryResult(prev => {
+                                if (!prev) return onlineResult;
+                                return hybridDictionary.mergeResults(prev, onlineResult);
+                            });
+
+                            // Audio cache is handled inside queryOnline, but we need to update URL if available
+                            if (onlineResult.phonetics.length > 0) {
+                                const audioPhonetic = onlineResult.phonetics.find(p => p.audio);
+                                if (audioPhonetic && audioPhonetic.audio) {
+                                    hybridDictionary.getAudioUrl(wordText, audioPhonetic.audio)
+                                        .then(url => setAudioUrl(url))
+                                        .catch(err => console.warn('Failed to load audio:', err));
+                                }
+                            }
                         }
+                    }).catch(err => console.warn('Online query failed', err));
+
+                    // If no local result, keep loading true until online finishes (or handle via empty state)
+                    if (!localResult) {
+                        // If no local, we must wait for online or at least show loading
+                        // We do nothing here, let the promise chain handle it or user sees loading
                     }
                 }
             } catch (e) {
@@ -124,20 +144,31 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                 setSavedWord(existing);
             }
 
-            // Query hybrid dictionary
-            const result = await hybridDictionary.query(wordText);
-            setDictionaryResult(result);
-
-            // Async audio loading - don't block UI
-            if (result.phonetics.length > 0) {
-                const audioPhonetic = result.phonetics.find(p => p.audio);
-                if (audioPhonetic && audioPhonetic.audio) {
-                    // Load audio in background
-                    hybridDictionary.getAudioUrl(wordText, audioPhonetic.audio)
-                        .then(url => setAudioUrl(url))
-                        .catch(err => console.warn('Failed to load audio:', err));
-                }
+            // 1. Query Local (Fast)
+            const localResult = await hybridDictionary.queryLocal(wordText);
+            if (localResult) {
+                setDictionaryResult(localResult);
+                setLoading(false);
             }
+
+            // 2. Query Online (Async)
+            hybridDictionary.queryOnline(wordText).then(onlineResult => {
+                if (onlineResult) {
+                    setDictionaryResult(prev => {
+                        if (!prev) return onlineResult;
+                        return hybridDictionary.mergeResults(prev, onlineResult);
+                    });
+                    // Audio
+                    if (onlineResult.phonetics.length > 0) {
+                        const audioPhonetic = onlineResult.phonetics.find(p => p.audio);
+                        if (audioPhonetic && audioPhonetic.audio) {
+                            hybridDictionary.getAudioUrl(wordText, audioPhonetic.audio)
+                                .then(url => setAudioUrl(url))
+                                .catch(console.warn);
+                        }
+                    }
+                }
+            });
         } catch (e) {
             console.error("Failed to search word", e);
         } finally {
@@ -203,26 +234,60 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
     const primaryPhonetic = dictionaryResult.phonetics.find(p => p.text)?.text || '';
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50" onClick={onClose}>
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+            {/* Click outside handler - transparent layer */}
             <div
-                className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[85vh] flex flex-col"
+                className="absolute inset-0 bg-transparent pointer-events-auto"
+                onClick={onClose}
+            />
+
+            <div
+                className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-2xl w-full mx-4 max-h-[85vh] flex flex-col relative pointer-events-auto"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 flex-shrink-0">
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                    >
-                        <X size={20} />
-                    </button>
+                    <div className="absolute top-4 right-4 flex items-center gap-2">
+                        <button
+                            onClick={() => setShowSources(!showSources)}
+                            className={cn(
+                                "p-1 rounded-full transition-colors",
+                                showSources ? "text-blue-600 bg-blue-50" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                            )}
+                            title="显示/隐藏数据来源"
+                        >
+                            <Info size={20} />
+                        </button>
+                        <button
+                            onClick={onClose}
+                            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
 
-                    <div className="pr-8">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-2">{dictionaryResult.word}</h2>
+                    <div className="pr-20">
+                        <div className="flex items-center gap-2 mb-2">
+                            <h2 className="text-3xl font-bold text-gray-900">{dictionaryResult.word}</h2>
+                            {showSources && dictionaryResult.source.local && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded border border-gray-200">{dictionaryResult.source.local}</span>
+                            )}
+                        </div>
+                        {/* Lemma / Prototype */}
+                        {dictionaryResult.lemma && dictionaryResult.lemma.toLowerCase() !== dictionaryResult.word.toLowerCase() && (
+                            <p className="text-sm text-gray-500 mb-2">
+                                原型: <span className="font-semibold text-blue-600">{dictionaryResult.lemma}</span>
+                            </p>
+                        )}
 
                         <div className="flex items-center gap-3 mb-3">
                             {primaryPhonetic && (
-                                <span className="text-gray-600 text-lg">/{primaryPhonetic}/</span>
+                                <div className="flex items-center gap-1">
+                                    <span className="text-gray-600 text-lg">/{primaryPhonetic}/</span>
+                                    {showSources && dictionaryResult.source.online && (
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded border border-green-100">{dictionaryResult.source.online}</span>
+                                    )}
+                                </div>
                             )}
                             {audioUrl && (
                                 <AudioPlayer src={audioUrl} />
@@ -248,34 +313,46 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                     {/* Context Section */}
                     {(initialData?.context || savedWord?.context) && (
                         <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
-                            <p className="text-sm text-gray-600 mb-1 font-medium">上下文</p>
-                            <p className="text-gray-900 italic">{initialData?.context || savedWord?.context}</p>
+                            <p className="text-sm text-gray-500 font-bold uppercase tracking-wide mb-1">上下文</p>
+                            <p className="text-gray-900 italic leading-relaxed">{initialData?.context || savedWord?.context}</p>
                         </div>
                     )}
 
                     {/* Basic Translation */}
                     {dictionaryResult.translations && dictionaryResult.translations.length > 0 && (
                         <div>
-                            <p className="text-sm text-gray-600 mb-2 font-medium">中文释义</p>
-                            <p className="text-gray-900 text-lg">{dictionaryResult.translations[0]}</p>
+                            <div className="flex items-center gap-2 mb-2">
+                                <p className="text-sm text-gray-500 font-bold uppercase tracking-wide">中文释义</p>
+                                {showSources && dictionaryResult.source.local && (
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded border border-gray-200">{dictionaryResult.source.local}</span>
+                                )}
+                            </div>
+                            <p className="text-gray-900 text-lg leading-relaxed">{dictionaryResult.translations[0]}</p>
                         </div>
                     )}
 
                     {/* Meanings from Online Dictionary */}
                     {dictionaryResult.meanings.length > 0 && (
                         <div>
-                            <p className="text-sm text-gray-600 mb-2 font-medium">英文释义</p>
-                            {dictionaryResult.meanings.map((meaning, idx) => (
-                                <div key={idx} className="mb-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <p className="text-sm text-gray-500 font-bold uppercase tracking-wide">英文释义</p>
+                                {showSources && dictionaryResult.source.online && (
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded border border-green-100">{dictionaryResult.source.online}</span>
+                                )}
+                            </div>
+                            {/* Limit to 2 meanings */}
+                            {dictionaryResult.meanings.slice(0, 2).map((meaning, idx) => (
+                                <div key={idx} className="mb-4 last:mb-0">
                                     <span className="text-sm font-semibold text-blue-600 italic">
                                         {meaning.partOfSpeech}
                                     </span>
                                     <ul className="mt-2 space-y-2">
-                                        {meaning.definitions.map((def, defIdx) => (
+                                        {/* Limit definitions to 3 per meaning */}
+                                        {meaning.definitions.slice(0, 3).map((def, defIdx) => (
                                             <li key={defIdx} className="text-gray-900">
                                                 <span className="text-gray-700">{def.definition}</span>
                                                 {def.example && (
-                                                    <p className="text-gray-500 italic text-sm mt-1 ml-4">
+                                                    <p className="text-gray-500 italic text-sm mt-1 ml-4 border-l-2 border-gray-200 pl-2">
                                                         "{def.example}"
                                                     </p>
                                                 )}
@@ -325,7 +402,12 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                                 onClick={() => toggleSection('ai')}
                                 className="w-full p-3 flex items-center justify-between bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 transition-colors"
                             >
-                                <span className="text-sm font-medium text-gray-700">AI 深度解析</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-gray-700">AI 深度解析</span>
+                                    {showSources && (
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded border border-purple-100">AI</span>
+                                    )}
+                                </div>
                                 {expandedSections.ai ? (
                                     <ChevronUp size={18} className="text-gray-500" />
                                 ) : (
@@ -341,15 +423,15 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                     )}
 
                     {/* Source Indicators */}
-                    <div className="flex gap-2 text-xs text-gray-400 pt-2">
+                    <div className="flex gap-2 text-xs text-gray-400 pt-2 border-t border-gray-50 mt-2">
                         {dictionaryResult.source.local && (
-                            <span>本地词典</span>
+                            <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">{dictionaryResult.source.local}</span>
                         )}
                         {dictionaryResult.source.online && (
-                            <span>在线词典</span>
+                            <span className="px-1.5 py-0.5 bg-green-50 text-green-600 rounded">{dictionaryResult.source.online}</span>
                         )}
                         {dictionaryResult.source.ai && (
-                            <span>AI 增强</span>
+                            <span className="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded">{dictionaryResult.source.ai}</span>
                         )}
                     </div>
                 </div>

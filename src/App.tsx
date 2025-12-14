@@ -6,6 +6,7 @@ import './App.css';
 import MainLayout from './components/Layout/MainLayout';
 import DictionaryDashboard from './pages/Dictionary/DictionaryDashboard';
 import ExerciseHub from './pages/Exercise/ExerciseHub';
+import ExerciseSession from './pages/Exercise/ExerciseSession';
 import LibraryList from './pages/Library/LibraryList';
 import Profile from './pages/Profile/Profile';
 import ReaderView from './pages/Reader/ReaderView';
@@ -24,6 +25,7 @@ function App() {
                 <Route path="dictionary/list" element={<WordList />} />
                 <Route path="library" element={<LibraryList />} />
                 <Route path="exercise" element={<ExerciseHub />} />
+                <Route path="exercise/session/:mode" element={<ExerciseSession />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="settings" element={<OllamaSettings />} />
                 <Route path="stats" element={<div className="p-8 text-center text-gray-500">Statistics (Coming Soon)</div>} />

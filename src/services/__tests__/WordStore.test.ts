@@ -70,4 +70,55 @@ describe('WordStore', () => {
         expect(stats.statusCounts.mastered).toBe(1);
         expect(stats.newToday).toBe(2); // word 1 and 3 are within 24h
     });
+
+
+    it('should calculate SRS stats correctly', async () => {
+        const now = Date.now();
+        const words: Word[] = [
+            { id: '1', text: 'a', translation: 'a', status: 'new', addedAt: now, nextReviewAt: now - 1000 }, // Due
+            { id: '2', text: 'b', translation: 'b', status: 'learning', addedAt: now, nextReviewAt: now + 10000 }, // Not due
+        ];
+
+        vi.mocked(dbOperations.getAll).mockResolvedValue(words);
+        const stats = await WordStore.getStats();
+
+        expect(stats.dueCount).toBe(1);
+    });
+
+    it('should submit review and update nextReviewAt correctly (pass)', async () => {
+        const now = Date.now();
+        // Mock word
+        const word: Word = { id: '1', text: 'a', translation: 'a', status: 'new', addedAt: now, interval: 0, easeFactor: 2.5 };
+        vi.mocked(dbOperations.getAll).mockResolvedValue([word]);
+
+        // User rates 'Good' (4)
+        await WordStore.submitReview('1', 4);
+
+        const putCall = vi.mocked(dbOperations.put).mock.calls[0];
+        const updatedWord = putCall[1] as Word;
+
+        expect(updatedWord.interval).toBe(1); // First interval is 1
+        expect(updatedWord.reviewCount).toBe(1);
+        expect(updatedWord.nextReviewAt).toBeGreaterThan(now);
+        expect(updatedWord.status).toBe('reviewed');
+    });
+
+    it('should submit review and reset interval on fail', async () => {
+        const now = Date.now();
+        // Mock word
+        const word: Word = {
+            id: '1', text: 'a', translation: 'a', status: 'reviewed',
+            addedAt: now, interval: 10, easeFactor: 2.5, reviewCount: 5
+        };
+        vi.mocked(dbOperations.getAll).mockResolvedValue([word]);
+
+        // User rates 'Again' (1)
+        await WordStore.submitReview('1', 1);
+
+        const putCall = vi.mocked(dbOperations.put).mock.calls[0];
+        const updatedWord = putCall[1] as Word;
+
+        expect(updatedWord.interval).toBe(1); // Reset to 1
+        expect(updatedWord.status).toBe('learning');
+    });
 });
