@@ -4,6 +4,7 @@ import { ArrowLeft, MoreHorizontal } from 'lucide-react';
 import { Word, WordStore } from '../../services/WordStore';
 import FlashcardMode from './FlashcardMode';
 import ChoiceMode from './ChoiceMode';
+import SpellingMode from './modes/SpellingMode';
 import SessionSummary from './SessionSummary';
 
 const ExerciseSession: React.FC = () => {
@@ -102,10 +103,16 @@ const ExerciseSession: React.FC = () => {
     const currentWord = words[currentIndex];
 
     // Determine effective mode for current card
-    // mixed mode could alternate randomly
-    const effectiveMode = mode === 'mixed'
-        ? (Math.random() > 0.5 ? 'flashcard' : 'choice')
-        : mode;
+    // mixed mode alternates between flashcard, choice, and spelling
+    const getEffectiveMode = (index: number): string => {
+        if (mode === 'mixed') {
+            const modes = ['flashcard', 'choice', 'spelling'];
+            return modes[index % modes.length];
+        }
+        return mode || 'flashcard';
+    };
+
+    const effectiveMode = getEffectiveMode(currentIndex);
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -141,6 +148,12 @@ const ExerciseSession: React.FC = () => {
                     {effectiveMode === 'choice' ? (
                         <ChoiceMode
                             key={currentWord.id} // Key to force reset on word change
+                            word={currentWord}
+                            onResult={handleResult}
+                        />
+                    ) : effectiveMode === 'spelling' ? (
+                        <SpellingMode
+                            key={currentWord.id}
                             word={currentWord}
                             onResult={handleResult}
                         />

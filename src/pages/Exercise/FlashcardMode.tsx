@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Word } from '../../services/WordStore';
-import { Volume2, RotateCcw } from 'lucide-react';
+import { Volume2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface FlashcardModeProps {
     word: Word;
@@ -11,12 +10,10 @@ interface FlashcardModeProps {
 
 const FlashcardMode: React.FC<FlashcardModeProps> = ({ word, onResult }) => {
     const [isFlipped, setIsFlipped] = useState(false);
-    const [audioPlaying, setAudioPlaying] = useState(false);
 
     // Reset state when word changes
     React.useEffect(() => {
         setIsFlipped(false);
-        setAudioPlaying(false);
     }, [word.id]);
 
     const playAudio = (e: React.MouseEvent) => {

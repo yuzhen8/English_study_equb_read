@@ -55,7 +55,10 @@ describe('DictionaryDashboard', () => {
             total: 10,
             statusCounts: { new: 2, learning: 3, reviewed: 4, mastered: 1 },
             newToday: 5,
-            chartData: []
+            dueCount: 3,
+            reviewedToday: 2,
+            chartData: [],
+            futureReviews: []
         };
         vi.mocked(WordStore.getStats).mockResolvedValue(mockStats);
 

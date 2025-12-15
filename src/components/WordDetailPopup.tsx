@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, ChevronDown, ChevronUp, Search, Info, BookOpen, Sparkles, Globe, Volume2, Book, BrainCircuit } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Search, Info, BookOpen, Sparkles, Globe, Book, BrainCircuit } from 'lucide-react';
 import { WordStore, type Word } from '../services/WordStore';
 import { hybridDictionary, type DictionaryResult } from '../services/DictionaryService';
 import AudioPlayer from './AudioPlayer';
@@ -384,7 +384,7 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                             title="中文释义"
                             icon={<Globe size={14} />}
                             colorClass="bg-green-500"
-                            source={dictionaryResult.source.local}
+                            source={dictionaryResult.source.local || undefined}
                             showSource={showSources}
                         >
                             <p className="font-medium text-gray-900 leading-relaxed">

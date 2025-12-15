@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Word, WordStore } from '../../services/WordStore';
 import { cn } from '../../lib/utils';
-import { Check, X, HelpCircle } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 
 interface ChoiceModeProps {
     word: Word;
