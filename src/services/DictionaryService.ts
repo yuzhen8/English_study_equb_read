@@ -21,6 +21,7 @@ export interface DictionaryResult {
     };
     translations?: string[]; // Basic translations (from local/AI)
     lemma?: string; // Word prototype/base form (from ECDICT exchange field)
+    frequency?: number; // Word frequency rank from ECDICT (frq field)
 }
 
 const FREE_DICT_API_BASE = 'https://api.dictionaryapi.dev/api/v2/entries/en/';
@@ -105,6 +106,11 @@ export class HybridDictionaryService {
                             break;
                         }
                     }
+                }
+
+                // 5. Extract frequency from frq field
+                if (localData.frq) {
+                    result.frequency = parseInt(localData.frq, 10);
                 }
 
                 return result;

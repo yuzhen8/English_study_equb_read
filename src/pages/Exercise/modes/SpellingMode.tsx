@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Word } from '../../../services/WordStore';
 import { cn } from '../../../lib/utils';
-import { Volume2, RotateCcw, ArrowLeft } from 'lucide-react';
+import { Volume2, RotateCcw, ArrowLeft, BookOpen, Settings2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import WordDetailPopup from '../../../components/WordDetailPopup';
+import ExerciseSettings from '../ExerciseSettings';
 
 interface SpellingModeProps {
     word: Word & { lemma?: string }; // lemma is the base form of the word
@@ -28,6 +30,8 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
     const [availableLetters, setAvailableLetters] = useState<string[]>([]);
     const [isComplete, setIsComplete] = useState(false);
     const [shakeIndex, setShakeIndex] = useState<number | null>(null);
+    const [showWordDetail, setShowWordDetail] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
 
     // Find next empty slot index
     const nextEmptySlot = useMemo(() => {
@@ -147,111 +151,143 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
     }, [isComplete, onResult]);
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50 text-slate-900">
-            {/* Header - Minimal, just back button and progress */}
-            <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-                <button
-                    onClick={() => navigate('/exercise')}
-                    className="p-2 hover:bg-slate-100 rounded-full text-slate-600"
-                >
-                    <ArrowLeft size={20} />
-                </button>
-                <span className="text-sm font-medium text-slate-600">
-                    {currentIndex} / {totalCount}
-                </span>
-            </header>
+        <>
+            <div className="flex flex-col h-screen bg-gray-50 text-slate-900">
+                {/* Header - Minimal, just back button and progress */}
+                <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+                    <button
+                        onClick={() => navigate('/exercise')}
+                        className="p-2 hover:bg-slate-100 rounded-full text-slate-600"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <span className="text-sm font-medium text-slate-600">
+                        {currentIndex} / {totalCount}
+                    </span>
+                    <button
+                        onClick={() => setShowSettings(true)}
+                        className="p-2 hover:bg-slate-100 rounded-full text-slate-600"
+                    >
+                        <Settings2 size={20} />
+                    </button>
+                </header>
 
-            {/* Main Content Area - Scrollable */}
-            <div className="flex-1 overflow-y-auto">
-                <div className="max-w-2xl mx-auto px-4 py-8">
-                    {/* Content Card */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-6">
-                        {/* Audio Button */}
-                        <div className="flex justify-center mb-6">
-                            <button
-                                onClick={playAudio}
-                                className="w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full text-white flex items-center justify-center shadow-md transition-all hover:scale-105 active:scale-95"
-                            >
-                                <Volume2 size={24} />
-                            </button>
-                        </div>
-
-                        {/* Translation */}
-                        <div className="text-center mb-6">
-                            <p className="text-2xl font-medium text-slate-900">{word.translation}</p>
-                        </div>
-
-                        {/* Reset Button */}
-                        <div className="flex justify-center">
-                            <button
-                                onClick={handleReset}
-                                className="px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-500 text-sm font-medium transition-colors flex items-center gap-2"
-                            >
-                                <RotateCcw size={14} />
-                                重置
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="mb-4">
-                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-blue-600 transition-all duration-300 rounded-full"
-                                style={{ width: `${progress * 100}%` }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Slots (填空区) */}
-                    <div className="flex flex-wrap justify-center gap-2 mb-6">
-                        {slots.map((letter, index) => (
-                            <button
-                                key={index}
-                                onClick={() => handleSlotClick(index)}
-                                className={cn(
-                                    "w-12 h-14 rounded-lg border-b-4 flex items-center justify-center transition-all font-bold text-2xl",
-                                    letter === null
-                                        ? "bg-gray-100 border-gray-300 text-gray-400"
-                                        : "bg-blue-50 text-blue-700 border-blue-500",
-                                    nextEmptySlot === index && letter === null && "ring-2 ring-blue-600 ring-offset-2",
-                                    shakeIndex === index && "animate-shake bg-red-50 border-red-500"
-                                )}
-                            >
-                                {letter ? letter.toUpperCase() : ''}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Keyboard (字母池) - Inline, below slots */}
-                    {!isComplete && (
-                        <div className="flex flex-wrap justify-center gap-2 mb-8">
-                            {availableLetters.map((letter, index) => (
+                {/* Main Content Area - Scrollable */}
+                <div className="flex-1 overflow-y-auto">
+                    <div className="max-w-2xl mx-auto px-4 py-8">
+                        {/* Content Card */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-6">
+                            {/* Audio Button */}
+                            <div className="flex justify-center mb-6">
                                 <button
-                                    key={`${letter}-${index}`}
-                                    onClick={() => handleLetterClick(letter, index)}
-                                    className="w-11 h-11 bg-gray-100 hover:bg-blue-50 rounded-lg shadow-sm font-bold text-xl text-slate-900 transition-all active:scale-95 hover:shadow-md"
+                                    onClick={playAudio}
+                                    className="w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full text-white flex items-center justify-center shadow-md transition-all hover:scale-105 active:scale-95"
                                 >
-                                    {letter.toUpperCase()}
+                                    <Volume2 size={24} />
+                                </button>
+                            </div>
+
+                            {/* Translation - 左对齐 */}
+                            <div className="mb-4">
+                                <p className="text-2xl font-medium text-slate-900 whitespace-pre-line text-left">{word.translation.replace(/\\n/g, '\n')}</p>
+                            </div>
+
+                            {/* 单词详情按钮 */}
+                            <div className="text-center mb-4">
+                                <button
+                                    onClick={() => setShowWordDetail(true)}
+                                    className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-700 transition-colors px-3 py-1.5 rounded-full hover:bg-purple-50 text-sm"
+                                >
+                                    <BookOpen size={16} />
+                                    <span>查看详情</span>
+                                </button>
+                            </div>
+
+                            {/* Reset Button */}
+                            <div className="flex justify-center">
+                                <button
+                                    onClick={handleReset}
+                                    className="px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-500 text-sm font-medium transition-colors flex items-center gap-2"
+                                >
+                                    <RotateCcw size={14} />
+                                    重置
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="mb-4">
+                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-blue-600 transition-all duration-300 rounded-full"
+                                    style={{ width: `${progress * 100}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Slots (填空区) */}
+                        <div className="flex flex-wrap justify-center gap-2 mb-6">
+                            {slots.map((letter, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => handleSlotClick(index)}
+                                    className={cn(
+                                        "w-12 h-14 rounded-lg border-b-4 flex items-center justify-center transition-all font-bold text-2xl",
+                                        letter === null
+                                            ? "bg-gray-100 border-gray-300 text-gray-400"
+                                            : "bg-blue-50 text-blue-700 border-blue-500",
+                                        nextEmptySlot === index && letter === null && "ring-2 ring-blue-600 ring-offset-2",
+                                        shakeIndex === index && "animate-shake bg-red-50 border-red-500"
+                                    )}
+                                >
+                                    {letter ? letter : ''}
                                 </button>
                             ))}
                         </div>
-                    )}
+
+                        {/* Keyboard (字母池) - Inline, below slots */}
+                        {!isComplete && (
+                            <div className="flex flex-wrap justify-center gap-2 mb-8">
+                                {availableLetters.map((letter, index) => (
+                                    <button
+                                        key={`${letter}-${index}`}
+                                        onClick={() => handleLetterClick(letter, index)}
+                                        className="w-11 h-11 bg-gray-100 hover:bg-blue-50 rounded-lg shadow-sm font-bold text-xl text-slate-900 transition-all active:scale-95 hover:shadow-md"
+                                    >
+                                        {letter}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                {/* Footer - Success Button */}
+                {isComplete && (
+                    <div className="fixed bottom-0 left-0 right-0 transform translate-y-0 transition-transform duration-300">
+                        <button
+                            onClick={() => onResult(5)}
+                            className="w-full bg-green-500 text-white py-4 text-lg font-bold hover:bg-green-600 transition-colors"
+                        >
+                            完成！继续下一题
+                        </button>
+                    </div>
+                )}
             </div>
 
-            {/* Footer - Success Button */}
-            {isComplete && (
-                <div className="fixed bottom-0 left-0 right-0 transform translate-y-0 transition-transform duration-300">
-                    <button
-                        onClick={() => onResult(5)}
-                        className="w-full bg-green-500 text-white py-4 text-lg font-bold hover:bg-green-600 transition-colors"
-                    >
-                        完成！继续下一题
-                    </button>
-                </div>
+            {/* Word Detail Popup */}
+            {showWordDetail && (
+                <WordDetailPopup
+                    wordId={word.id}
+                    onClose={() => setShowWordDetail(false)}
+                />
             )}
-        </div>
+
+            {/* Settings Modal */}
+            {showSettings && (
+                <ExerciseSettings onClose={() => setShowSettings(false)} />
+            )}
+        </>
     );
 };
 

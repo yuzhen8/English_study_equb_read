@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Library, Dumbbell, BarChart2, User } from 'lucide-react';
+import { BookOpen, Library, Dumbbell, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -27,7 +27,6 @@ const BottomNav: React.FC = () => {
         { icon: BookOpen, label: '书库', path: '/library' },
         { icon: Library, label: '词典', path: '/' }, // Dictionary Dashboard as Home
         { icon: Dumbbell, label: '锻炼', path: '/exercise' },
-        { icon: BarChart2, label: '统计', path: '/stats' },
         { icon: User, label: '我的', path: '/profile' },
     ];
 

@@ -404,10 +404,21 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                                 /{primaryPhonetic}/
                             </span>
                         )}
-                        {audioUrl && (
-                            <div className="scale-90 origin-left">
-                                <AudioPlayer src={audioUrl} />
-                            </div>
+                        {/* 使用频率显示 - 放在音频左边 */}
+                        {dictionaryResult.frequency && (
+                            <span className="px-2 py-1 text-xs font-medium bg-amber-50 text-amber-700 rounded-md border border-amber-100">
+                                频率: {dictionaryResult.frequency}
+                            </span>
+                        )}
+                        {/* 音频播放 - 支持TTS回退 */}
+                        <div className="scale-90 origin-left">
+                            <AudioPlayer src={audioUrl || undefined} word={dictionaryResult?.word} />
+                        </div>
+                        {/* 如果有reviewCount显示复习次数 */}
+                        {savedWord?.reviewCount && savedWord.reviewCount > 0 && (
+                            <span className="px-2 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-md border border-blue-100">
+                                已复习 {savedWord.reviewCount} 次
+                            </span>
                         )}
                     </div>
                 </div>
@@ -484,6 +495,21 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                             <p className="italic text-gray-700 bg-blue-50/50 p-3 rounded-lg border border-blue-50/50 text-sm leading-relaxed">
                                 "{initialData?.context || savedWord?.context}"
                             </p>
+                            {/* 已加入词典时显示加入时间 */}
+                            {savedWord && (
+                                <div className="mt-2 text-xs text-gray-400 flex items-center gap-1">
+                                    <span>加入词典时间:</span>
+                                    <span className="font-medium">
+                                        {new Date(savedWord.addedAt).toLocaleDateString('zh-CN', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </span>
+                                </div>
+                            )}
                         </DetailSection>
                     )}
 

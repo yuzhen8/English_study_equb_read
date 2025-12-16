@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MoreVertical, CheckSquare, SortAsc } from 'lucide-react';
+import { ArrowLeft, CheckSquare, ChevronDown, MoreVertical, ArrowUp, ArrowDown, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import WordDetailPopup from '../../components/WordDetailPopup';
 import BatchActionSheet from '../../components/Dictionary/BatchActionSheet';
@@ -10,17 +10,20 @@ import { WordStore, Word } from '../../services/WordStore';
 import { GroupStore } from '../../services/GroupStore';
 
 type StatusFilter = '' | 'new' | 'learning' | 'reviewed' | 'mastered';
-type SortBy = 'date' | 'alpha';
+type SortBy = 'alpha' | 'progress' | 'lastReview' | 'nextReview' | 'repeatCount' | 'date' | 'frequency';
 
 const WordList: React.FC = () => {
     const navigate = useNavigate();
     const [words, setWords] = useState<Word[]>([]);
     const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
     const [selectedWordIds, setSelectedWordIds] = useState<Set<string>>(new Set());
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
-    const [sortBy, setSortBy] = useState<SortBy>('date');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('new');
+    const [sortBy, setSortBy] = useState<SortBy>('progress');
+    const [sortAscending, setSortAscending] = useState(true);
+    const [showSortMenu, setShowSortMenu] = useState(false);
     const [selectedWordId, setSelectedWordId] = useState<string>('');
-    const [showBatchActions, setShowBatchActions] = useState(false); // 控制批量操作面板显示
+    const [showBatchActions, setShowBatchActions] = useState(false);
+    const sortMenuRef = useRef<HTMLDivElement>(null);
 
     // Dialog states
     const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
@@ -36,15 +39,64 @@ const WordList: React.FC = () => {
         setWords(list);
     };
 
+    // 关闭排序菜单的点击外部处理
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+                setShowSortMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     // 过滤和排序
     const getFilteredAndSortedWords = () => {
-        let filtered = words.filter(w => statusFilter ? w.status === statusFilter : true);
+        let filtered = words.filter(w => {
+            if (!statusFilter) return true;
+            if (statusFilter === 'new') return w.status === 'new';
+            if (statusFilter === 'learning') {
+                // "学习"显示所有已开始学习的单词（learning + reviewed）
+                return w.status === 'learning' || w.status === 'reviewed';
+            }
+            if (statusFilter === 'reviewed') {
+                // "已学习"显示已掌握的单词
+                return w.status === 'mastered';
+            }
+            return w.status === statusFilter;
+        });
 
-        if (sortBy === 'date') {
-            filtered.sort((a, b) => b.addedAt - a.addedAt);
-        } else {
-            filtered.sort((a, b) => a.text.localeCompare(b.text));
-        }
+        // 排序逻辑
+        filtered.sort((a, b) => {
+            let result = 0;
+            switch (sortBy) {
+                case 'alpha':
+                    result = a.text.localeCompare(b.text);
+                    break;
+                case 'progress':
+                    // 进度：形如 new < learning < reviewed < mastered
+                    const progressOrder: Record<string, number> = { 'new': 0, 'learning': 1, 'reviewed': 2, 'mastered': 3 };
+                    result = (progressOrder[a.status] || 0) - (progressOrder[b.status] || 0);
+                    break;
+                case 'lastReview':
+                    result = (b.lastReviewedAt || 0) - (a.lastReviewedAt || 0);
+                    break;
+                case 'nextReview':
+                    result = (a.nextReviewAt || 0) - (b.nextReviewAt || 0);
+                    break;
+                case 'repeatCount':
+                    result = (b.reviewCount || 0) - (a.reviewCount || 0);
+                    break;
+                case 'date':
+                    result = b.addedAt - a.addedAt;
+                    break;
+                case 'frequency':
+                    // 频率优先显示常用词（假设 reviewCount 代表频率）
+                    result = (b.reviewCount || 0) - (a.reviewCount || 0);
+                    break;
+            }
+            return sortAscending ? result : -result;
+        });
 
         return filtered;
     };
@@ -159,10 +211,19 @@ const WordList: React.FC = () => {
     };
 
     const statusTabs = [
-        { value: '' as StatusFilter, label: '全部' },
         { value: 'new' as StatusFilter, label: '新的' },
         { value: 'learning' as StatusFilter, label: '学习' },
         { value: 'reviewed' as StatusFilter, label: '已学习' }
+    ];
+
+    const sortOptions = [
+        { value: 'alpha' as SortBy, label: '字母顺序', icon: 'AB' },
+        { value: 'progress' as SortBy, label: '进度', icon: null },
+        { value: 'lastReview' as SortBy, label: '最后训练', icon: null },
+        { value: 'nextReview' as SortBy, label: '下一次训练', icon: null },
+        { value: 'repeatCount' as SortBy, label: '重复次数', icon: null },
+        { value: 'date' as SortBy, label: '添加时间', icon: null },
+        { value: 'frequency' as SortBy, label: '频率', icon: null }
     ];
 
     return (
@@ -201,19 +262,73 @@ const WordList: React.FC = () => {
                     </div>
 
                     {/* Status Tabs */}
-                    <div className="flex gap-4 overflow-x-auto pb-2">
+                    <div className="flex gap-2 overflow-x-auto pb-2">
                         {statusTabs.map(tab => (
                             <button
                                 key={tab.value}
                                 onClick={() => setStatusFilter(tab.value)}
-                                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${statusFilter === tab.value
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
+                                className={cn(
+                                    "px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors border",
+                                    statusFilter === tab.value
+                                        ? 'bg-gray-900 text-white border-gray-900'
+                                        : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
+                                )}
                             >
                                 {tab.label}
                             </button>
                         ))}
+                    </div>
+
+                    {/* Sort Controls */}
+                    <div className="flex items-center gap-2 mt-3 relative" ref={sortMenuRef}>
+                        <span className="text-sm text-gray-500">按照排序:</span>
+                        <button
+                            onClick={() => setShowSortMenu(!showSortMenu)}
+                            className="flex items-center gap-1 text-sm text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                        >
+                            <RefreshCw size={14} className="text-gray-400" />
+                            <span>{sortOptions.find(o => o.value === sortBy)?.label}</span>
+                            <ChevronDown size={14} />
+                        </button>
+                        <button
+                            onClick={() => setSortAscending(!sortAscending)}
+                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            title={sortAscending ? '升序' : '降序'}
+                        >
+                            {sortAscending ? <ArrowDown size={16} className="text-gray-500" /> : <ArrowUp size={16} className="text-gray-500" />}
+                        </button>
+
+                        {/* Sort Dropdown Menu */}
+                        {showSortMenu && (
+                            <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-30 min-w-[180px]">
+                                <div className="px-3 py-2 text-sm font-medium text-gray-400">按照排序</div>
+                                {sortOptions.map(option => (
+                                    <button
+                                        key={option.value}
+                                        onClick={() => {
+                                            setSortBy(option.value);
+                                            setShowSortMenu(false);
+                                        }}
+                                        className={cn(
+                                            "w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-gray-50 transition-colors",
+                                            sortBy === option.value ? 'text-blue-600' : 'text-gray-700'
+                                        )}
+                                    >
+                                        {option.icon ? (
+                                            <span className="w-5 text-center font-medium">{option.icon}</span>
+                                        ) : (
+                                            <RefreshCw size={16} className="text-gray-400" />
+                                        )}
+                                        <span>{option.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Words Count */}
+                    <div className="text-xs text-gray-400 mt-2">
+                        {filteredWords.length} 个单词
                     </div>
                 </div>
 
@@ -273,8 +388,8 @@ const WordList: React.FC = () => {
                                                 )}
                                                 <div className="flex-1 min-w-0">
                                                     <div className="font-medium text-gray-900">{word.text}</div>
-                                                    <div className="text-sm text-gray-500 mt-0.5 truncate">
-                                                        {word.translation}
+                                                    <div className="text-sm text-gray-500 mt-0.5 line-clamp-2 whitespace-pre-line">
+                                                        {word.translation.replace(/\\n/g, '\n')}
                                                     </div>
                                                 </div>
                                                 {!isMultiSelectMode && (
@@ -318,8 +433,8 @@ const WordList: React.FC = () => {
                                         )}
                                         <div className="flex-1 min-w-0">
                                             <div className="font-medium text-gray-900">{word.text}</div>
-                                            <div className="text-sm text-gray-500 mt-0.5 truncate">
-                                                {word.translation}
+                                            <div className="text-sm text-gray-500 mt-0.5 line-clamp-2 whitespace-pre-line">
+                                                {word.translation.replace(/\\n/g, '\n')}
                                             </div>
                                         </div>
                                         {!isMultiSelectMode && (

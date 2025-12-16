@@ -181,8 +181,8 @@ const DictionaryDashboard: React.FC = () => {
                                     </div>
                                 </div>
                                 <div>
-                                    <span className="text-4xl font-bold">{stats.newToday}</span>
-                                    <p className="text-blue-100 text-xs mt-1">+2 比昨天</p>
+                                    <span className="text-4xl font-bold">{stats.statusCounts.new}</span>
+                                    <p className="text-blue-100 text-xs mt-1">未开始学习</p>
                                 </div>
                             </div>
 

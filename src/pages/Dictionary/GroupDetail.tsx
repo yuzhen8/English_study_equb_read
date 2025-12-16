@@ -295,7 +295,7 @@ const GroupDetail: React.FC = () => {
                                     )}
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-bold text-gray-900">{word.text}</h3>
-                                        <p className="text-sm text-gray-500 truncate mt-0.5">{word.translation}</p>
+                                        <p className="text-sm text-gray-500 line-clamp-2 whitespace-pre-line mt-0.5">{word.translation.replace(/\\n/g, '\n')}</p>
                                     </div>
                                     <span className={cn(
                                         "px-2 py-0.5 rounded-full text-xs font-medium",

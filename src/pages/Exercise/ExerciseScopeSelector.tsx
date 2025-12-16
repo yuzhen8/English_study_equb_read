@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Zap, Layers, Type, MousePointerClick, Check } from 'lucide-react';
+import { ArrowLeft, Zap, Layers, Type, MousePointerClick, Check, Headphones, FileText } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { WordStore, Word } from '../../services/WordStore';
 import { GroupStore, WordGroup } from '../../services/GroupStore';
@@ -11,6 +11,9 @@ const modeConfig: Record<string, { icon: React.ElementType; color: string; title
     flashcard: { icon: Layers, color: 'text-orange-500', title: '单词闪卡' },
     choice: { icon: MousePointerClick, color: 'text-purple-500', title: '多项选择' },
     spelling: { icon: Type, color: 'text-teal-500', title: '拼写构建' },
+    'listening-choice': { icon: Headphones, color: 'text-pink-500', title: '听力选择' },
+    'listening-spelling': { icon: Headphones, color: 'text-amber-500', title: '听力拼写' },
+    'fill-blank': { icon: FileText, color: 'text-cyan-500', title: '选词填空' },
 };
 
 // 范围选项类型
@@ -149,7 +152,7 @@ const ExerciseScopeSelector: React.FC = () => {
     const groupOptions = scopes.filter(s => s.type === 'group');
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-40">
+        <div className="min-h-screen bg-gray-50 pb-40 overflow-x-hidden">
             {/* Header */}
             <div className="bg-white px-4 pt-12 pb-4 sticky top-0 z-10 shadow-sm">
                 <div className="flex items-center gap-3">

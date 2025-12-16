@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, Settings2 } from 'lucide-react';
 import { Word, WordStore } from '../../services/WordStore';
 import { GroupStore } from '../../services/GroupStore';
 import FlashcardMode from './FlashcardMode';
 import ChoiceMode from './ChoiceMode';
 import SpellingMode from './modes/SpellingMode';
+import ListeningChoiceMode from './modes/ListeningChoiceMode';
+import ListeningSpellingMode from './modes/ListeningSpellingMode';
+import FillBlankMode from './modes/FillBlankMode';
 import SessionSummary from './SessionSummary';
+import ExerciseSettings, { loadSettings } from './ExerciseSettings';
+
+// 练习项类型：一个单词 + 一个模式
+interface ExerciseItem {
+    word: Word;
+    mode: string;
+}
 
 const ExerciseSession: React.FC = () => {
     const { mode } = useParams<{ mode: string }>(); // 'mixed', 'flashcard', 'choice'
@@ -14,9 +24,14 @@ const ExerciseSession: React.FC = () => {
     const navigate = useNavigate();
 
     const [loading, setLoading] = useState(true);
-    const [words, setWords] = useState<Word[]>([]);
+    const [exerciseItems, setExerciseItems] = useState<ExerciseItem[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [sessionComplete, setSessionComplete] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    // 暂存结果，只有完成所有单词后才提交
+    const [pendingResults, setPendingResults] = useState<{ wordId: string; quality: number }[]>([]);
+    // 存储原始单词列表用于计算总数
+    const [uniqueWords, setUniqueWords] = useState<Word[]>([]);
 
     useEffect(() => {
         const loadSession = async () => {
@@ -24,6 +39,7 @@ const ExerciseSession: React.FC = () => {
             try {
                 const scope = searchParams.get('scope') || 'random';
                 const groupId = searchParams.get('groupId');
+                const settings = loadSettings();
 
                 let selectedWords: Word[] = [];
                 const allWords = await WordStore.getWords();
@@ -33,42 +49,67 @@ const ExerciseSession: React.FC = () => {
                 // 根据范围选择单词
                 switch (scope) {
                     case 'today':
-                        // 今天添加的单词
                         selectedWords = allWords.filter(w => now - w.addedAt < oneDay);
                         break;
-
                     case 'learning':
-                        // 学习中的单词
                         selectedWords = allWords.filter(w => w.status === 'learning' || w.status === 'reviewed');
-                        // 随机排序
                         selectedWords = selectedWords.sort(() => 0.5 - Math.random());
                         break;
-
+                    case 'new':
+                        selectedWords = allWords.filter(w => w.status === 'new');
+                        selectedWords = selectedWords.sort(() => 0.5 - Math.random());
+                        break;
                     case 'random':
-                        // 随机词汇
                         selectedWords = allWords.sort(() => 0.5 - Math.random());
                         break;
-
                     default:
-                        // 可能是群组选择 (group-xxx)
                         if (scope.startsWith('group-') && groupId) {
                             const group = await GroupStore.getGroup(groupId);
                             if (group) {
                                 selectedWords = allWords.filter(w => group.wordIds.includes(w.id));
-                                // 随机排序群组内单词
                                 selectedWords = selectedWords.sort(() => 0.5 - Math.random());
                             }
                         } else {
-                            // 默认回退到随机
                             selectedWords = allWords.sort(() => 0.5 - Math.random());
                         }
                         break;
                 }
 
-                // 限制会话大小
-                selectedWords = selectedWords.slice(0, 20);
+                // 从URL参数获取limit，默认20
+                const limitParam = searchParams.get('limit');
+                const limit = limitParam ? parseInt(limitParam, 10) : 20;
+                selectedWords = selectedWords.slice(0, limit);
 
-                setWords(selectedWords);
+                // 保存原始单词列表
+                setUniqueWords(selectedWords);
+
+                // 根据模式生成练习项
+                if (mode === 'mixed') {
+                    // 获取启用的模式
+                    const enabledModes: string[] = [];
+                    if (settings.includeFlashcard) enabledModes.push('flashcard');
+                    if (settings.includeChoice) enabledModes.push('choice');
+                    if (settings.includeSpelling) enabledModes.push('spelling');
+                    if (settings.includeListeningChoice) enabledModes.push('listening-choice');
+                    if (settings.includeListeningSpelling) enabledModes.push('listening-spelling');
+                    if (settings.includeFillBlank) enabledModes.push('fill-blank');
+
+                    // 如果没有启用任何模式，默认启用flashcard
+                    if (enabledModes.length === 0) enabledModes.push('flashcard');
+
+                    // 为每个单词生成所有启用模式的练习项
+                    const items: ExerciseItem[] = [];
+                    for (const word of selectedWords) {
+                        for (const m of enabledModes) {
+                            items.push({ word, mode: m });
+                        }
+                    }
+                    setExerciseItems(items);
+                } else {
+                    // 单一模式：每个单词只有一个练习项
+                    const items = selectedWords.map(word => ({ word, mode: mode || 'flashcard' }));
+                    setExerciseItems(items);
+                }
             } catch (error) {
                 console.error("Failed to load session", error);
             } finally {
@@ -79,15 +120,21 @@ const ExerciseSession: React.FC = () => {
     }, [mode, searchParams]);
 
     const handleResult = async (quality: number) => {
-        const currentWord = words[currentIndex];
-        if (currentWord) {
-            await WordStore.submitReview(currentWord.id, quality);
+        const currentItem = exerciseItems[currentIndex];
+        if (currentItem) {
+            // 暂存结果，不立即提交
+            setPendingResults(prev => [...prev, { wordId: currentItem.word.id, quality }]);
         }
 
         // Advance
-        if (currentIndex < words.length - 1) {
+        if (currentIndex < exerciseItems.length - 1) {
             setCurrentIndex(prev => prev + 1);
         } else {
+            // 所有练习项完成，批量提交所有结果
+            const allResults = [...pendingResults, { wordId: currentItem.word.id, quality }];
+            for (const result of allResults) {
+                await WordStore.submitReview(result.wordId, result.quality);
+            }
             setSessionComplete(true);
         }
     };
@@ -100,16 +147,16 @@ const ExerciseSession: React.FC = () => {
         );
     }
 
-    if (!sessionComplete && words.length === 0) {
+    if (!sessionComplete && exerciseItems.length === 0) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-center space-y-4">
-                <h2 className="text-2xl font-bold text-gray-900">All Caught Up!</h2>
-                <p className="text-gray-500">You have no words due for review right now.</p>
+                <h2 className="text-2xl font-bold text-gray-900">没有单词需要学习</h2>
+                <p className="text-gray-500">当前没有待学习的单词。</p>
                 <button
                     onClick={() => navigate(-1)}
                     className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-colors"
                 >
-                    Back to Exercises
+                    返回
                 </button>
             </div>
         );
@@ -122,30 +169,34 @@ const ExerciseSession: React.FC = () => {
                     <button onClick={() => navigate('/exercise')} className="p-2 hover:bg-gray-100 rounded-full">
                         <ArrowLeft size={24} />
                     </button>
-                    <span className="ml-4 font-bold text-lg">Session Summary</span>
+                    <span className="ml-4 font-bold text-lg">学习完成</span>
                 </header>
                 <div className="flex-1 flex items-center justify-center">
-                    <SessionSummary totalReviewed={words.length} />
+                    <SessionSummary totalReviewed={uniqueWords.length} />
                 </div>
             </div>
         );
     }
 
-    const currentWord = words[currentIndex];
+    const currentItem = exerciseItems[currentIndex];
+    const currentWord = currentItem?.word;
+    const effectiveMode = currentItem?.mode || 'flashcard';
 
-    // Determine effective mode for current card
-    // mixed mode alternates between flashcard, choice, and spelling
-    const getEffectiveMode = (index: number): string => {
-        if (mode === 'mixed') {
-            const modes = ['flashcard', 'choice', 'spelling'];
-            return modes[index % modes.length];
-        }
-        return mode || 'flashcard';
+    // 模式名称映射
+    const getModeDisplayName = (m: string): string => {
+        const names: Record<string, string> = {
+            'flashcard': '单词闪卡',
+            'choice': '多项选择',
+            'spelling': '拼写构建',
+            'listening-choice': '听力选择',
+            'listening-spelling': '听力拼写',
+            'fill-blank': '选词填空',
+            'mixed': '混合练习'
+        };
+        return names[m] || m;
     };
 
-    const effectiveMode = getEffectiveMode(currentIndex);
-
-    // For spelling mode, render full screen without ExerciseSession header
+    // For spelling and listening-spelling modes, render full screen without ExerciseSession header
     if (effectiveMode === 'spelling') {
         return (
             <SpellingMode
@@ -153,7 +204,19 @@ const ExerciseSession: React.FC = () => {
                 word={currentWord}
                 onResult={handleResult}
                 currentIndex={currentIndex + 1}
-                totalCount={words.length}
+                totalCount={exerciseItems.length}
+            />
+        );
+    }
+
+    if (effectiveMode === 'listening-spelling') {
+        return (
+            <ListeningSpellingMode
+                key={currentWord.id}
+                word={currentWord}
+                onResult={handleResult}
+                currentIndex={currentIndex + 1}
+                totalCount={exerciseItems.length}
             />
         );
     }
@@ -167,8 +230,8 @@ const ExerciseSession: React.FC = () => {
                         <ArrowLeft size={24} />
                     </button>
                     <div className="flex flex-col">
-                        <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">{mode} Practice</span>
-                        <span className="text-xs text-gray-400">{currentIndex + 1} / {words.length}</span>
+                        <span className="text-sm font-medium text-gray-500">{getModeDisplayName(effectiveMode)}</span>
+                        <span className="text-xs text-gray-400">{currentIndex + 1} / {exerciseItems.length}</span>
                     </div>
                 </div>
 
@@ -177,21 +240,36 @@ const ExerciseSession: React.FC = () => {
                     <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
                             className="h-full bg-blue-500 transition-all duration-300"
-                            style={{ width: `${((currentIndex) / words.length) * 100}%` }}
+                            style={{ width: `${((currentIndex) / exerciseItems.length) * 100}%` }}
                         />
                     </div>
-                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full">
-                        <MoreHorizontal size={20} />
+                    <button
+                        onClick={() => setShowSettings(true)}
+                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full"
+                    >
+                        <Settings2 size={20} />
                     </button>
                 </div>
             </header>
 
-            {/* Content - Add padding for fixed header */}
-            <div className="flex-1 flex flex-col items-center justify-center p-4 pt-20">
+            {/* Content - Add padding for fixed header, no scrollbar unless needed */}
+            <div className="flex-1 flex flex-col items-center justify-center p-4 pt-20 overflow-hidden">
                 <div className="w-full max-w-md">
                     {effectiveMode === 'choice' ? (
                         <ChoiceMode
-                            key={currentWord.id} // Key to force reset on word change
+                            key={currentWord.id}
+                            word={currentWord}
+                            onResult={handleResult}
+                        />
+                    ) : effectiveMode === 'listening-choice' ? (
+                        <ListeningChoiceMode
+                            key={currentWord.id}
+                            word={currentWord}
+                            onResult={handleResult}
+                        />
+                    ) : effectiveMode === 'fill-blank' ? (
+                        <FillBlankMode
+                            key={currentWord.id}
                             word={currentWord}
                             onResult={handleResult}
                         />
@@ -204,6 +282,11 @@ const ExerciseSession: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* Settings Modal */}
+            {showSettings && (
+                <ExerciseSettings onClose={() => setShowSettings(false)} />
+            )}
         </div>
     );
 };
