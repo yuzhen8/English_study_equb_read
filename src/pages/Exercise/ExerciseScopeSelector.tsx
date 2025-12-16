@@ -1,0 +1,277 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Zap, Layers, Type, MousePointerClick, Check } from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { WordStore, Word } from '../../services/WordStore';
+import { GroupStore, WordGroup } from '../../services/GroupStore';
+
+// 练习模式图标和颜色映射
+const modeConfig: Record<string, { icon: React.ElementType; color: string; title: string }> = {
+    mixed: { icon: Zap, color: 'text-blue-600', title: '混合练习' },
+    flashcard: { icon: Layers, color: 'text-orange-500', title: '单词闪卡' },
+    choice: { icon: MousePointerClick, color: 'text-purple-500', title: '多项选择' },
+    spelling: { icon: Type, color: 'text-teal-500', title: '拼写构建' },
+};
+
+// 范围选项类型
+interface ScopeOption {
+    id: string;
+    type: 'preset' | 'group';
+    label: string;
+    subLabel?: string;
+    count: number;
+    groupId?: string;
+}
+
+const ExerciseScopeSelector: React.FC = () => {
+    const { mode } = useParams<{ mode: string }>();
+    const navigate = useNavigate();
+
+    const [scopes, setScopes] = useState<ScopeOption[]>([]);
+    const [groups, setGroups] = useState<WordGroup[]>([]);
+    const [selectedScope, setSelectedScope] = useState<string>('today');
+    const [loading, setLoading] = useState(true);
+    const [wordCounts, setWordCounts] = useState<{
+        today: number;
+        random: number;
+        learning: number;
+        total: number;
+    }>({ today: 0, random: 0, learning: 0, total: 0 });
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            // 获取所有单词统计
+            const allWords = await WordStore.getWords();
+            const now = Date.now();
+            const oneDay = 24 * 60 * 60 * 1000;
+
+            // 今天添加的单词
+            const todayWords = allWords.filter(w => now - w.addedAt < oneDay);
+
+            // 学习中的单词
+            const learningWords = allWords.filter(w => w.status === 'learning' || w.status === 'reviewed');
+
+            setWordCounts({
+                today: todayWords.length,
+                random: Math.min(allWords.length, 20), // 随机选择最多20个
+                learning: learningWords.length,
+                total: allWords.length
+            });
+
+            // 获取群组
+            const allGroups = await GroupStore.getGroups();
+            setGroups(allGroups);
+
+            // 构建预设范围选项
+            const presetScopes: ScopeOption[] = [
+                { id: 'today', type: 'preset', label: '今天添加的单词', count: todayWords.length },
+                { id: 'random', type: 'preset', label: '随机词汇', count: Math.min(allWords.length, 20) },
+                { id: 'learning', type: 'preset', label: '随机学习单词', count: learningWords.length },
+            ];
+
+            // 转换群组为范围选项
+            const groupScopes: ScopeOption[] = allGroups.map(g => ({
+                id: `group-${g.id}`,
+                type: 'group' as const,
+                label: g.name,
+                subLabel: formatTimeAgo(g.updatedAt),
+                count: g.wordIds.length,
+                groupId: g.id
+            }));
+
+            setScopes([...presetScopes, ...groupScopes]);
+
+            // 默认选择第一个有单词的选项
+            const firstWithWords = [...presetScopes, ...groupScopes].find(s => s.count > 0);
+            if (firstWithWords) {
+                setSelectedScope(firstWithWords.id);
+            }
+        } catch (error) {
+            console.error('Failed to load data', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 格式化时间显示
+    const formatTimeAgo = (timestamp: number): string => {
+        const now = Date.now();
+        const diff = now - timestamp;
+        const minutes = Math.floor(diff / (1000 * 60));
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+        if (minutes < 1) return '刚刚';
+        if (minutes < 60) return `约 ${minutes} 分钟前`;
+        if (hours < 24) return `约 ${hours} 小时前`;
+        if (days < 30) return `约 ${days} 天前`;
+        return new Date(timestamp).toLocaleDateString('zh-CN');
+    };
+
+    // 开始练习
+    const handleStart = () => {
+        const selectedOption = scopes.find(s => s.id === selectedScope);
+        if (!selectedOption || selectedOption.count === 0) return;
+
+        // 构建查询参数
+        const params = new URLSearchParams();
+        params.set('scope', selectedScope);
+
+        if (selectedOption.type === 'group' && selectedOption.groupId) {
+            params.set('groupId', selectedOption.groupId);
+        }
+
+        navigate(`/exercise/session/${mode}?${params.toString()}`);
+    };
+
+    const currentMode = modeConfig[mode || 'mixed'] || modeConfig.mixed;
+    const ModeIcon = currentMode.icon;
+
+    // 获取选中项的单词数量
+    const selectedOption = scopes.find(s => s.id === selectedScope);
+    const canStart = selectedOption && selectedOption.count > 0;
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
+
+    // 分离预设选项和群组选项
+    const presetOptions = scopes.filter(s => s.type === 'preset');
+    const groupOptions = scopes.filter(s => s.type === 'group');
+
+    return (
+        <div className="min-h-screen bg-gray-50 pb-40">
+            {/* Header */}
+            <div className="bg-white px-4 pt-12 pb-4 sticky top-0 z-10 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => navigate('/exercise')}
+                        className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                        <ArrowLeft size={24} className="text-gray-700" />
+                    </button>
+                    <div className="flex items-center gap-2">
+                        <ModeIcon size={24} className={currentMode.color} />
+                        <h1 className="text-xl font-bold text-gray-900">{currentMode.title}</h1>
+                    </div>
+                </div>
+            </div>
+
+            {/* Scope Options */}
+            <div className="px-4 py-4 space-y-6">
+                {/* 随机范围 */}
+                <div className="space-y-2">
+                    <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider px-1">随机</h3>
+                    <div className="space-y-2">
+                        {presetOptions.map((option) => (
+                            <ScopeOptionItem
+                                key={option.id}
+                                option={option}
+                                selected={selectedScope === option.id}
+                                onSelect={() => setSelectedScope(option.id)}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                {/* 我的小组 */}
+                {groupOptions.length > 0 && (
+                    <div className="space-y-2">
+                        <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider px-1">我的小组</h3>
+                        <div className="space-y-2">
+                            {groupOptions.map((option) => (
+                                <ScopeOptionItem
+                                    key={option.id}
+                                    option={option}
+                                    selected={selectedScope === option.id}
+                                    onSelect={() => setSelectedScope(option.id)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Start Button */}
+            <div className="fixed bottom-20 left-0 right-0 p-4 bg-white border-t border-gray-100 z-20">
+                <button
+                    onClick={handleStart}
+                    disabled={!canStart}
+                    className={cn(
+                        "w-full py-4 rounded-2xl font-bold text-lg transition-all",
+                        canStart
+                            ? "bg-gray-900 text-white hover:bg-black active:scale-[0.98]"
+                            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    )}
+                >
+                    开始
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// 范围选项组件
+interface ScopeOptionItemProps {
+    option: ScopeOption;
+    selected: boolean;
+    onSelect: () => void;
+}
+
+const ScopeOptionItem: React.FC<ScopeOptionItemProps> = ({ option, selected, onSelect }) => {
+    return (
+        <button
+            onClick={onSelect}
+            className={cn(
+                "w-full p-4 rounded-xl flex items-center gap-3 transition-all text-left",
+                selected
+                    ? "bg-white border-2 border-green-500 shadow-sm"
+                    : "bg-white border border-gray-100 hover:border-gray-200"
+            )}
+        >
+            {/* Selection Indicator */}
+            <div className={cn(
+                "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0",
+                selected
+                    ? "border-green-500 bg-green-500"
+                    : "border-gray-300"
+            )}>
+                {selected && (
+                    <Check size={12} className="text-white" strokeWidth={3} />
+                )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+                <h4 className="font-medium text-gray-900">{option.label}</h4>
+                {option.subLabel && (
+                    <p className="text-xs text-orange-500 mt-0.5">{option.subLabel}</p>
+                )}
+            </div>
+
+            {/* Count */}
+            <span className={cn(
+                "text-sm font-medium",
+                option.count > 0 ? "text-gray-600" : "text-gray-300"
+            )}>
+                {option.count}
+            </span>
+
+            {/* Loading indicator for learning words (optional visual) */}
+            {option.id === 'learning' && option.count > 0 && (
+                <div className="w-4 h-4 rounded-full border-2 border-orange-300 border-t-transparent animate-spin" />
+            )}
+        </button>
+    );
+};
+
+export default ExerciseScopeSelector;

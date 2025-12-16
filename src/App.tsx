@@ -6,11 +6,13 @@ import './App.css';
 import MainLayout from './components/Layout/MainLayout';
 import DictionaryDashboard from './pages/Dictionary/DictionaryDashboard';
 import ExerciseHub from './pages/Exercise/ExerciseHub';
+import ExerciseScopeSelector from './pages/Exercise/ExerciseScopeSelector';
 import ExerciseSession from './pages/Exercise/ExerciseSession';
 import LibraryList from './pages/Library/LibraryList';
 import Profile from './pages/Profile/Profile';
 import ReaderView from './pages/Reader/ReaderView';
 import WordList from './pages/Dictionary/WordList';
+import GroupDetail from './pages/Dictionary/GroupDetail';
 import OllamaSettings from './pages/Settings/OllamaSettings';
 
 function App() {
@@ -23,8 +25,10 @@ function App() {
             <Route path="/" element={<MainLayout />}>
                 <Route index element={<DictionaryDashboard />} />
                 <Route path="dictionary/list" element={<WordList />} />
+                <Route path="dictionary/group/:id" element={<GroupDetail />} />
                 <Route path="library" element={<LibraryList />} />
                 <Route path="exercise" element={<ExerciseHub />} />
+                <Route path="exercise/scope/:mode" element={<ExerciseScopeSelector />} />
                 <Route path="exercise/session/:mode" element={<ExerciseSession />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="settings" element={<OllamaSettings />} />

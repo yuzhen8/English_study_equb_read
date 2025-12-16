@@ -1,17 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
-import { Plus, MoreHorizontal, ChevronRight } from 'lucide-react';
+import { Plus, MoreHorizontal, ChevronRight, FolderPlus } from 'lucide-react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 import { WordStore } from '../../services/WordStore';
+import { GroupStore, WordGroup } from '../../services/GroupStore';
 import WordDetailPopup from '../../components/WordDetailPopup';
+import CreateGroupDialog from '../../components/Dictionary/CreateGroupDialog';
 
 const DictionaryDashboard: React.FC = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'my-words' | 'groups'>('my-words');
     const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'year'>('week');
     const [showWordPopup, setShowWordPopup] = useState(false);
+    const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
+    const [groups, setGroups] = useState<WordGroup[]>([]);
     const [stats, setStats] = useState({
         total: 0,
         statusCounts: { new: 0, learning: 0, reviewed: 0, mastered: 0 },
@@ -19,13 +23,49 @@ const DictionaryDashboard: React.FC = () => {
         chartData: [] as { name: string; words: number }[]
     });
 
-    React.useEffect(() => {
+    // 加载统计数据
+    useEffect(() => {
         const loadStats = async () => {
             const data = await WordStore.getStats();
             setStats(data);
         };
         loadStats();
     }, []);
+
+    // 加载群组数据
+    useEffect(() => {
+        if (activeTab === 'groups') {
+            loadGroups();
+        }
+    }, [activeTab]);
+
+    const loadGroups = async () => {
+        const allGroups = await GroupStore.getGroups();
+        // 按更新时间排序，最新的在前
+        allGroups.sort((a, b) => b.updatedAt - a.updatedAt);
+        setGroups(allGroups);
+    };
+
+    // 创建群组
+    const handleCreateGroup = async (name: string, description?: string) => {
+        await GroupStore.createGroup(name, description);
+        loadGroups();
+    };
+
+    // 格式化时间显示
+    const formatTimeAgo = (timestamp: number): string => {
+        const now = Date.now();
+        const diff = now - timestamp;
+        const minutes = Math.floor(diff / (1000 * 60));
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+        if (minutes < 1) return '刚刚';
+        if (minutes < 60) return `约 ${minutes} 分钟前`;
+        if (hours < 24) return `约 ${hours} 小时前`;
+        if (days < 30) return `约 ${days} 天前`;
+        return new Date(timestamp).toLocaleDateString('zh-CN');
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -82,15 +122,49 @@ const DictionaryDashboard: React.FC = () => {
 
             {/* 内容区域 - 根据 activeTab 切换 */}
             {activeTab === 'groups' ? (
-                /* 群组视图占位 */
-                <div className="px-4 py-16 text-center">
-                    <div className="text-gray-400 mb-4">
-                        <svg className="w-20 h-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">群组功能开发中</h3>
-                    <p className="text-sm text-gray-500">您可以通过"全部单词"页面的多选模式创建群组</p>
+                /* 群组视图 */
+                <div className="px-4 py-2">
+                    {groups.length === 0 ? (
+                        /* 空状态 */
+                        <div className="py-16 text-center">
+                            <div className="text-gray-400 mb-4">
+                                <FolderPlus size={64} className="mx-auto" strokeWidth={1.5} />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">还没有群组</h3>
+                            <p className="text-sm text-gray-500 mb-6">
+                                创建群组来组织和管理您的单词
+                            </p>
+                            <button
+                                onClick={() => setShowCreateGroupDialog(true)}
+                                className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+                            >
+                                <Plus size={18} />
+                                创建第一个群组
+                            </button>
+                        </div>
+                    ) : (
+                        /* 群组列表 */
+                        <div className="space-y-2">
+                            {groups.map((group) => (
+                                <button
+                                    key={group.id}
+                                    onClick={() => navigate(`/dictionary/group/${group.id}`)}
+                                    className="w-full bg-white rounded-xl p-4 flex justify-between items-center shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors text-left"
+                                >
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold text-gray-900 truncate">{group.name}</h3>
+                                        <p className="text-xs text-gray-400 mt-0.5">
+                                            {formatTimeAgo(group.updatedAt)}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 ml-4">
+                                        <span className="text-gray-600 font-medium">{group.wordIds.length}</span>
+                                        <ChevronRight size={20} className="text-gray-400" />
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             ) : (
                 /* 正常的统计内容 */
@@ -181,23 +255,44 @@ const DictionaryDashboard: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    {/* FAB */}
-                    <button
-                        onClick={() => setShowWordPopup(true)}
-                        className="fixed bottom-24 right-4 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 hover:bg-black transition-colors z-20"
-                    >
-                        <Plus size={20} />
-                        <span className="font-bold">添加单词</span>
-                    </button>
+                </>
+            )}
 
-                    {/* Word Detail Popup */}
-                    {showWordPopup && (
-                        <WordDetailPopup
-                            onClose={() => setShowWordPopup(false)}
-                        />
-                    )}
-                </div>
-            );
+            {/* FAB - 根据当前标签页动态显示 */}
+            {activeTab === 'groups' ? (
+                <button
+                    onClick={() => setShowCreateGroupDialog(true)}
+                    className="fixed bottom-24 right-4 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 hover:bg-black transition-colors z-20"
+                >
+                    <Plus size={20} />
+                    <span className="font-bold">创建群组</span>
+                </button>
+            ) : (
+                <button
+                    onClick={() => setShowWordPopup(true)}
+                    className="fixed bottom-24 right-4 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 hover:bg-black transition-colors z-20"
+                >
+                    <Plus size={20} />
+                    <span className="font-bold">添加单词</span>
+                </button>
+            )}
+
+            {/* Word Detail Popup */}
+            {showWordPopup && (
+                <WordDetailPopup
+                    onClose={() => setShowWordPopup(false)}
+                />
+            )}
+
+            {/* Create Group Dialog */}
+            {showCreateGroupDialog && (
+                <CreateGroupDialog
+                    onClose={() => setShowCreateGroupDialog(false)}
+                    onCreate={handleCreateGroup}
+                />
+            )}
+        </div>
+    );
 };
 
-            export default DictionaryDashboard;
+export default DictionaryDashboard;

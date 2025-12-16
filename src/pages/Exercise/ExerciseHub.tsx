@@ -17,11 +17,11 @@ const ExerciseHub: React.FC = () => {
     }, []);
 
     const handleStartMixed = () => {
-        navigate('/exercise/session/mixed');
+        navigate('/exercise/scope/mixed');
     };
 
     const handleStartMode = (mode: string) => {
-        navigate(`/exercise/session/${mode}`);
+        navigate(`/exercise/scope/${mode}`);
     };
 
     return (

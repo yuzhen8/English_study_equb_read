@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, ChevronDown, ChevronUp, Search, Info, BookOpen, Sparkles, Globe, Book, BrainCircuit } from 'lucide-react';
 import { WordStore, type Word } from '../services/WordStore';
+import { GroupStore } from '../services/GroupStore';
 import { hybridDictionary, type DictionaryResult } from '../services/DictionaryService';
 import AudioPlayer from './AudioPlayer';
 import { cn } from '../lib/utils';
@@ -11,6 +12,7 @@ interface WordDetailPopupProps {
         text: string;
         context?: string;
     };
+    groupId?: string; // 如果指定，添加单词后会同时添加到该群组
     onClose: () => void;
 }
 
@@ -75,7 +77,7 @@ const DetailSection: React.FC<{
     );
 };
 
-const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, onClose }) => {
+const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, groupId, onClose }) => {
     const [dictionaryResult, setDictionaryResult] = useState<DictionaryResult | null>(null);
     const [savedWord, setSavedWord] = useState<Word | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -227,6 +229,13 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
             );
 
             console.log('[WordDetailPopup] Word added successfully:', newWord);
+
+            // 如果指定了群组ID，将单词添加到群组
+            if (groupId) {
+                await GroupStore.addWordsToGroup(groupId, [newWord.id]);
+                console.log('[WordDetailPopup] Word added to group:', groupId);
+            }
+
             setSavedWord(newWord);
         } catch (e) {
             console.error("[WordDetailPopup] Failed to add word", e);

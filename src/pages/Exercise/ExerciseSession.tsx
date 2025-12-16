@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, MoreHorizontal } from 'lucide-react';
 import { Word, WordStore } from '../../services/WordStore';
+import { GroupStore } from '../../services/GroupStore';
 import FlashcardMode from './FlashcardMode';
 import ChoiceMode from './ChoiceMode';
 import SpellingMode from './modes/SpellingMode';
@@ -9,6 +10,7 @@ import SessionSummary from './SessionSummary';
 
 const ExerciseSession: React.FC = () => {
     const { mode } = useParams<{ mode: string }>(); // 'mixed', 'flashcard', 'choice'
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
 
     const [loading, setLoading] = useState(true);
@@ -20,24 +22,53 @@ const ExerciseSession: React.FC = () => {
         const loadSession = async () => {
             setLoading(true);
             try {
-                // For now, simple logic: get due words for all modes
-                // In future, 'mixed' might use different algorithm than specific modes
-                let dueWords = await WordStore.getDueWords();
+                const scope = searchParams.get('scope') || 'random';
+                const groupId = searchParams.get('groupId');
 
-                // If no due words, maybe grab some "learning" or "new" words just for demo/practice?
-                // Or just show "All caught up!"
-                if (dueWords.length === 0) {
-                    // Fallback: Grab some random words if empty (for testing/demo)
-                    const allWords = await WordStore.getWords();
-                    if (allWords.length > 0) {
-                        dueWords = allWords.sort(() => 0.5 - Math.random()).slice(0, 10);
-                    }
-                } else {
-                    // Limit session size to avoid fatigue
-                    dueWords = dueWords.slice(0, 20);
+                let selectedWords: Word[] = [];
+                const allWords = await WordStore.getWords();
+                const now = Date.now();
+                const oneDay = 24 * 60 * 60 * 1000;
+
+                // 根据范围选择单词
+                switch (scope) {
+                    case 'today':
+                        // 今天添加的单词
+                        selectedWords = allWords.filter(w => now - w.addedAt < oneDay);
+                        break;
+
+                    case 'learning':
+                        // 学习中的单词
+                        selectedWords = allWords.filter(w => w.status === 'learning' || w.status === 'reviewed');
+                        // 随机排序
+                        selectedWords = selectedWords.sort(() => 0.5 - Math.random());
+                        break;
+
+                    case 'random':
+                        // 随机词汇
+                        selectedWords = allWords.sort(() => 0.5 - Math.random());
+                        break;
+
+                    default:
+                        // 可能是群组选择 (group-xxx)
+                        if (scope.startsWith('group-') && groupId) {
+                            const group = await GroupStore.getGroup(groupId);
+                            if (group) {
+                                selectedWords = allWords.filter(w => group.wordIds.includes(w.id));
+                                // 随机排序群组内单词
+                                selectedWords = selectedWords.sort(() => 0.5 - Math.random());
+                            }
+                        } else {
+                            // 默认回退到随机
+                            selectedWords = allWords.sort(() => 0.5 - Math.random());
+                        }
+                        break;
                 }
 
-                setWords(dueWords);
+                // 限制会话大小
+                selectedWords = selectedWords.slice(0, 20);
+
+                setWords(selectedWords);
             } catch (error) {
                 console.error("Failed to load session", error);
             } finally {
@@ -45,7 +76,7 @@ const ExerciseSession: React.FC = () => {
             }
         };
         loadSession();
-    }, [mode]);
+    }, [mode, searchParams]);
 
     const handleResult = async (quality: number) => {
         const currentWord = words[currentIndex];
