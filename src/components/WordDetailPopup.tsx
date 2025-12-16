@@ -184,21 +184,52 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
     }, [wordId, initialData]);
 
     const handleAdd = async () => {
-        if (!dictionaryResult) return;
+        console.log('[WordDetailPopup] handleAdd called');
+        console.log('[WordDetailPopup] dictionaryResult:', dictionaryResult);
+        console.log('[WordDetailPopup] initialData:', initialData);
+        console.log('[WordDetailPopup] savedWord:', savedWord);
+
         try {
-            // 优先使用简明释义，没有则使用第一条详细释义
-            const translation = dictionaryResult.translations?.[0] ||
-                dictionaryResult.meanings[0]?.definitions[0]?.definition || '';
-            const context = initialData?.context || '';
+            // 确定单词文本和上下文
+            const wordText = dictionaryResult?.word || initialData?.text || '';
+            const context = initialData?.context || savedWord?.context || '';
+
+            console.log('[WordDetailPopup] wordText:', wordText);
+            console.log('[WordDetailPopup] context:', context);
+
+            if (!wordText) {
+                console.error('[WordDetailPopup] No word text available');
+                return;
+            }
+
+            // 获取翻译
+            let translation = '';
+            if (dictionaryResult) {
+                // 优先使用简明释义，没有则使用第一条详细释义
+                translation = dictionaryResult.translations?.[0] ||
+                    dictionaryResult.meanings[0]?.definitions[0]?.definition || '';
+            }
+
+            // 如果没有翻译，使用占位符（后续可以手动编辑）
+            if (!translation) {
+                translation = '(待翻译)';
+            }
+
+            console.log('[WordDetailPopup] translation:', translation);
+            console.log('[WordDetailPopup] Calling WordStore.addWord...');
 
             const newWord = await WordStore.addWord(
-                dictionaryResult.word,
+                wordText,
                 translation,
-                context
+                context,
+                undefined, // sourceBookId
+                dictionaryResult?.lemma // Base form of the word
             );
+
+            console.log('[WordDetailPopup] Word added successfully:', newWord);
             setSavedWord(newWord);
         } catch (e) {
-            console.error("Failed to add word", e);
+            console.error("[WordDetailPopup] Failed to add word", e);
         }
     };
 
@@ -319,14 +350,11 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
     const primaryPhonetic = dictionaryResult.phonetics.find(p => p.text)?.text || '';
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-            {/* 点击背景关闭 */}
-            <div className="absolute inset-0 bg-transparent pointer-events-auto" onClick={onClose} />
-
+        <div className="fixed inset-0 flex items-center justify-center z-50" onClick={onClose}>
             {/* 卡片主体 */}
             <div
-                className="bg-white rounded-2xl shadow-2xl border border-gray-200/80 w-full max-w-xl mx-4 max-h-[85vh] flex flex-col pointer-events-auto animate-in zoom-in-95 duration-200"
-                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl shadow-2xl border border-gray-200/80 w-full max-w-xl mx-4 max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()} // 阻止卡片内的点击事件冒泡到父元素
             >
                 {/* 1. 头部区域 */}
                 <div className="px-6 pt-6 pb-4 border-b border-gray-100 bg-white rounded-t-2xl z-10">
@@ -387,8 +415,8 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                             source={dictionaryResult.source.local || undefined}
                             showSource={showSources}
                         >
-                            <p className="font-medium text-gray-900 leading-relaxed">
-                                {dictionaryResult.translations.join('；')}
+                            <p className="font-medium text-gray-900 leading-relaxed whitespace-pre-line">
+                                {dictionaryResult.translations.join('；').replace(/\\n/g, '\n')}
                             </p>
                         </DetailSection>
                     )}
@@ -474,7 +502,10 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                 </div>
 
                 {/* 3. 底部操作栏 */}
-                <div className="p-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl">
+                <div
+                    className="p-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl"
+                    onClick={(e) => e.stopPropagation()} // 阻止整个操作栏的点击事件冒泡
+                >
                     {savedWord ? (
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-sm">
@@ -489,7 +520,10 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                             </div>
 
                             <button
-                                onClick={handleRemove}
+                                onClick={(e) => {
+                                    e.stopPropagation(); // 阻止事件冒泡
+                                    handleRemove();
+                                }}
                                 className="flex-1 bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow active:scale-[0.98]"
                             >
                                 移除单词
@@ -497,7 +531,11 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                         </div>
                     ) : (
                         <button
-                            onClick={handleAdd}
+                            onClick={(e) => {
+                                e.stopPropagation(); // 阻止事件冒泡
+                                console.log('[WordDetailPopup] Button clicked!', e);
+                                handleAdd();
+                            }}
                             className="w-full bg-gray-900 hover:bg-black text-white px-4 py-3 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                         >
                             <span>添加到生词本</span>

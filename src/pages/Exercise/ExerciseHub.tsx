@@ -1,28 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '../../lib/utils';
-import { Zap, Layers, Type, MousePointerClick, Trophy, TrendingUp, Award, Clock } from 'lucide-react';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Zap, Layers, Type, MousePointerClick } from 'lucide-react';
 import { WordStore } from '../../services/WordStore';
 import { useNavigate } from 'react-router-dom';
 
 const ExerciseHub: React.FC = () => {
     const navigate = useNavigate();
-    const [stats, setStats] = useState({
-        dueCount: 0,
-        reviewedToday: 0,
-        totalWords: 0,
-        futureReviews: [] as { name: string; count: number }[]
-    });
+    const [dueCount, setDueCount] = useState(0);
 
     useEffect(() => {
         const loadStats = async () => {
             const data = await WordStore.getStats();
-            setStats({
-                dueCount: data.dueCount,
-                reviewedToday: data.reviewedToday,
-                totalWords: data.total,
-                futureReviews: data.futureReviews || []
-            });
+            setDueCount(data.dueCount);
         };
         loadStats();
     }, []);
@@ -43,101 +32,17 @@ const ExerciseHub: React.FC = () => {
             </div>
 
             <div className="p-4 space-y-6">
-                {/* Hero Card - Mixed Practice */}
-                <button
-                    onClick={handleStartMixed}
-                    className="w-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-6 text-white shadow-xl shadow-blue-200 relative overflow-hidden group text-left"
-                >
-                    <div className="absolute top-0 right-0 p-8 opacity-10 transform translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform duration-500">
-                        <Trophy size={120} />
-                    </div>
-
-                    <div className="relative z-10">
-                        <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-sm">
-                            <Zap size={24} className="text-white fill-current" />
-                        </div>
-                        <h2 className="text-2xl font-bold mb-2">混合练习</h2>
-                        <p className="text-blue-100 text-sm mb-4 max-w-[70%]">
-                            基于你的遗忘曲线生成的综合复习计划。
-                        </p>
-                        <div className="flex items-center gap-4">
-                            <div className="bg-white/20 px-3 py-1.5 rounded-lg backdrop-blur-sm">
-                                <span className="text-lg font-bold">{stats.dueCount}</span>
-                                <span className="text-blue-100 text-xs ml-1">待复习</span>
-                            </div>
-                            <div className="bg-white text-blue-600 px-6 py-2.5 rounded-xl font-bold text-sm shadow-sm hover:bg-blue-50 transition-colors">
-                                开始练习
-                            </div>
-                        </div>
-                    </div>
-                </button>
-
-                {/* Exercise Statistics */}
-                <div className="space-y-4">
-                    <h3 className="font-bold text-gray-900 px-1">练习统计</h3>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Today's Reviews */}
-                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-gray-500 text-xs font-medium">今日复习</span>
-                                <Clock size={16} className="text-gray-400" />
-                            </div>
-                            <div className="text-2xl font-bold text-gray-900">{stats.reviewedToday}</div>
-                            <p className="text-xs text-gray-400 mt-1">个单词</p>
-                        </div>
-
-                        {/* Total Words */}
-                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-gray-500 text-xs font-medium">总单词数</span>
-                                <Award size={16} className="text-gray-400" />
-                            </div>
-                            <div className="text-2xl font-bold text-gray-900">{stats.totalWords}</div>
-                            <p className="text-xs text-gray-400 mt-1">个单词</p>
-                        </div>
-                    </div>
-
-                    {/* Review Forecast Chart */}
-                    {stats.futureReviews.length > 0 && (
-                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                            <div className="flex items-center justify-between mb-4">
-                                <h4 className="text-sm font-bold text-gray-900">未来7天复习计划</h4>
-                                <TrendingUp size={16} className="text-gray-400" />
-                            </div>
-                            <ResponsiveContainer width="100%" height={120}>
-                                <AreaChart data={stats.futureReviews}>
-                                    <defs>
-                                        <linearGradient id="colorReviews" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <XAxis 
-                                        dataKey="name" 
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fontSize: 12, fill: '#9ca3af' }}
-                                    />
-                                    <Tooltip 
-                                        contentStyle={{ 
-                                            backgroundColor: '#fff', 
-                                            border: '1px solid #e5e7eb',
-                                            borderRadius: '8px',
-                                            padding: '8px'
-                                        }}
-                                    />
-                                    <Area 
-                                        type="monotone" 
-                                        dataKey="count" 
-                                        stroke="#3b82f6" 
-                                        fillOpacity={1} 
-                                        fill="url(#colorReviews)" 
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    )}
+                {/* Mixed Practice - Same size as other items */}
+                <div className="space-y-3">
+                    <h3 className="font-bold text-gray-900 px-1">推荐练习</h3>
+                    <ExerciseItem
+                        icon={Zap}
+                        color="bg-gradient-to-br from-blue-500 to-indigo-600"
+                        title="混合练习"
+                        subtitle="基于遗忘曲线的综合复习"
+                        count={dueCount}
+                        onClick={handleStartMixed}
+                    />
                 </div>
 
                 {/* Mode List */}
@@ -149,7 +54,7 @@ const ExerciseHub: React.FC = () => {
                         color="bg-orange-500"
                         title="单词闪卡"
                         subtitle="快速回忆释义"
-                        count={stats.dueCount}
+                        count={dueCount}
                         onClick={() => handleStartMode('flashcard')}
                     />
                     <ExerciseItem
@@ -157,7 +62,7 @@ const ExerciseHub: React.FC = () => {
                         color="bg-purple-500"
                         title="多项选择"
                         subtitle="从选项中找出正确答案"
-                        count={stats.dueCount}
+                        count={dueCount}
                         onClick={() => handleStartMode('choice')}
                     />
                     <ExerciseItem
@@ -165,7 +70,7 @@ const ExerciseHub: React.FC = () => {
                         color="bg-teal-500"
                         title="拼写构建"
                         subtitle="听音频并拼写单词"
-                        count={stats.dueCount}
+                        count={dueCount}
                         onClick={() => handleStartMode('spelling')}
                     />
                 </div>
@@ -185,7 +90,7 @@ interface ExerciseItemProps {
 
 const ExerciseItem: React.FC<ExerciseItemProps> = ({ icon: Icon, color, title, subtitle, count, onClick }) => {
     return (
-        <button 
+        <button
             onClick={onClick}
             className="w-full bg-white p-4 rounded-2xl flex items-center gap-4 shadow-sm border border-gray-100 hover:border-blue-200 transition-all hover:shadow-md active:scale-[0.98]"
         >

@@ -94,12 +94,30 @@
         - [x] **WordStore 升级**: 添加 lastReviewedAt, reviewCount, easeFactor, interval 字段
         - [x] **复习算法**: 实现 SM-2 简易版算法 (submitReview)
         - [x] **获取待复习**: 实现 getDueWords 方法
-    - [x] **[NEW]** 练习会话 UI (Exercise Session)
-        - [x] 会话容器 (ExerciseSession.tsx) - 负责加载单词和进度管理
-        - [x] 闪卡模式 (FlashcardMode.tsx)
-        - [x] 多项选择模式 (ChoiceMode.tsx)
-    - [ ] 练习逻辑: 单词构建
-    - [ ] 练习逻辑: 混合模式
+    - [/] **[Refactor]** 练习模式体验优化 (Exercise UX & Logic)
+        - [x] 会话容器 (ExerciseSession.tsx) - 基础实现
+        - [ ] **[NEW]** 练习前置流程 (Scope Selection):
+            - [ ] 实现 "学习范围选择" 界面 (Start Screen)
+            - [ ] 支持选项: 随机新词 (New), 随机复习 (Review), 随机全部 (Random)
+        - [ ] **[NEW]** 全屏布局适配 (Viewport Fix):
+            - [ ] 优化 `ExerciseSession` 布局，强制单屏显示 (100vh)
+            - [ ] 修复顶部导航栏需滚动查看的问题 (Fixed Header)
+        - [ ] **闪卡模式修复 (Flashcard Fixes)**:
+            - [ ] 修复卡片翻转逻辑，去除背面的镜像效果
+            - [ ] 背面内容明确: 仅显示中文释义 + 原句 (Context)
+        - [ ] **多项选择优化 (Choice Optimization)**:
+            - [ ] 选项内容净化: 仅显示中文意思，移除音标和其他辅助文本
+        - [x] **单词构建重构 (Construction Mode)**:
+            - [x] 将 "拼写模式" (Spelling) 重构为 "单词构建" (Word Construction)
+            - [x] 实现逻辑: 显示中文释义 -> 提供打乱的字母块 -> 用户点击/拖拽完成拼写
+            - [x] 实现新视觉设计: Tailwind 配色方案 (bg-white, text-slate-900, blue-600主色)
+            - [x] 实现布局: Header(进度条+计数), Context(功能按钮+释义), Slots(填空区), Keyboard(字母池), Footer(成功按钮)
+            - [x] 实现点击即校验逻辑: 对→填入&隐形，错→颤动，完→显下一步
+            - [x] 仅显示中文释义: 移除音标和英文显示，参考提示只保留中文解释
+            - [x] 使用单词原型: 使用 lemma (原型) 而非变形词进行拼写测试 (如 look 而非 looking)
+            - [x] 自动填入逻辑: 点击字母自动填入下一个空槽位，无需先点击输入框
+            - [x] 语音播放按钮: 添加醒目的圆形音频播放按钮 (蓝色大按钮)
+    - [x] 练习逻辑: 混合模式
 
 - [ ] 数据与设置
     - [ ] 设置 SQLite/Store 数据库 (用于单词和图书记录)

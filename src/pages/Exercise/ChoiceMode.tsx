@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils';
 import { Check, X } from 'lucide-react';
 
 interface ChoiceModeProps {
-    word: Word;
+    word: Word & { lemma?: string };
     onResult: (quality: number) => void;
 }
 
@@ -51,7 +51,7 @@ const ChoiceMode: React.FC<ChoiceModeProps> = ({ word, onResult }) => {
                 <span className="inline-block px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
                     Multiple Choice
                 </span>
-                <h2 className="text-4xl font-bold text-gray-900 mb-2">{word.text}</h2>
+                <h2 className="text-4xl font-bold text-gray-900 mb-2">{word.lemma || word.text}</h2>
                 <p className="text-gray-400 text-sm">Select the correct meaning</p>
             </div>
 

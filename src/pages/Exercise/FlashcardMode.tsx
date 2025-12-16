@@ -4,7 +4,7 @@ import { Volume2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface FlashcardModeProps {
-    word: Word;
+    word: Word & { lemma?: string; phonetic?: string };
     onResult: (quality: number) => void;
 }
 
@@ -29,26 +29,32 @@ const FlashcardMode: React.FC<FlashcardModeProps> = ({ word, onResult }) => {
     };
 
     return (
-        <div className="max-w-md w-full mx-auto perspective-1000">
+        <div className="max-w-md w-full mx-auto" style={{ perspective: '1000px' }}>
             <div
                 className={cn(
-                    "relative w-full aspect-[4/5] transition-all duration-500 transform-style-3d cursor-pointer",
-                    isFlipped ? "rotate-y-180" : ""
+                    "relative w-full aspect-[4/5] transition-all duration-500 cursor-pointer"
                 )}
+                style={{
+                    transformStyle: 'preserve-3d',
+                    transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                }}
                 onClick={() => !isFlipped && setIsFlipped(true)}
             >
                 {/* Front */}
-                <div className={cn(
-                    "absolute inset-0 backface-hidden bg-white rounded-3xl shadow-xl flex flex-col items-center justify-center p-8 border-2 border-transparent hover:border-blue-100 transition-colors",
-                    isFlipped && "pointer-events-none" // prevent clicking front when back is shown (visually)
-                )}>
+                <div
+                    className="absolute inset-0 bg-white rounded-3xl shadow-xl flex flex-col items-center justify-center p-8 border-2 border-transparent hover:border-blue-100 transition-colors"
+                    style={{
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden'
+                    }}
+                >
                     <div className="text-center space-y-6">
                         <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase tracking-wider">
                             Flashcard
                         </span>
 
                         <div>
-                            <h2 className="text-5xl font-bold text-gray-900 mb-4">{word.text}</h2>
+                            <h2 className="text-5xl font-bold text-gray-900 mb-4">{word.lemma || word.text}</h2>
                             <button
                                 onClick={playAudio}
                                 className="inline-flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-blue-50"
@@ -62,22 +68,38 @@ const FlashcardMode: React.FC<FlashcardModeProps> = ({ word, onResult }) => {
                 </div>
 
                 {/* Back */}
-                <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white rounded-3xl shadow-xl flex flex-col overflow-hidden">
+                <div
+                    className="absolute inset-0 bg-white rounded-3xl shadow-xl flex flex-col overflow-hidden"
+                    style={{
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)'
+                    }}
+                >
                     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
                         <div>
-                            <h3 className="text-2xl font-bold text-gray-900 mb-2">{word.text}</h3>
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">{word.lemma || word.text}</h3>
                             <div className="w-12 h-1 bg-blue-500 rounded-full mx-auto" />
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-4 w-full">
+                            {/* Phonetic */}
+                            {word.phonetic && (
+                                <div>
+                                    <p className="text-lg text-gray-600">/{word.phonetic}/</p>
+                                </div>
+                            )}
+
+                            {/* Translation */}
                             <div>
-                                <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-1">Meaning</h4>
+                                <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-1">释义</h4>
                                 <p className="text-xl text-gray-800 font-medium">{word.translation}</p>
                             </div>
 
+                            {/* Context/Original sentence */}
                             {word.context && (
                                 <div>
-                                    <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-1">Context</h4>
+                                    <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-1">原句</h4>
                                     <p className="text-gray-600 italic">"{word.context}"</p>
                                 </div>
                             )}
@@ -87,35 +109,21 @@ const FlashcardMode: React.FC<FlashcardModeProps> = ({ word, onResult }) => {
                     {/* Gradient overlay for bottom separation */}
                     <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-                    {/* Controls */}
-                    <div className="p-4 grid grid-cols-4 gap-2 bg-gray-50">
+                    {/* Controls - Only 2 buttons */}
+                    <div className="p-4 grid grid-cols-2 gap-3 bg-gray-50">
                         <button
-                            onClick={(e) => { e.stopPropagation(); onResult(1); }}
-                            className="flex flex-col items-center py-2 px-1 rounded-xl hover:bg-red-50 text-red-600 transition-colors group"
+                            onClick={(e) => { e.stopPropagation(); onResult(2); }}
+                            className="flex flex-col items-center py-3 px-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-600 transition-colors group border border-orange-200"
                         >
-                            <span className="text-xs font-bold mb-1 group-hover:scale-110 transition-transform">Again</span>
-                            <span className="text-[10px] text-red-400">1 min</span>
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onResult(3); }}
-                            className="flex flex-col items-center py-2 px-1 rounded-xl hover:bg-orange-50 text-orange-600 transition-colors group"
-                        >
-                            <span className="text-xs font-bold mb-1 group-hover:scale-110 transition-transform">Hard</span>
-                            <span className="text-[10px] text-orange-400">2 days</span>
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onResult(4); }}
-                            className="flex flex-col items-center py-2 px-1 rounded-xl hover:bg-blue-50 text-blue-600 transition-colors group"
-                        >
-                            <span className="text-xs font-bold mb-1 group-hover:scale-110 transition-transform">Good</span>
-                            <span className="text-[10px] text-blue-400">4 days</span>
+                            <span className="text-base font-bold mb-1 group-hover:scale-110 transition-transform">学习</span>
+                            <span className="text-xs text-orange-400">继续学习</span>
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); onResult(5); }}
-                            className="flex flex-col items-center py-2 px-1 rounded-xl hover:bg-green-50 text-green-600 transition-colors group"
+                            className="flex flex-col items-center py-3 px-2 rounded-xl bg-green-50 hover:bg-green-100 text-green-600 transition-colors group border border-green-200"
                         >
-                            <span className="text-xs font-bold mb-1 group-hover:scale-110 transition-transform">Easy</span>
-                            <span className="text-[10px] text-green-400">7 days</span>
+                            <span className="text-base font-bold mb-1 group-hover:scale-110 transition-transform">悉知</span>
+                            <span className="text-xs text-green-400">已掌握</span>
                         </button>
                     </div>
                 </div>

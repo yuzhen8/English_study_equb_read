@@ -9,6 +9,7 @@ export interface Word {
     status: 'new' | 'learning' | 'reviewed' | 'mastered';
     addedAt: number;
     nextReviewAt?: number;
+    lemma?: string; // Base/dictionary form of the word (e.g., "look" for "looking")
 
     // SRS Fields
     lastReviewedAt?: number;
@@ -39,7 +40,7 @@ export const WordStore = {
         }
     },
 
-    addWord: async (text: string, translation: string, context?: string, sourceBookId?: string): Promise<Word> => {
+    addWord: async (text: string, translation: string, context?: string, sourceBookId?: string, lemma?: string): Promise<Word> => {
         const words = await WordStore.getWords();
         // Simple duplicate check (case-insensitive)
         const existing = words.find(w => w.text.toLowerCase() === text.toLowerCase());
@@ -55,6 +56,7 @@ export const WordStore = {
             translation,
             context,
             sourceBookId,
+            lemma, // Base form of the word
             status: 'new',
             addedAt: Date.now()
         };
@@ -66,6 +68,45 @@ export const WordStore = {
     deleteWord: async (id: string) => {
         await dbOperations.delete(STORE_WORDS, id);
     },
+
+    /**
+     * 批量删除单词
+     */
+    deleteWords: async (ids: string[]) => {
+        for (const id of ids) {
+            await WordStore.deleteWord(id);
+        }
+    },
+
+    /**
+     * 导出单词数据
+     */
+    exportWords: async (ids: string[]): Promise<Word[]> => {
+        const words = await WordStore.getWords();
+        return words.filter(w => ids.includes(w.id));
+    },
+
+    /**
+     * 导出为 CSV 格式
+     */
+    exportWordsAsCSV: (words: Word[]): string => {
+        const headers = ['单词', '翻译', '状态', '添加时间', '上下文'];
+        const rows = words.map(w => [
+            w.text,
+            w.translation,
+            w.status,
+            new Date(w.addedAt).toLocaleDateString(),
+            w.context || ''
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+
+        return csvContent;
+    },
+
 
     updateStatus: async (id: string, status: Word['status']) => {
         const words = await WordStore.getWords();

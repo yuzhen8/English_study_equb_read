@@ -114,10 +114,23 @@ const ExerciseSession: React.FC = () => {
 
     const effectiveMode = getEffectiveMode(currentIndex);
 
+    // For spelling mode, render full screen without ExerciseSession header
+    if (effectiveMode === 'spelling') {
+        return (
+            <SpellingMode
+                key={currentWord.id}
+                word={currentWord}
+                onResult={handleResult}
+                currentIndex={currentIndex + 1}
+                totalCount={words.length}
+            />
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
-            {/* Header */}
-            <header className="bg-white shadow-sm px-4 h-16 flex items-center justify-between z-10">
+            {/* Header - Fixed at top */}
+            <header className="fixed top-0 left-0 right-0 bg-white shadow-sm px-4 h-16 flex items-center justify-between z-10">
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate('/exercise')} className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
                         <ArrowLeft size={24} />
@@ -142,18 +155,12 @@ const ExerciseSession: React.FC = () => {
                 </div>
             </header>
 
-            {/* Content */}
-            <div className="flex-1 flex flex-col items-center justify-center p-4">
+            {/* Content - Add padding for fixed header */}
+            <div className="flex-1 flex flex-col items-center justify-center p-4 pt-20">
                 <div className="w-full max-w-md">
                     {effectiveMode === 'choice' ? (
                         <ChoiceMode
                             key={currentWord.id} // Key to force reset on word change
-                            word={currentWord}
-                            onResult={handleResult}
-                        />
-                    ) : effectiveMode === 'spelling' ? (
-                        <SpellingMode
-                            key={currentWord.id}
                             word={currentWord}
                             onResult={handleResult}
                         />
