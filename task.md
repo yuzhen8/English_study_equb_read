@@ -189,23 +189,23 @@
 - [x] SRS 算法验证与日志系统 (Verification)
     - [x] **后端日志服务**: 在 `electron/main.ts` 实现 `debug:log-srs` 接口，支持将 JSON 数据追加写入桌面文件
     - [x] **暴露接口**: 在 `preload.ts` 中暴露 `logSRS` 方法
-    - [ ] **前端数据采集**: 在 `ExerciseSession` 结算流程中植入探针
-        - [ ] 捕获原始输入 (Mode Scores & Weights)
-        - [ ] 捕获 SRS 变更前状态 (Before State)
-        - [ ] 捕获 SRS 变更后状态 (After State - via Refetch)
-        - [ ] 生成完整差异报告并调用日志接口
+    - [x] **前端数据采集**: 在 `ExerciseSession` 结算流程中植入探针
+        - [x] 捕获原始输入 (Mode Scores & Weights)
+        - [x] 捕获 SRS 变更前状态 (Before State)
+        - [x] 捕获 SRS 变更后状态 (After State - via Refetch)
+        - [x] 生成完整差异报告并调用日志接口
     - [ ] **执行验证测试**:
         - [ ] 运行一次混合练习，包含“全部掌握”、“部分错误”、“完全忘记”三种情况
         - [ ] 检查桌面 `linga_srs_debug.json`
         - [ ] 确认 Interval 和 EF 值的变化符合 SM-2 算法预期
-    - [ ] 在我的-设置界面添加开关，是否启用这个功能
-- [ ] 修复复习模式筛选逻辑 (Review Mode Logic)
-        - [ ] **问题描述**: 当前 `ExerciseSession` 的 `loadSession` 方法缺少针对 "review" (复习) scope 的处理分支，导致点击“开始复习”时错误地加载了所有“学习中”的单词，而非仅加载“到期”单词。
-        - [ ] **修改代码**: 在 `src/pages/Exercise/ExerciseSession.tsx` 的 `switch(scope)` 语句中添加 `case 'review'`。
-        - [ ] **实现逻辑**: 调用 `await WordStore.getDueWords()` 仅获取 `nextReviewAt <= now` 的单词。
-- [ ] 优化 SRS 间隔时间计算 (SRS Timing Alignment)
-    - [ ] **问题描述**: 当前算法基于 `Date.now()` 精确计算复习时间。例如今晚 23:00 复习的单词，必须等到明晚 23:00 才能复习，体验不佳。
-    - [ ] **优化目标**: 采用“自然日”结算机制 (Day-based alignment)。
-    - [ ] **实现逻辑**: 修改 `src/services/WordStore.ts` 中的 `submitReview` 方法。
-        - [ ] 计算 `nextReviewAt` 时，不直接使用 `now + interval`。
-        - [ ] 将时间标准化为 **目标日期的凌晨 04:00** (Day Start Threshold)。这样只要跨过凌晨4点，所有当天的复习任务都会激活，无需等待具体时刻。
+    - [x] 在设置界面添加开关，是否启用这个功能
+- [x] 修复复习模式筛选逻辑 (Review Mode Logic)
+        - [x] **问题描述**: 当前 `ExerciseSession` 的 `loadSession` 方法缺少针对 "review" (复习) scope 的处理分支，导致点击“开始复习”时错误地加载了所有“学习中”的单词，而非仅加载“到期”单词。
+        - [x] **修改代码**: 在 `src/pages/Exercise/ExerciseSession.tsx` 的 `switch(scope)` 语句中添加 `case 'review'`。
+        - [x] **实现逻辑**: 调用 `await WordStore.getDueWords()` 仅获取 `nextReviewAt <= now` 的单词。
+- [x] 优化 SRS 间隔时间计算 (SRS Timing Alignment)
+    - [x] **问题描述**: 当前算法基于 `Date.now()` 精确计算复习时间。例如今晚 23:00 复习的单词，必须等到明晚 23:00 才能复习，体验不佳。
+    - [x] **优化目标**: 采用“自然日”结算机制 (Day-based alignment)。
+    - [x] **实现逻辑**: 修改 `src/services/WordStore.ts` 中的 `submitReview` 方法。
+        - [x] 计算 `nextReviewAt` 时，不直接使用 `now + interval`。
+        - [x] 将时间标准化为 **目标日期的凌晨 04:00** (Day Start Threshold)。这样只要跨过凌晨4点，所有当天的复习任务都会激活，无需等待具体时刻。

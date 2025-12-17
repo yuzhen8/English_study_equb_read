@@ -35,6 +35,10 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
     const [isComplete, setIsComplete] = useState(false);
     const [shakeIndex, setShakeIndex] = useState<number | null>(null);
     const [showHint, setShowHint] = useState(false);
+    // 错误计数和惩罚状态
+    const [mistakeCount, setMistakeCount] = useState(0);
+    const [usedHint, setUsedHint] = useState(false);
+    const [usedReset, setUsedReset] = useState(false);
 
     const nextEmptySlot = useMemo(() => {
         const idx = slots.findIndex(s => s === null);
@@ -61,6 +65,9 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
         setIsComplete(false);
         setShakeIndex(null);
         setShowHint(false);
+        setMistakeCount(0);
+        setUsedHint(false);
+        setUsedReset(false);
 
         // 自动播放
         setTimeout(() => playAudio(), 500);
@@ -92,12 +99,14 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
                 setIsComplete(true);
             }
         } else {
+            setMistakeCount(prev => prev + 1);
             setShakeIndex(nextEmptySlot);
             setTimeout(() => setShakeIndex(null), 500);
         }
     };
 
     const handleReset = () => {
+        setUsedReset(true); // 标记使用了重置
         const wordLetters = targetWord.split('');
         setSlots(Array(targetWord.length).fill(null));
 
@@ -109,14 +118,26 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
         setShakeIndex(null);
     };
 
+    // 计算动态评分
+    const calculateScore = (): number => {
+        // 使用提示或重置 = 1分
+        if (usedHint || usedReset) return 1;
+        // 根据错误次数评分: 0错=5, 1错=4, 2错=3, 3+错=2
+        if (mistakeCount === 0) return 5;
+        if (mistakeCount === 1) return 4;
+        if (mistakeCount === 2) return 3;
+        return 2;
+    };
+
     useEffect(() => {
         if (isComplete) {
+            const score = calculateScore();
             const timer = setTimeout(() => {
-                onResult(5);
+                onResult(score);
             }, 1500);
             return () => clearTimeout(timer);
         }
-    }, [isComplete, onResult]);
+    }, [isComplete, onResult, usedHint, usedReset, mistakeCount]);
 
     return (
         <>
@@ -166,7 +187,7 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
                             <div className="flex items-center justify-center gap-3 mb-3">
                                 {!showHint && !isComplete && (
                                     <button
-                                        onClick={() => setShowHint(true)}
+                                        onClick={() => { setShowHint(true); setUsedHint(true); }}
                                         className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
                                     >
                                         显示提示
@@ -263,7 +284,7 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
                 {isComplete && (
                     <div className="fixed bottom-0 left-0 right-0">
                         <button
-                            onClick={() => onResult(5)}
+                            onClick={() => onResult(calculateScore())}
                             className="w-full bg-green-500 text-white py-4 text-lg font-bold hover:bg-green-600 transition-colors"
                         >
                             完成！继续下一题

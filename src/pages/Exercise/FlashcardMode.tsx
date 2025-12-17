@@ -135,7 +135,7 @@ const FlashcardMode: React.FC<FlashcardModeProps> = ({ word, onResult }) => {
                         {/* Controls - Only 2 buttons */}
                         <div className="p-4 grid grid-cols-2 gap-3 bg-gray-50">
                             <button
-                                onClick={(e) => { e.stopPropagation(); onResult(2); }}
+                                onClick={(e) => { e.stopPropagation(); onResult(1); }}
                                 className="flex flex-col items-center py-3 px-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-600 transition-colors group border border-orange-200"
                             >
                                 <span className="text-base font-bold mb-1 group-hover:scale-110 transition-transform">学习</span>

@@ -32,6 +32,9 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
     const [shakeIndex, setShakeIndex] = useState<number | null>(null);
     const [showWordDetail, setShowWordDetail] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
+    // 错误计数和重置状态
+    const [mistakeCount, setMistakeCount] = useState(0);
+    const [usedReset, setUsedReset] = useState(false);
 
     // Find next empty slot index
     const nextEmptySlot = useMemo(() => {
@@ -63,6 +66,8 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
 
         setIsComplete(false);
         setShakeIndex(null);
+        setMistakeCount(0);
+        setUsedReset(false);
     }, [word.id, targetWord, generateRandomLetters]);
 
     // Handle clicking on a filled slot to remove the letter
@@ -112,6 +117,7 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
             });
         } else {
             // Error: shake animation on current target slot
+            setMistakeCount(prev => prev + 1);
             setShakeIndex(nextEmptySlot);
             setTimeout(() => setShakeIndex(null), 500);
         }
@@ -119,6 +125,7 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
 
     // Reset the puzzle
     const handleReset = () => {
+        setUsedReset(true); // 标记使用了重置
         const letters = targetWord.split('');
         setSlots(new Array(letters.length).fill(null));
         const extraCount = Math.max(2, Math.floor(letters.length * 0.5));
@@ -140,15 +147,27 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
     // Calculate progress
     const progress = slots.length > 0 ? slots.filter(s => s !== null).length / slots.length : 0;
 
+    // 计算动态评分
+    const calculateScore = (): number => {
+        // 使用重置 = 1分
+        if (usedReset) return 1;
+        // 根据错误次数评分: 0错=5, 1错=4, 2错=3, 3+错=2
+        if (mistakeCount === 0) return 5;
+        if (mistakeCount === 1) return 4;
+        if (mistakeCount === 2) return 3;
+        return 2;
+    };
+
     // Auto advance when complete
     useEffect(() => {
         if (isComplete) {
+            const score = calculateScore();
             const timer = setTimeout(() => {
-                onResult(5); // Perfect score for completion
+                onResult(score);
             }, 1500);
             return () => clearTimeout(timer);
         }
-    }, [isComplete, onResult]);
+    }, [isComplete, onResult, usedReset, mistakeCount]);
 
     return (
         <>
@@ -266,7 +285,7 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
                 {isComplete && (
                     <div className="fixed bottom-0 left-0 right-0 transform translate-y-0 transition-transform duration-300">
                         <button
-                            onClick={() => onResult(5)}
+                            onClick={() => onResult(calculateScore())}
                             className="w-full bg-green-500 text-white py-4 text-lg font-bold hover:bg-green-600 transition-colors"
                         >
                             完成！继续下一题
