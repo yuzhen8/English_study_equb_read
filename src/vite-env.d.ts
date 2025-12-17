@@ -10,6 +10,8 @@ interface ElectronAPI {
     selectFile: () => Promise<string | null>;
     getAudio: (url: string, word: string) => Promise<{ success: boolean; path?: string; error?: string }>;
     searchLocal: (word: string) => Promise<{ success: boolean; found: boolean; message?: string; data?: any }>;
+    // SRS 调试日志
+    logSRS: (data: any) => Promise<{ success: boolean; path?: string; error?: string }>;
 }
 
 interface Window {

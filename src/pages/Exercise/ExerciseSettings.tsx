@@ -24,6 +24,9 @@ export interface SettingsState {
     includeListeningChoice: boolean;   // 包含听力选择
     includeListeningSpelling: boolean; // 包含听力拼写
     includeFillBlank: boolean;      // 包含选词填空
+
+    // 开发者设置
+    enableSRSDebugLog: boolean;     // 启用 SRS 调试日志
 }
 
 const defaultSettings: SettingsState = {
@@ -38,6 +41,7 @@ const defaultSettings: SettingsState = {
     includeListeningChoice: true,
     includeListeningSpelling: true,
     includeFillBlank: true,
+    enableSRSDebugLog: false,
 };
 
 // 从localStorage加载设置
@@ -175,9 +179,10 @@ const ExerciseSettings: React.FC<ExerciseSettingsProps> = ({ onClose }) => {
         general: true,
         audio: false,
         mixed: false,
+        developer: false,
     });
 
-    const toggleSection = (section: 'general' | 'audio' | 'mixed') => {
+    const toggleSection = (section: 'general' | 'audio' | 'mixed' | 'developer') => {
         setExpandedSections(prev => ({
             ...prev,
             [section]: !prev[section]
@@ -301,6 +306,20 @@ const ExerciseSettings: React.FC<ExerciseSettingsProps> = ({ onClose }) => {
                         label="选词填空"
                         checked={settings.includeFillBlank}
                         onChange={(v) => updateSetting('includeFillBlank', v)}
+                    />
+                </SettingsSection>
+
+                {/* 开发者设置 */}
+                <SettingsSection
+                    title="开发者选项"
+                    expanded={expandedSections.developer}
+                    onToggle={() => toggleSection('developer')}
+                >
+                    <ToggleSetting
+                        label="SRS 调试日志"
+                        checked={settings.enableSRSDebugLog}
+                        onChange={(v) => updateSetting('enableSRSDebugLog', v)}
+                        description="完成练习后将 SRS 算法变更记录保存到桌面"
                     />
                 </SettingsSection>
             </div>

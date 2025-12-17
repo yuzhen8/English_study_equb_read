@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Zap, Layers, Type, MousePointerClick, Check, Headphones, FileText } from 'lucide-react';
+import { ArrowLeft, Zap, Layers, Type, MousePointerClick, Check, Headphones, FileText, HelpCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { WordStore, Word } from '../../services/WordStore';
 import { GroupStore, WordGroup } from '../../services/GroupStore';
@@ -22,6 +22,7 @@ interface ScopeOption {
     type: 'preset' | 'group';
     label: string;
     subLabel?: string;
+    helpText?: string;  // 帮助提示文本
     count: number;
     groupId?: string;
 }
@@ -34,12 +35,14 @@ const ExerciseScopeSelector: React.FC = () => {
     const [groups, setGroups] = useState<WordGroup[]>([]);
     const [selectedScope, setSelectedScope] = useState<string>('today');
     const [loading, setLoading] = useState(true);
+    const [showHelpPanel, setShowHelpPanel] = useState(false);  // 全局帮助面板状态
     const [wordCounts, setWordCounts] = useState<{
         today: number;
         random: number;
+        newWords: number;
         learning: number;
         total: number;
-    }>({ today: 0, random: 0, learning: 0, total: 0 });
+    }>({ today: 0, random: 0, newWords: 0, learning: 0, total: 0 });
 
     useEffect(() => {
         loadData();
@@ -50,18 +53,23 @@ const ExerciseScopeSelector: React.FC = () => {
         try {
             // 获取所有单词统计
             const allWords = await WordStore.getWords();
-            const now = Date.now();
-            const oneDay = 24 * 60 * 60 * 1000;
 
-            // 今天添加的单词
-            const todayWords = allWords.filter(w => now - w.addedAt < oneDay);
+            // 今天添加的单词（按天结算，从当天 0:00 开始）
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const startOfToday = today.getTime();
+            const todayWords = allWords.filter(w => w.addedAt >= startOfToday);
+
+            // 新词（仅未开始学习的单词）
+            const newWords = allWords.filter(w => w.status === 'new');
 
             // 学习中的单词
             const learningWords = allWords.filter(w => w.status === 'learning' || w.status === 'reviewed');
 
             setWordCounts({
                 today: todayWords.length,
-                random: Math.min(allWords.length, 20), // 随机选择最多20个
+                random: allWords.length,
+                newWords: newWords.length,
                 learning: learningWords.length,
                 total: allWords.length
             });
@@ -72,9 +80,34 @@ const ExerciseScopeSelector: React.FC = () => {
 
             // 构建预设范围选项
             const presetScopes: ScopeOption[] = [
-                { id: 'today', type: 'preset', label: '今天添加的单词', count: todayWords.length },
-                { id: 'random', type: 'preset', label: '随机词汇', count: Math.min(allWords.length, 20) },
-                { id: 'learning', type: 'preset', label: '随机学习单词', count: learningWords.length },
+                {
+                    id: 'today',
+                    type: 'preset',
+                    label: '今天添加的单词',
+                    count: todayWords.length,
+                    helpText: '显示过24小时内添加到词典的单词'
+                },
+                {
+                    id: 'random',
+                    type: 'preset',
+                    label: '随机词汇',
+                    count: allWords.length,
+                    helpText: '从所有单词中随机选择，包括新词、学习中和已掌握的单词'
+                },
+                {
+                    id: 'newWords',
+                    type: 'preset',
+                    label: '随机新词',
+                    count: newWords.length,
+                    helpText: '从未开始学习的单词中随机选择（状态为"新"的单词）'
+                },
+                {
+                    id: 'learning',
+                    type: 'preset',
+                    label: '随机学习单词',
+                    count: learningWords.length,
+                    helpText: '从正在学习的单词中随机选择（状态为"学习中"或"已复习"的单词）'
+                },
             ];
 
             // 转换群组为范围选项
@@ -173,7 +206,32 @@ const ExerciseScopeSelector: React.FC = () => {
             <div className="px-4 py-4 space-y-6">
                 {/* 随机范围 */}
                 <div className="space-y-2">
-                    <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider px-1">随机</h3>
+                    <div className="flex items-center justify-between px-1">
+                        <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider">随机</h3>
+                        <button
+                            onClick={() => setShowHelpPanel(!showHelpPanel)}
+                            className={cn(
+                                "p-1 rounded-full transition-colors",
+                                showHelpPanel
+                                    ? "text-blue-500 bg-blue-50"
+                                    : "text-gray-400 hover:text-blue-500 hover:bg-blue-50"
+                            )}
+                            title="查看说明"
+                        >
+                            <HelpCircle size={16} />
+                        </button>
+                    </div>
+
+                    {/* 帮助面板 */}
+                    {showHelpPanel && (
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 space-y-2">
+                            <div><strong>今天添加的单词</strong>：显示今天（0:00 起）添加到词典的单词</div>
+                            <div><strong>随机词汇</strong>：从所有单词中随机选择，包括新词、学习中和已掌握的单词</div>
+                            <div><strong>随机新词</strong>：从未开始学习的单词中随机选择（状态为"新"的单词）</div>
+                            <div><strong>随机学习单词</strong>：从正在学习的单词中随机选择（状态为"学习中"或"已复习"的单词）</div>
+                        </div>
+                    )}
+
                     <div className="space-y-2">
                         {presetOptions.map((option) => (
                             <ScopeOptionItem
@@ -268,11 +326,6 @@ const ScopeOptionItem: React.FC<ScopeOptionItemProps> = ({ option, selected, onS
             )}>
                 {option.count}
             </span>
-
-            {/* Loading indicator for learning words (optional visual) */}
-            {option.id === 'learning' && option.count > 0 && (
-                <div className="w-4 h-4 rounded-full border-2 border-orange-300 border-t-transparent animate-spin" />
-            )}
         </button>
     );
 };

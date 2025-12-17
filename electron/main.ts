@@ -240,6 +240,42 @@ app.on('ready', async () => {
         }
         return result.filePaths[0]; // Return the first selected file path
     });
+
+    // SRS 调试日志接口
+    ipcMain.handle('debug:log-srs', async (event, data: any) => {
+        try {
+            const desktopPath = app.getPath('desktop');
+            const logFilePath = path.join(desktopPath, 'linga_srs_debug.json');
+
+            // 读取现有日志（如果存在）
+            let existingLogs: any[] = [];
+            try {
+                const existingData = await fs.readFile(logFilePath, 'utf-8');
+                existingLogs = JSON.parse(existingData);
+                if (!Array.isArray(existingLogs)) {
+                    existingLogs = [existingLogs];
+                }
+            } catch {
+                // 文件不存在或解析失败，使用空数组
+                existingLogs = [];
+            }
+
+            // 添加时间戳和新数据
+            const logEntry = {
+                timestamp: new Date().toISOString(),
+                ...data
+            };
+            existingLogs.push(logEntry);
+
+            // 写入文件
+            await fs.writeFile(logFilePath, JSON.stringify(existingLogs, null, 2), 'utf-8');
+
+            return { success: true, path: logFilePath };
+        } catch (error) {
+            console.error('SRS Log error:', error);
+            return { success: false, error: String(error) };
+        }
+    });
 });
 
 app.on('window-all-closed', () => {

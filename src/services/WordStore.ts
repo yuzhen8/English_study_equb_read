@@ -220,7 +220,6 @@ export const WordStore = {
         if (!word) return;
 
         const now = Date.now();
-        const oneDay = 24 * 60 * 60 * 1000;
 
         // Defaults
         if (!word.easeFactor) word.easeFactor = 2.5;
@@ -261,7 +260,15 @@ export const WordStore = {
         }
 
         word.interval = nextInterval;
-        word.nextReviewAt = now + (nextInterval * oneDay);
+
+        // 优化：采用自然日结算机制
+        // 将 nextReviewAt 标准化为目标日期的凌晨 04:00
+        // 这样只要跨过凌晨4点，所有当天的复习任务都会激活
+        const targetDate = new Date(now);
+        targetDate.setDate(targetDate.getDate() + nextInterval);
+        targetDate.setHours(4, 0, 0, 0); // 设置为凌晨 04:00
+        word.nextReviewAt = targetDate.getTime();
+
         word.lastReviewedAt = now;
         word.reviewCount++;
 

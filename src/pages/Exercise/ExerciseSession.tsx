@@ -12,6 +12,54 @@ import FillBlankMode from './modes/FillBlankMode';
 import SessionSummary from './SessionSummary';
 import ExerciseSettings, { loadSettings } from './ExerciseSettings';
 
+// 模式权重配置 (Mode Weights)
+// 主动输出型 (高权重): 拼写、听力拼写、选词填空
+// 被动识别型 (标准权重): 闪卡、听力选择、多项选择
+const MODE_WEIGHTS: Record<string, number> = {
+    'spelling': 2.0,           // 拼写构建 - 高权重
+    'listening-spelling': 2.0, // 听力拼写 - 高权重
+    'fill-blank': 1.5,         // 选词填空 - 中高权重
+    'flashcard': 1.0,          // 闪卡 - 标准权重
+    'listening-choice': 1.0,   // 听力选择 - 标准权重
+    'choice': 0.8,             // 多项选择 - 略低权重
+};
+
+/**
+ * 计算加权综合评分
+ * @param results 各模式的评分结果
+ * @returns 最终加权评分 (0-5)
+ * 
+ * 规则:
+ * 1. 一票否决: 任意模式评分为 0 → 最终评分为 0
+ * 2. 严重错误惩罚: 任意模式评分为 1 → 最终评分强制为 1
+ * 3. 加权平均: 其他情况使用加权平均计算
+ */
+const calculateWeightedScore = (results: { mode: string; quality: number }[]): number => {
+    // 检查一票否决
+    if (results.some(r => r.quality === 0)) {
+        return 0;
+    }
+
+    // 检查严重错误惩罚
+    if (results.some(r => r.quality === 1)) {
+        return 1;
+    }
+
+    // 计算加权平均
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    for (const result of results) {
+        const weight = MODE_WEIGHTS[result.mode] || 1.0;
+        weightedSum += result.quality * weight;
+        totalWeight += weight;
+    }
+
+    if (totalWeight === 0) return 0;
+
+    return Math.round(weightedSum / totalWeight);
+};
+
 // 练习项类型：一个单词 + 一个模式
 interface ExerciseItem {
     word: Word;
@@ -29,7 +77,7 @@ const ExerciseSession: React.FC = () => {
     const [sessionComplete, setSessionComplete] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     // 暂存结果，只有完成所有单词后才提交
-    const [pendingResults, setPendingResults] = useState<{ wordId: string; quality: number }[]>([]);
+    const [pendingResults, setPendingResults] = useState<{ wordId: string; quality: number; mode: string }[]>([]);
     // 存储原始单词列表用于计算总数
     const [uniqueWords, setUniqueWords] = useState<Word[]>([]);
 
@@ -43,19 +91,31 @@ const ExerciseSession: React.FC = () => {
 
                 let selectedWords: Word[] = [];
                 const allWords = await WordStore.getWords();
-                const now = Date.now();
-                const oneDay = 24 * 60 * 60 * 1000;
 
                 // 根据范围选择单词
                 switch (scope) {
                     case 'today':
-                        selectedWords = allWords.filter(w => now - w.addedAt < oneDay);
+                        // 今天添加的单词（按天结算，从当天 0:00 开始）
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const startOfToday = today.getTime();
+                        selectedWords = allWords.filter(w => w.addedAt >= startOfToday);
+                        break;
+                    case 'review':
+                        // 复习模式：仅获取到期的单词
+                        selectedWords = await WordStore.getDueWords();
+                        selectedWords = selectedWords.sort(() => 0.5 - Math.random());
                         break;
                     case 'learning':
                         selectedWords = allWords.filter(w => w.status === 'learning' || w.status === 'reviewed');
                         selectedWords = selectedWords.sort(() => 0.5 - Math.random());
                         break;
                     case 'new':
+                        selectedWords = allWords.filter(w => w.status === 'new');
+                        selectedWords = selectedWords.sort(() => 0.5 - Math.random());
+                        break;
+                    case 'newWords':
+                        // 随机新词：仅未开始学习的单词
                         selectedWords = allWords.filter(w => w.status === 'new');
                         selectedWords = selectedWords.sort(() => 0.5 - Math.random());
                         break;
@@ -123,7 +183,7 @@ const ExerciseSession: React.FC = () => {
         const currentItem = exerciseItems[currentIndex];
         if (currentItem) {
             // 暂存结果，不立即提交
-            setPendingResults(prev => [...prev, { wordId: currentItem.word.id, quality }]);
+            setPendingResults(prev => [...prev, { wordId: currentItem.word.id, quality, mode: currentItem.mode }]);
         }
 
         // Advance
@@ -131,10 +191,89 @@ const ExerciseSession: React.FC = () => {
             setCurrentIndex(prev => prev + 1);
         } else {
             // 所有练习项完成，批量提交所有结果
-            const allResults = [...pendingResults, { wordId: currentItem.word.id, quality }];
+            const allResults = [...pendingResults, { wordId: currentItem.word.id, quality, mode: currentItem.mode }];
+
+            // 按单词分组结果
+            const resultsByWord = new Map<string, { wordId: string; results: { mode: string; quality: number }[] }>();
             for (const result of allResults) {
-                await WordStore.submitReview(result.wordId, result.quality);
+                if (!resultsByWord.has(result.wordId)) {
+                    resultsByWord.set(result.wordId, { wordId: result.wordId, results: [] });
+                }
+                resultsByWord.get(result.wordId)!.results.push({ mode: result.mode, quality: result.quality });
             }
+
+            // 日志数据收集
+            const logEntries: any[] = [];
+
+            for (const [wordId, data] of resultsByWord) {
+                // 捕获 SRS 变更前状态
+                const beforeState = await WordStore.getWord(wordId);
+
+                // 使用加权评分算法计算最终分数
+                const weightedQuality = calculateWeightedScore(data.results);
+
+                // 提交复习结果
+                await WordStore.submitReview(wordId, weightedQuality);
+
+                // 捕获 SRS 变更后状态
+                const afterState = await WordStore.getWord(wordId);
+
+                // 生成日志条目
+                if (beforeState && afterState) {
+                    logEntries.push({
+                        word: beforeState.text,
+                        wordId,
+                        modeResults: data.results,
+                        weightedQuality: weightedQuality,
+                        before: {
+                            status: beforeState.status,
+                            interval: beforeState.interval,
+                            easeFactor: beforeState.easeFactor,
+                            nextReviewAt: beforeState.nextReviewAt,
+                            reviewCount: beforeState.reviewCount
+                        },
+                        after: {
+                            status: afterState.status,
+                            interval: afterState.interval,
+                            easeFactor: afterState.easeFactor,
+                            nextReviewAt: afterState.nextReviewAt,
+                            reviewCount: afterState.reviewCount
+                        },
+                        changes: {
+                            intervalDelta: (afterState.interval || 0) - (beforeState.interval || 0),
+                            easeFactorDelta: ((afterState.easeFactor || 2.5) - (beforeState.easeFactor || 2.5)).toFixed(2),
+                            statusChanged: beforeState.status !== afterState.status
+                        }
+                    });
+                }
+            }
+
+            // 调用日志接口（如果启用且有日志条目）
+            const settings = loadSettings();
+            console.log('[SRS Debug] Log entries count:', logEntries.length);
+            console.log('[SRS Debug] enableSRSDebugLog:', settings.enableSRSDebugLog);
+
+            if (settings.enableSRSDebugLog && logEntries.length > 0) {
+                console.log('[SRS Debug] electronAPI available:', !!window.electronAPI);
+                console.log('[SRS Debug] logSRS method available:', !!(window.electronAPI?.logSRS));
+
+                if (window.electronAPI?.logSRS) {
+                    try {
+                        const result = await window.electronAPI.logSRS({
+                            sessionMode: mode,
+                            totalWords: resultsByWord.size,
+                            totalExercises: allResults.length,
+                            entries: logEntries
+                        });
+                        console.log('[SRS Debug] Log result:', result);
+                    } catch (error) {
+                        console.error('[SRS Debug] Failed to save log:', error);
+                    }
+                } else {
+                    console.warn('[SRS Debug] logSRS not available - Electron may need restart');
+                }
+            }
+
             setSessionComplete(true);
         }
     };

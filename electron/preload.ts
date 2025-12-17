@@ -21,5 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     readFile: (path: string) => ipcRenderer.invoke('read-file', path),
     selectFile: () => ipcRenderer.invoke('select-file'),
     getAudio: (url: string, word: string) => ipcRenderer.invoke('dict:get-audio', { url, word }),
-    searchLocal: (word: string) => ipcRenderer.invoke('dict:search-local', word)
+    searchLocal: (word: string) => ipcRenderer.invoke('dict:search-local', word),
+    // SRS 调试日志
+    logSRS: (data: any) => ipcRenderer.invoke('debug:log-srs', data)
 })

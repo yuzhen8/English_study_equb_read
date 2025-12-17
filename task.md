@@ -138,16 +138,8 @@
         - [x] 会话容器 (ExerciseSession.tsx) - 基础实现
         - [x] **[NEW]** 练习前置流程 (Scope Selection):
             - [x] 实现 "学习范围选择" 界面 (ExerciseScopeSelector.tsx)
-            - [x] 支持选项: 今天添加的单词, 随机词汇, 随机学习单词
+            - [x] 支持选项: 今天添加的单词, 随机词汇, 随机新词, 随机学习单词
             - [x] 支持选择群组 (我的小组) 进行专项练习
-        - [ ] **[NEW]** 全屏布局适配 (Viewport Fix):
-            - [ ] 优化 `ExerciseSession` 布局，强制单屏显示 (100vh)
-            - [ ] 修复顶部导航栏需滚动查看的问题 (Fixed Header)
-        - [ ] **闪卡模式修复 (Flashcard Fixes)**:
-            - [ ] 修复卡片翻转逻辑，去除背面的镜像效果
-            - [ ] 背面内容明确: 仅显示中文释义 + 原句 (Context)
-        - [ ] **多项选择优化 (Choice Optimization)**:
-            - [ ] 选项内容净化: 仅显示中文意思，移除音标和其他辅助文本
         - [x] **单词构建重构 (Construction Mode)**:
             - [x] 将 "拼写模式" (Spelling) 重构为 "单词构建" (Word Construction)
             - [x] 实现逻辑: 显示中文释义 -> 提供打乱的字母块 -> 用户点击/拖拽完成拼写
@@ -180,3 +172,40 @@
     - [/] 多源翻译支持 (Google API, DeepSeek, **Ollama**)
     - [ ] 生词状态管理 (New -> Learning -> Review)
     - [ ] 个人资料页 UI
+
+- [x]  SRS 评分逻辑重构 (Weighted Aggregation Strategy)
+        - [x] **定义模式权重 (Mode Weights)**: 在 `ExerciseSession` 中配置权重常量 `MODE_WEIGHTS`
+            - [x] 主动输出型 (高权重): 拼写 (2.0), 听力拼写 (2.0), 选词填空 (1.5)
+            - [x] 被动识别型 (标准权重): 闪卡 (1.0), 听力选择 (1.0), 多项选择 (0.8)
+        - [x] **实现综合评分算法**: 开发 `calculateWeightedScore` 工具函数
+            - [x] **一票否决机制 (Veto Power)**: 若任意模式评分为 0 (完全忘记)，最终评分直接判为 0
+            - [x] **严重错误惩罚**: 若任意模式评分为 1 (错误)，最终评分强制判为 1 (或高权重惩罚)
+            - [x] **加权平均计算**: 基于 `(评分 × 权重) / 总权重` 计算最终 Quality (四舍五入)
+        - [x] **重构提交逻辑 (Submit Once)**: 修改 `handleResult` 的结算流程
+            - [x] **结果聚合**: 练习过程中仅暂存结果 (包含 `mode` 和 `quality`)，不调用 API
+            - [x] **按单词分组**: 结算时将同一单词的不同模式结果归类
+            - [x] **统一提交**: 循环调用 `calculateWeightedScore` 得出最终分，每个单词仅触发一次 `WordStore.submitReview`
+            
+- [x] SRS 算法验证与日志系统 (Verification)
+    - [x] **后端日志服务**: 在 `electron/main.ts` 实现 `debug:log-srs` 接口，支持将 JSON 数据追加写入桌面文件
+    - [x] **暴露接口**: 在 `preload.ts` 中暴露 `logSRS` 方法
+    - [ ] **前端数据采集**: 在 `ExerciseSession` 结算流程中植入探针
+        - [ ] 捕获原始输入 (Mode Scores & Weights)
+        - [ ] 捕获 SRS 变更前状态 (Before State)
+        - [ ] 捕获 SRS 变更后状态 (After State - via Refetch)
+        - [ ] 生成完整差异报告并调用日志接口
+    - [ ] **执行验证测试**:
+        - [ ] 运行一次混合练习，包含“全部掌握”、“部分错误”、“完全忘记”三种情况
+        - [ ] 检查桌面 `linga_srs_debug.json`
+        - [ ] 确认 Interval 和 EF 值的变化符合 SM-2 算法预期
+    - [ ] 在我的-设置界面添加开关，是否启用这个功能
+- [ ] 修复复习模式筛选逻辑 (Review Mode Logic)
+        - [ ] **问题描述**: 当前 `ExerciseSession` 的 `loadSession` 方法缺少针对 "review" (复习) scope 的处理分支，导致点击“开始复习”时错误地加载了所有“学习中”的单词，而非仅加载“到期”单词。
+        - [ ] **修改代码**: 在 `src/pages/Exercise/ExerciseSession.tsx` 的 `switch(scope)` 语句中添加 `case 'review'`。
+        - [ ] **实现逻辑**: 调用 `await WordStore.getDueWords()` 仅获取 `nextReviewAt <= now` 的单词。
+- [ ] 优化 SRS 间隔时间计算 (SRS Timing Alignment)
+    - [ ] **问题描述**: 当前算法基于 `Date.now()` 精确计算复习时间。例如今晚 23:00 复习的单词，必须等到明晚 23:00 才能复习，体验不佳。
+    - [ ] **优化目标**: 采用“自然日”结算机制 (Day-based alignment)。
+    - [ ] **实现逻辑**: 修改 `src/services/WordStore.ts` 中的 `submitReview` 方法。
+        - [ ] 计算 `nextReviewAt` 时，不直接使用 `now + interval`。
+        - [ ] 将时间标准化为 **目标日期的凌晨 04:00** (Day Start Threshold)。这样只要跨过凌晨4点，所有当天的复习任务都会激活，无需等待具体时刻。
