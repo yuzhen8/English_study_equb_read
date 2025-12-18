@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
-import { Plus, MoreHorizontal, ChevronRight, FolderPlus } from 'lucide-react';
+import { Plus, MoreHorizontal, ChevronRight, FolderPlus, Zap, CheckCircle2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 import { WordStore } from '../../services/WordStore';
@@ -72,8 +72,8 @@ const DictionaryDashboard: React.FC = () => {
             {/* Header */}
             <div className="bg-white px-4 pt-12 pb-4 sticky top-0 z-10 shadow-sm">
                 <div className="flex justify-between items-center mb-4">
-                    <h1 className="text-2xl font-bold text-gray-900">词典</h1>
-                    <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full">
+                    <h1 className="text-2xl font-bold text-slate-900">词典</h1>
+                    <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
                         <MoreHorizontal size={20} />
                     </button>
                 </div>
@@ -188,18 +188,24 @@ const DictionaryDashboard: React.FC = () => {
 
                             {/* Progress Stats */}
                             <div className="flex flex-col gap-3">
-                                <div className="bg-white rounded-2xl p-3 flex-1 flex flex-col justify-center shadow-sm border border-gray-100">
-                                    <span className="text-gray-400 text-xs mb-1">进行中</span>
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-xl font-bold text-gray-900">{stats.statusCounts.learning + stats.statusCounts.reviewed}</span>
-                                        <span className="text-xs text-orange-500 font-medium">待复习</span>
+                                <div className="bg-orange-50/80 rounded-2xl p-4 flex-1 flex flex-col justify-center border border-orange-100 relative overflow-hidden group">
+                                    <div className="absolute top-2 right-2 bg-orange-100 p-1.5 rounded-lg text-orange-500 opacity-50 group-hover:opacity-100 transition-opacity">
+                                        <Zap size={14} />
+                                    </div>
+                                    <span className="text-orange-600/80 text-xs mb-1 font-medium">进行中</span>
+                                    <div className="flex items-baseline gap-1 relative z-10">
+                                        <span className="text-2xl font-bold text-slate-900">{stats.statusCounts.learning + stats.statusCounts.reviewed}</span>
+                                        <span className="text-xs text-orange-500 font-bold">待复习</span>
                                     </div>
                                 </div>
-                                <div className="bg-white rounded-2xl p-3 flex-1 flex flex-col justify-center shadow-sm border border-gray-100">
-                                    <span className="text-gray-400 text-xs mb-1">已学习</span>
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-xl font-bold text-gray-900">{stats.total}</span>
-                                        <span className="text-xs text-green-500 font-medium">个单词</span>
+                                <div className="bg-emerald-50/80 rounded-2xl p-4 flex-1 flex flex-col justify-center border border-emerald-100 relative overflow-hidden group">
+                                    <div className="absolute top-2 right-2 bg-emerald-100 p-1.5 rounded-lg text-emerald-500 opacity-50 group-hover:opacity-100 transition-opacity">
+                                        <CheckCircle2 size={14} />
+                                    </div>
+                                    <span className="text-emerald-600/80 text-xs mb-1 font-medium">已掌握</span>
+                                    <div className="flex items-baseline gap-1 relative z-10">
+                                        <span className="text-2xl font-bold text-slate-900">{stats.statusCounts.mastered}</span>
+                                        <span className="text-xs text-emerald-500 font-bold">个单词</span>
                                     </div>
                                 </div>
                             </div>

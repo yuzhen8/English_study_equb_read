@@ -37,7 +37,7 @@ const BottomNav: React.FC = () => {
     }
 
     return (
-        <div className="h-16 border-t border-gray-200 bg-white flex items-center justify-around z-50">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 h-16 px-2 bg-white/90 backdrop-blur-lg rounded-full flex items-center gap-1 shadow-2xl border border-white/50 z-50 transition-all duration-300">
             {navItemsFull.map((item) => {
                 const active = isActive(item.path);
                 const Icon = item.icon;
@@ -46,12 +46,21 @@ const BottomNav: React.FC = () => {
                         key={item.path}
                         onClick={() => navigate(item.path)}
                         className={twMerge(
-                            "flex flex-col items-center justify-center w-full h-full text-xs gap-1 transition-colors",
-                            active ? "text-blue-600" : "text-gray-400 hover:text-gray-600"
+                            "relative flex flex-col items-center justify-center w-16 h-12 rounded-full transition-all duration-300",
+                            active ? "text-blue-600 -translate-y-1" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
                         )}
                     >
-                        <Icon size={24} strokeWidth={active ? 2.5 : 2} />
-                        <span className={clsx("font-medium", active ? "text-blue-600" : "text-gray-500")}>
+                        {/* Active Indicator Background */}
+                        {active && (
+                            <div className="absolute inset-0 bg-blue-50 rounded-full -z-10 animate-fade-in" />
+                        )}
+
+                        <Icon
+                            size={24}
+                            strokeWidth={active ? 2.5 : 2}
+                            className={clsx("transition-transform duration-300", active && "scale-110")}
+                        />
+                        <span className={clsx("text-[10px] font-medium mt-0.5 transition-colors", active ? "text-blue-600" : "text-slate-500")}>
                             {item.label}
                         </span>
                     </button>

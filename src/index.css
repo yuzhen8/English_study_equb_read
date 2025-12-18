@@ -18,7 +18,7 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-slate-50 text-slate-900;
 }
 
 #root {
@@ -28,9 +28,26 @@ body {
 
 /* Shake animation for error feedback */
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-  20%, 40%, 60%, 80% { transform: translateX(4px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-4px);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(4px);
+  }
 }
 
 .animate-shake {

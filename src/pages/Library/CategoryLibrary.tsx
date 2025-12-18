@@ -565,15 +565,15 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, selected, onClic
     <button
         onClick={onClick}
         className={cn(
-            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
+            "w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium transition-all text-left mb-1",
             selected
-                ? "bg-indigo-50 text-indigo-700"
-                : "text-gray-600 hover:bg-gray-50"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
+                : "text-slate-600 hover:bg-slate-100"
         )}
     >
-        <span className={selected ? "text-indigo-600" : "text-gray-400"}>{icon}</span>
+        <span className={selected ? "text-white" : "text-slate-400 group-hover:text-slate-600"}>{icon}</span>
         <span className="truncate flex-1">{label}</span>
-        {selected && <ChevronRight size={14} className="text-indigo-400" />}
+        {/* Removed redundant chevron for cleaner look */}
     </button>
 );
 
@@ -630,7 +630,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, on
             onTouchStart={startPress}
             onTouchEnd={endPress}
             onClick={handleClick}
-            className="bg-white rounded-lg p-2 shadow-sm border border-gray-100 hover:shadow-md transition-all cursor-pointer group select-none"
+            className="bg-white rounded-xl p-3 shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group select-none relative"
         >
             <div className="aspect-[2/3] bg-gray-100 rounded-md mb-2 overflow-hidden relative">
                 {book.cover ? (

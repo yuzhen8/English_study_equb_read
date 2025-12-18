@@ -10,8 +10,9 @@
         - [x] **[NEW]** 实现主布局容器 (MainLayout) 与背景样式
         - [x] **[NEW]** 实现底部导航栏 (词典, 首页, 图书馆, 锻炼, 个人资料)
         - [x] 调整标签顺序 (书库在词典左侧)
-        - [x] 配置 React Router 路由结构
-    - [/] **[NEW]** 测试与质量保证 (Testing & QA)
+        - [x] Configure React Router structure
+        - [x] Beautify Navigation Bar (BottomNav)
+    - [/] **[NEW]** Testing & QA
         - [x] 配置 Vitest & React Testing Library 环境
         - [x] 编写核心服务单元测试 (Services)
             - [x] WordStore (CRUD)
