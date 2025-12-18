@@ -27,6 +27,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // CEFR 分析
     analyzeCEFR: (text: string) => ipcRenderer.invoke('cefr:analyze', { text }),
     checkCEFR: () => ipcRenderer.invoke('cefr:check'),
+    saveBookFile: (id: string, arrayBuffer: ArrayBuffer) => ipcRenderer.invoke('save-book-file', { id, arrayBuffer }),
+    deleteBookFile: (id: string) => ipcRenderer.invoke('delete-book-file', id),
+    // Backup & Restore
+    saveBackupData: (data: string) => ipcRenderer.invoke('backup:saveData', data),
+    loadBackupData: () => ipcRenderer.invoke('backup:loadData'),
+    exportBooks: () => ipcRenderer.invoke('backup:exportBooks'),
     aiFetch: (options: { url: string, method?: string, headers?: any, body?: any }) => ipcRenderer.invoke('ai:fetch', options)
 })
-

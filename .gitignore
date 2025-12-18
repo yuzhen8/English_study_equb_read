@@ -131,3 +131,7 @@ build/
 # 忽略 Python 缓存
 __pycache__/
 *.pyc
+release/
+
+# 忽略 resources 目录下的可执行文件
+resources/*.exe

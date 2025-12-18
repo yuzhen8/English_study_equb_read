@@ -15,6 +15,12 @@ interface ElectronAPI {
     // CEFR 分析
     analyzeCEFR: (text: string) => Promise<{ success: boolean; data?: CefrAnalysisResult; error?: string }>;
     checkCEFR: () => Promise<{ success: boolean; cefrDictPath?: string; cefrDictSize?: number; error?: string }>;
+    // New Book File Management
+    saveBookFile: (id: string, arrayBuffer: ArrayBuffer) => Promise<{ success: boolean; path?: string; error?: string }>;
+    deleteBookFile: (id: string) => Promise<{ success: boolean; error?: string }>;
+    saveBackupData: (data: string) => Promise<{ success: boolean; path?: string; error?: string }>;
+    loadBackupData: () => Promise<{ success: boolean; data?: string; error?: string }>;
+    exportBooks: () => Promise<{ success: boolean; count?: number; error?: string }>;
 }
 
 // CEFR 分析结果接口

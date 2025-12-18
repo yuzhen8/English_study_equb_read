@@ -1,6 +1,5 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Settings, Bell, Shield } from 'lucide-react';
+import { User, Settings, Bell, Shield, Database } from 'lucide-react';
 
 const Profile: React.FC = () => {
     const navigate = useNavigate();
@@ -28,6 +27,16 @@ const Profile: React.FC = () => {
                     />
                     <MenuItem icon={Bell} label="通知" />
                     <MenuItem icon={Shield} label="隐私" border={false} />
+                </div>
+
+                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+                    {/* Data Management Submenu */}
+                    <MenuItem
+                        icon={Database}
+                        label="备份与恢复"
+                        onClick={() => navigate('/profile/data')}
+                        border={false}
+                    />
                 </div>
             </div>
         </div>

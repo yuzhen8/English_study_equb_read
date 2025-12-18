@@ -505,10 +505,34 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                 doc.addEventListener('mousemove', handleMouseMove);
                 doc.addEventListener('mouseup', handleMouseUp);
 
-                doc.addEventListener('click', () => {
+                doc.addEventListener('click', (e: MouseEvent) => {
                     // Handle Click for Word Selection (if not selecting range)
                     // We wait for checking selection
                     setTimeout(() => {
+                        // Strict Hit Test: Check if we actually clicked on a word
+                        // This prevents "snapping" to nearest word when clicking whitespace
+                        let isPrecisionHit = false;
+                        // @ts-ignore
+                        if (doc.caretRangeFromPoint) {
+                            // @ts-ignore
+                            const hitRange = doc.caretRangeFromPoint(e.clientX, e.clientY);
+                            if (hitRange && hitRange.startContainer.nodeType === Node.TEXT_NODE) {
+                                const hText = hitRange.startContainer.textContent || "";
+                                const offset = hitRange.startOffset;
+                                // Check characters around the hit point
+                                const char = hText[offset] || "";
+                                const charPrev = hText[offset - 1] || "";
+                                if (/[\w\d']/.test(char) || /[\w\d']/.test(charPrev)) {
+                                    isPrecisionHit = true;
+                                }
+                            }
+                        } else {
+                            // Fallback if API missing (unlikely in Electron/Chrome)
+                            isPrecisionHit = true;
+                        }
+
+                        if (!isPrecisionHit) return;
+
                         const sel = doc.getSelection();
                         // If nothing selected (caret), select the word under cursor
                         // Note: Only if we aren't already handling a popup

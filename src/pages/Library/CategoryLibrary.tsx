@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import ePub from 'epubjs';
 import {
     Plus, Clock, FolderOpen, Pencil, Trash2,
-    ChevronRight, BookOpen, Menu, X, BarChart3, Info
+    ChevronRight, BookOpen, Menu, X, BarChart3, Info,
+    ChevronDown, Upload, Library
 } from 'lucide-react';
 import { Category, CategoryStore, SYSTEM_CATEGORY_ALL, SYSTEM_CATEGORY_READING, SYSTEM_CATEGORY_UNCATEGORIZED } from '../../services/CategoryStore';
 import { Book, LibraryStore, CefrAnalysisSummary } from '../../services/LibraryStore';
@@ -23,8 +24,11 @@ const CategoryLibrary: React.FC = () => {
     const [showRenameModal, setShowRenameModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
+    const [importMenuOpen, setImportMenuOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+    const [editingBook, setEditingBook] = useState<Book | null>(null);
     const [newCategoryName, setNewCategoryName] = useState('');
+    const [showDeleteBookModal, setShowDeleteBookModal] = useState(false);
 
     // CEFR 分析状态
     const [showCefrModal, setShowCefrModal] = useState(false);
@@ -79,6 +83,15 @@ const CategoryLibrary: React.FC = () => {
             setEditingCategory(null);
             setSelectedCategory(SYSTEM_CATEGORY_ALL);
             await loadCategories();
+            await loadBooks();
+        }
+        await loadBooks();
+    }
+    const handleDeleteBook = async () => {
+        if (editingBook) {
+            await LibraryStore.deleteBook(editingBook.id);
+            setShowDeleteBookModal(false);
+            setEditingBook(null);
             await loadBooks();
         }
     };
@@ -170,8 +183,26 @@ const CategoryLibrary: React.FC = () => {
         }
     };
 
+    const handleLocalImport = async () => {
+        try {
+            const filePath = await window.electronAPI.selectFile();
+            if (filePath) {
+                const fileResult = await window.electronAPI.readFile(filePath);
+                if (fileResult.success && fileResult.data) {
+                    await LibraryStore.addBook(filePath, fileResult.data, selectedCategory);
+                    await loadBooks();
+                    setImportMenuOpen(false);
+                } else {
+                    console.error("Failed to read file", fileResult.error);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to import book", error);
+        }
+    };
+
     return (
-        <div className="flex bg-gray-50">
+        <div className="flex h-full bg-gray-50 overflow-hidden">
             {/* Mobile Sidebar Toggle */}
             <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -182,8 +213,8 @@ const CategoryLibrary: React.FC = () => {
 
             {/* Sidebar */}
             <aside className={cn(
-                "w-56 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 fixed lg:sticky top-0 z-40",
-                "h-screen",
+                "w-56 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 z-40",
+                "fixed inset-y-0 left-0 lg:static lg:h-full",
                 sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}>
                 {/* Sidebar Header */}
@@ -259,13 +290,11 @@ const CategoryLibrary: React.FC = () => {
                             )}
                         </div>
                     ))}
-                </div>
 
-                {/* Add Category Button */}
-                <div className="p-4 border-t border-gray-100">
+                    {/* Add Category Button (Moved Inline) */}
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="w-full py-2 px-3 border-2 border-dashed border-gray-200 rounded-lg text-gray-500 text-sm font-medium hover:border-indigo-300 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2"
+                        className="w-full mt-2 py-2 px-3 border border-dashed border-gray-300 rounded-lg text-gray-500 text-sm font-medium hover:border-indigo-300 hover:text-indigo-600 hover:bg-gray-50 transition-all flex items-center justify-center gap-2 opacity-80 hover:opacity-100"
                     >
                         <Plus size={16} />
                         新建分类...
@@ -274,28 +303,75 @@ const CategoryLibrary: React.FC = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 lg:ml-0">
+            <main className="flex-1 flex flex-col h-full overflow-hidden lg:ml-0">
                 {/* Header */}
-                <div className="sticky top-0 bg-gray-50 z-10 px-6 py-4 border-b border-gray-100">
+                <div className="bg-gray-50 z-10 px-6 py-4 border-b border-gray-100 shrink-0">
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-xl font-bold text-gray-900">{getCategoryName(selectedCategory)}</h1>
                             <p className="text-sm text-gray-500">{books.length} 本书</p>
                         </div>
                         {selectedCategory !== SYSTEM_CATEGORY_ALL && selectedCategory !== SYSTEM_CATEGORY_READING && (
-                            <button
-                                onClick={() => setShowImportModal(true)}
-                                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                            >
-                                <Plus size={16} />
-                                导入书籍
-                            </button>
+                            <div className="relative">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setImportMenuOpen(!importMenuOpen);
+                                    }}
+                                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    <Plus size={16} />
+                                    导入书籍
+                                    <ChevronDown size={16} className={cn("transition-transform", importMenuOpen ? "rotate-180" : "")} />
+                                </button>
+
+                                {importMenuOpen && (
+                                    <>
+                                        <div
+                                            className="fixed inset-0 z-10"
+                                            onClick={() => setImportMenuOpen(false)}
+                                        />
+                                        <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-100 py-1 z-20 overflow-hidden">
+                                            <button
+                                                onClick={() => {
+                                                    handleLocalImport();
+                                                    setImportMenuOpen(false);
+                                                }}
+                                                className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                                            >
+                                                <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                                                    <Upload size={16} />
+                                                </div>
+                                                <div>
+                                                    <div className="font-medium text-gray-900">本地导入</div>
+                                                    <div className="text-xs text-gray-500">上传本地 EPUB 文件</div>
+                                                </div>
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowImportModal(true);
+                                                    setImportMenuOpen(false);
+                                                }}
+                                                className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors border-t border-gray-50"
+                                            >
+                                                <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                                                    <Library size={16} />
+                                                </div>
+                                                <div>
+                                                    <div className="font-medium text-gray-900">移动书籍</div>
+                                                    <div className="text-xs text-gray-500">从其他分类选择书籍</div>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>
 
                 {/* Book Grid */}
-                <div className="p-6">
+                <div className="flex-1 overflow-y-auto p-6">
                     {books.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20">
                             <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center max-w-sm">
@@ -316,10 +392,18 @@ const CategoryLibrary: React.FC = () => {
                                     book={book}
                                     onClick={() => openBook(book)}
                                     showReadingBadge={selectedCategory === SYSTEM_CATEGORY_ALL}
-                                    onAnalyze={(e) => book.cefrAnalysis
-                                        ? showCachedCefrResult(book, e)
-                                        : startCefrAnalysis(book, e)
-                                    }
+                                    onAnalyze={(e) => {
+                                        if (book.cefrAnalysis) {
+                                            showCachedCefrResult(book, e);
+                                        } else {
+                                            startCefrAnalysis(book, e);
+                                        }
+                                    }}
+                                    onDelete={(e) => {
+                                        e.stopPropagation();
+                                        setEditingBook(book);
+                                        setShowDeleteBookModal(true);
+                                    }}
                                 />
                             ))}
                         </div>
@@ -380,6 +464,32 @@ const CategoryLibrary: React.FC = () => {
                             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
                         >
                             保存
+                        </button>
+                    </div>
+                </Modal>
+            )}
+
+            {/* Delete Book Modal */}
+            {showDeleteBookModal && editingBook && (
+                <Modal title="删除书籍" onClose={() => setShowDeleteBookModal(false)}>
+                    <div className="text-gray-600 mb-4">
+                        <p>确定要删除书籍 "<strong>{editingBook.title}</strong>" 吗？</p>
+                        <p className="text-amber-600 text-sm mt-2">
+                            ⚠️ 此操作将永久删除该书籍及其阅读进度。
+                        </p>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <button
+                            onClick={() => setShowDeleteBookModal(false)}
+                            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            取消
+                        </button>
+                        <button
+                            onClick={handleDeleteBook}
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                            删除
                         </button>
                     </div>
                 </Modal>
@@ -473,19 +583,58 @@ interface BookCardProps {
     onClick: () => void;
     showReadingBadge?: boolean;
     onAnalyze?: (e: React.MouseEvent) => void;
+    onDelete?: (e: React.MouseEvent) => void;
 }
 
-const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, onAnalyze }) => {
+const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, onAnalyze, onDelete }) => {
     const hasCefrResult = !!book.cefrAnalysis;
+    const timerRef = React.useRef<any>(null);
+    const isLongPressRef = React.useRef(false);
+
+    const startPress = () => {
+        isLongPressRef.current = false;
+        timerRef.current = setTimeout(() => {
+            isLongPressRef.current = true;
+            if (onDelete) {
+                // Pass a fake event or null since we trigger manually
+                // We create a synthetic-like object if strictly needed, but onDelete accepts (e) => void.
+                // We can construct a minimal object or just pass nothing if type allows, but type is (e: React.MouseEvent).
+                // Let's cast or adjust. Actually we can just call the handler logic inside CategoryLibrary if we change the signature,
+                // but simpler is to mock the stopPropagation part or just pass {} as any.
+                // Better: The onDelete in CategoryLibrary calls e.stopPropagation().
+                // We should pass a mock event with stopPropagation.
+                onDelete({ stopPropagation: () => { } } as React.MouseEvent);
+            }
+        }, 800);
+    };
+
+    const endPress = () => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+        }
+    };
+
+    const handleClick = (e: React.MouseEvent) => {
+        if (isLongPressRef.current) {
+            e.stopPropagation();
+            return;
+        }
+        onClick();
+    };
 
     return (
         <div
-            onClick={onClick}
-            className="bg-white rounded-lg p-2 shadow-sm border border-gray-100 hover:shadow-md transition-all cursor-pointer group"
+            onMouseDown={startPress}
+            onMouseUp={endPress}
+            onMouseLeave={endPress}
+            onTouchStart={startPress}
+            onTouchEnd={endPress}
+            onClick={handleClick}
+            className="bg-white rounded-lg p-2 shadow-sm border border-gray-100 hover:shadow-md transition-all cursor-pointer group select-none"
         >
             <div className="aspect-[2/3] bg-gray-100 rounded-md mb-2 overflow-hidden relative">
                 {book.cover ? (
-                    <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                    <img src={book.cover} alt={book.title} className="w-full h-full object-cover pointer-events-none" />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-200">
                         <span className="text-[10px] text-gray-400 text-center px-1 line-clamp-3">{book.title}</span>
@@ -534,8 +683,9 @@ const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, on
                         </button>
                     </div>
                 )}
+
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
-            </div>
+            </div >
             <h3 className="font-medium text-gray-900 text-xs truncate">{book.title}</h3>
             <p className="text-gray-400 text-[10px] truncate mt-0.5">{book.author}</p>
             {/* 进度条和百分比放在同一行 */}
@@ -548,7 +698,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, on
                 </div>
                 <span className="text-[9px] text-gray-400 w-6 text-right">{Math.round(book.progress || 0)}%</span>
             </div>
-        </div>
+        </div >
     );
 };
 

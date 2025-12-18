@@ -50,6 +50,18 @@ export const LibraryStore = {
 
     getBookData: async (id: string): Promise<ArrayBuffer | undefined> => {
         try {
+            // First try to check if we have the book metadata
+            const book = await dbOperations.get<Book>(STORE_BOOKS, id);
+            if (book && book.path) {
+                // Read from file system
+                const result = await window.electronAPI.readFile(book.path);
+                if (result.success && result.data) {
+                    return result.data;
+                }
+            }
+
+            // Fallback for old books stored in DB (migration support)
+            // Or just return undefined if we want to enforce file storage
             return await dbOperations.get<ArrayBuffer>(STORE_BOOK_DATA, id);
         } catch (e) {
             console.error("Failed to load book data", e);
@@ -57,7 +69,7 @@ export const LibraryStore = {
         }
     },
 
-    addBook: async (filePath: string, arrayBuffer: ArrayBuffer): Promise<Book> => {
+    addBook: async (filePath: string, arrayBuffer: ArrayBuffer, categoryId?: string): Promise<Book> => {
         // @ts-ignore
         const book: any = new ePub(arrayBuffer);
 
@@ -91,7 +103,8 @@ export const LibraryStore = {
             cover: coverBase64,
             path: filePath,
             addedAt: Date.now(),
-            progress: 0
+            progress: 0,
+            categoryId: categoryId || null
         };
 
         const currentBooks = await LibraryStore.getBooks();
@@ -106,21 +119,42 @@ export const LibraryStore = {
         if (newBook.path) {
             const existing = currentBooks.find(b => b.path === newBook.path);
             if (existing) {
-                // Update data just in case
-                await dbOperations.put(STORE_BOOK_DATA, arrayBuffer, existing.id);
+                // If existing book, update its content on disk
+                const saveResult = await window.electronAPI.saveBookFile(existing.id, arrayBuffer);
+                if (saveResult.success && saveResult.path) {
+                    existing.path = saveResult.path; // Update path to be sure (it should be same)
+                    await dbOperations.put(STORE_BOOKS, existing);
+                }
                 return existing;
             }
         }
 
+        // Save book content to file system via Main Process
+        const saveResult = await window.electronAPI.saveBookFile(id, arrayBuffer);
+        if (!saveResult.success || !saveResult.path) {
+            throw new Error("Failed to save book file: " + saveResult.error);
+        }
+
+        newBook.path = saveResult.path; // Use the local saved path
+
         await dbOperations.add(STORE_BOOKS, newBook);
-        await dbOperations.add(STORE_BOOK_DATA, arrayBuffer, id);
+        // We no longer store data in STORE_BOOK_DATA
+        // await dbOperations.add(STORE_BOOK_DATA, arrayBuffer, id);
 
         return newBook;
     },
 
     deleteBook: async (id: string) => {
         await dbOperations.delete(STORE_BOOKS, id);
-        await dbOperations.delete(STORE_BOOK_DATA, id);
+        // Also delete file from disk
+        await window.electronAPI.deleteBookFile(id);
+
+        // Clean up legacy data if exists
+        try {
+            await dbOperations.delete(STORE_BOOK_DATA, id);
+        } catch (e) {
+            // Ignore
+        }
     },
 
     updateProgress: async (id: string, progress: number, lastCfi?: string) => {

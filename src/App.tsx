@@ -14,6 +14,7 @@ import ReaderView from './pages/Reader/ReaderView';
 import WordList from './pages/Dictionary/WordList';
 import GroupDetail from './pages/Dictionary/GroupDetail';
 import Settings from './pages/Settings/Settings';
+import DataManagement from './pages/Profile/DataManagement';
 
 function App() {
     useEffect(() => {
@@ -31,6 +32,7 @@ function App() {
                 <Route path="exercise/scope/:mode" element={<ExerciseScopeSelector />} />
                 <Route path="exercise/session/:mode" element={<ExerciseSession />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="profile/data" element={<DataManagement />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="stats" element={<div className="p-8 text-center text-gray-500">Statistics (Coming Soon)</div>} />
             </Route>

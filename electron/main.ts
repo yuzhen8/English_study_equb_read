@@ -248,6 +248,48 @@ app.on('ready', async () => {
         return result.filePaths[0]; // Return the first selected file path
     });
 
+    // Book File Management
+    ipcMain.handle('save-book-file', async (event, { id, arrayBuffer }) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const booksDir = path.join(userDataPath, 'books');
+
+            // Ensure directory exists
+            try {
+                await fs.access(booksDir);
+            } catch {
+                await fs.mkdir(booksDir, { recursive: true });
+            }
+
+            const filePath = path.join(booksDir, `${id}.epub`);
+            // Convert ArrayBuffer to Buffer
+            const buffer = Buffer.from(arrayBuffer);
+            await fs.writeFile(filePath, buffer);
+
+            return { success: true, path: filePath };
+        } catch (error) {
+            console.error('Save book file error:', error);
+            return { success: false, error: String(error) };
+        }
+    });
+
+    ipcMain.handle('delete-book-file', async (event, id) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const filePath = path.join(userDataPath, 'books', `${id}.epub`);
+
+            await fs.unlink(filePath);
+            return { success: true };
+        } catch (error: any) {
+            // Ignore if file doesn't exist
+            if (error.code !== 'ENOENT') {
+                console.error('Delete book file error:', error);
+                return { success: false, error: String(error) };
+            }
+            return { success: true };
+        }
+    });
+
     // SRS 调试日志接口
     ipcMain.handle('debug:log-srs', async (event, data: any) => {
         try {
@@ -334,6 +376,79 @@ app.on('ready', async () => {
                 });
             }
         });
+    });
+
+    // --- Backup & Restore IPC ---
+
+    ipcMain.handle('backup:saveData', async (event, dataString: string) => {
+        const { canceled, filePath } = await dialog.showSaveDialog({
+            title: '保存备份数据',
+            defaultPath: `linga-data-backup-${new Date().toISOString().split('T')[0]}.json`,
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+
+        if (canceled || !filePath) return { success: false, error: 'User canceled' };
+
+        try {
+            await fs.writeFile(filePath, dataString, 'utf-8');
+            return { success: true, path: filePath };
+        } catch (e) {
+            return { success: false, error: String(e) };
+        }
+    });
+
+    ipcMain.handle('backup:exportBooks', async () => {
+        const { canceled, filePaths } = await dialog.showOpenDialog({
+            title: '选择导出文件夹',
+            properties: ['openDirectory', 'createDirectory']
+        });
+
+        if (canceled || filePaths.length === 0) return { success: false, error: 'User canceled' };
+
+        const targetDir = filePaths[0];
+
+        try {
+            // Assume books are stored in userData/books
+            const booksDir = path.join(app.getPath('userData'), 'books');
+
+            // Ensure source exists
+            try {
+                await fs.access(booksDir);
+            } catch {
+                return { success: false, error: 'No books directory found to export.' };
+            }
+
+            const files = await fs.readdir(booksDir);
+            let count = 0;
+            for (const file of files) {
+                if (file.endsWith('.epub')) {
+                    const src = path.join(booksDir, file);
+                    const dest = path.join(targetDir, file);
+                    await fs.copyFile(src, dest);
+                    count++;
+                }
+            }
+            return { success: true, count };
+        } catch (e) {
+            return { success: false, error: String(e) };
+        }
+    });
+
+    ipcMain.handle('backup:loadData', async () => {
+        const { canceled, filePaths } = await dialog.showOpenDialog({
+            title: '选择备份文件',
+            filters: [{ name: 'JSON', extensions: ['json'] }],
+            properties: ['openFile']
+        });
+
+        if (canceled || filePaths.length === 0) return { success: false, error: 'User canceled' };
+
+        try {
+            const dataString = await fs.readFile(filePaths[0], 'utf-8');
+            return { success: true, data: dataString };
+        } catch (e) {
+            return { success: false, error: String(e) };
+        }
     });
 });
 

@@ -110,23 +110,29 @@ const ExerciseHub: React.FC = () => {
                         </div>
 
                         <div className="h-32 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={weekData}>
-                                    <XAxis
-                                        dataKey="name"
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fontSize: 10, fill: '#9CA3AF' }}
-                                        dy={10}
-                                    />
-                                    <Tooltip
-                                        cursor={{ fill: '#F3F4F6' }}
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '11px' }}
-                                    />
-                                    <Bar dataKey="learned" stackId="a" fill="#10B981" radius={[2, 2, 0, 0]} barSize={16} />
-                                    <Bar dataKey="reviewed" stackId="a" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={16} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                            {weekData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                    <BarChart data={weekData}>
+                                        <XAxis
+                                            dataKey="name"
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{ fontSize: 10, fill: '#9CA3AF' }}
+                                            dy={10}
+                                        />
+                                        <Tooltip
+                                            cursor={{ fill: '#F3F4F6' }}
+                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '11px' }}
+                                        />
+                                        <Bar dataKey="learned" stackId="a" fill="#10B981" radius={[2, 2, 0, 0]} barSize={16} />
+                                        <Bar dataKey="reviewed" stackId="a" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={16} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                                    暂无数据
+                                </div>
+                            )}
                         </div>
 
                         <div className="mt-6 grid grid-cols-2 gap-4">
@@ -167,13 +173,15 @@ const ExerciseHub: React.FC = () => {
                         {/* 准备复习 */}
                         <button
                             onClick={handleStartDueReview}
-                            className="w-full bg-white rounded-xl p-4 flex items-center justify-between border border-gray-100 hover:border-blue-200 transition-all active:scale-[0.98]"
+                            className="w-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-2xl p-4 flex items-center justify-between text-white shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
                         >
                             <div className="flex items-center gap-3">
-                                <RefreshCw size={18} className="text-blue-500" />
-                                <span className="text-gray-700 font-medium">准备复习</span>
+                                <div className="p-2 bg-white/20 rounded-xl">
+                                    <RefreshCw size={20} className="text-white" />
+                                </div>
+                                <span className="font-bold text-lg">准备复习</span>
                             </div>
-                            <span className="text-gray-400 font-bold">{stats.dueCount} 个单词</span>
+                            <span className="font-bold">{stats.dueCount} 个单词</span>
                         </button>
 
                         {/* 下一次重复时间 */}
@@ -194,7 +202,6 @@ const ExerciseHub: React.FC = () => {
                             color="bg-gradient-to-br from-blue-500 to-indigo-600"
                             title="混合练习"
                             subtitle="基于遗忘曲线的综合复习"
-                            count={stats.dueCount}
                             onClick={() => handleStartMode('mixed')}
                         />
                         <ExerciseItem
@@ -202,7 +209,6 @@ const ExerciseHub: React.FC = () => {
                             color="bg-orange-500"
                             title="单词闪卡"
                             subtitle="快速回忆释义"
-                            count={stats.dueCount}
                             onClick={() => handleStartMode('flashcard')}
                         />
                         <ExerciseItem
@@ -210,7 +216,6 @@ const ExerciseHub: React.FC = () => {
                             color="bg-purple-500"
                             title="多项选择"
                             subtitle="从选项中找出正确答案"
-                            count={stats.dueCount}
                             onClick={() => handleStartMode('choice')}
                         />
                         <ExerciseItem
@@ -218,7 +223,6 @@ const ExerciseHub: React.FC = () => {
                             color="bg-teal-500"
                             title="拼写构建"
                             subtitle="根据释义拼写单词"
-                            count={stats.dueCount}
                             onClick={() => handleStartMode('spelling')}
                         />
                         <ExerciseItem
@@ -226,7 +230,6 @@ const ExerciseHub: React.FC = () => {
                             color="bg-pink-500"
                             title="听力选择"
                             subtitle="根据发音选择正确释义"
-                            count={stats.dueCount}
                             onClick={() => handleStartMode('listening-choice')}
                         />
                         <ExerciseItem
@@ -234,7 +237,6 @@ const ExerciseHub: React.FC = () => {
                             color="bg-amber-500"
                             title="听力拼写"
                             subtitle="根据发音拼写单词"
-                            count={stats.dueCount}
                             onClick={() => handleStartMode('listening-spelling')}
                         />
                         <ExerciseItem
@@ -242,7 +244,6 @@ const ExerciseHub: React.FC = () => {
                             color="bg-cyan-500"
                             title="选词填空"
                             subtitle="根据语境选择正确单词"
-                            count={stats.dueCount}
                             onClick={() => handleStartMode('fill-blank')}
                         />
                     </div>
