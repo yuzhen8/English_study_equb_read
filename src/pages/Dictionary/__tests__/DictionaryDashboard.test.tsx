@@ -58,7 +58,8 @@ describe('DictionaryDashboard', () => {
             dueCount: 3,
             reviewedToday: 2,
             chartData: [],
-            futureReviews: []
+            futureReviews: [],
+            weeklyData: []
         };
         vi.mocked(WordStore.getStats).mockResolvedValue(mockStats);
 

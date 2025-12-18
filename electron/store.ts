@@ -15,7 +15,49 @@ interface AppConfig {
     ollamaContextEnabled?: boolean; // Whether to send context to Ollama
     ollamaThinkEnabled?: boolean; // Whether to show/process <think> tags
     ollamaPrompt?: string; // Custom template
+    promptTemplates?: Array<{ id: string; name: string; content: string }>;
+    activePromptId?: string;
+    activePromptContent?: string;
 }
+
+const defaultTemplates = [
+    {
+        id: 'standard-analysis',
+        name: '标准语法分析 (中文)',
+        content: `Analyze the following English sentence and provide the analysis in CHINESE (中文):
+1. translation: 给出地道的中文翻译。
+2. grammarAnalysis: 一个结构化的语法分析对象，包含：
+   - sentenceType: 句法类型（如：简单句、并列句、复合句）
+   - mainTense: 主要时态（如：一般过去时、现在进行时）
+   - structure: 高层结构描述（如：主语 + 谓语 + 宾语）
+   - components: 一个包含核心词汇/短语解析的数组，每个元素包含 segment (片段), role (语法角色), explanation (中文详细解释)。
+
+请严格按照以下 JSON 格式返回结果（所有分析描述请使用中文）：
+{
+  "translation": "...",
+  "grammarAnalysis": {
+    "sentenceType": "...",
+    "mainTense": "...",
+    "structure": "...",
+    "components": [
+      {"segment": "...", "role": "...", "explanation": "..."}
+    ]
+  }
+}
+
+待分析文本: {{text}}`
+    },
+    {
+        id: 'minimalist',
+        name: '极简翻译',
+        content: `Translate the following English text to natural Chinese:
+{
+  "translation": "中文翻译",
+  "grammarAnalysis": "暂无详情"
+}
+Text: {{text}}`
+    }
+];
 
 const defaultConfig: AppConfig = {
     translationProvider: 'google',
@@ -44,7 +86,9 @@ JSON Structure:
 }
 
 Text to analyze: {{text}}
-{{context}}`
+{{context}}`,
+    promptTemplates: defaultTemplates,
+    activePromptId: 'standard-analysis'
 };
 
 export class ConfigManager {

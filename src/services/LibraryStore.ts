@@ -1,6 +1,9 @@
 import ePub from 'epubjs';
 import { dbOperations, STORE_BOOKS, STORE_BOOK_DATA } from './db';
 
+// 书籍阅读状态
+export type BookStatus = 'unread' | 'reading' | 'finished';
+
 export interface Book {
     id: string;
     title: string;
@@ -8,7 +11,31 @@ export interface Book {
     cover?: string; // Base64
     path?: string; // File path for Electron
     addedAt: number;
-    progress?: number; // 0-100 or cfi
+    progress?: number; // 0-100 percent
+    lastCfi?: string; // ePub CFI for exact position
+    totalPages?: number; // 总页数
+    currentPage?: number; // 当前页
+    categoryId?: string | null; // null = 未分类
+    status?: BookStatus; // 阅读状态
+    cefrAnalysis?: CefrAnalysisSummary; // CEFR 分析结果缓存
+}
+
+// CEFR 分析结果摘要 (存储在 Book 中)
+export interface CefrAnalysisSummary {
+    primaryLevel: string;  // A1-C2
+    difficultyScore: number;  // 1-6
+    totalWords: number;
+    uniqueWords: number;
+    analyzedAt: number;  // 分析时间戳
+    distribution: {
+        [key: string]: {
+            count: number;
+            percentage: number;
+            uniqueWords: number;
+        };
+    };
+    unknownWordsRatio: number;
+    sampleUnknownWords: string[];
 }
 
 export const LibraryStore = {
@@ -96,11 +123,47 @@ export const LibraryStore = {
         await dbOperations.delete(STORE_BOOK_DATA, id);
     },
 
-    updateProgress: async (id: string, progress: number) => {
+    updateProgress: async (id: string, progress: number, lastCfi?: string) => {
+        try {
+            // 直接获取单本书，而不是获取所有书籍
+            const book = await dbOperations.get<Book>(STORE_BOOKS, id);
+            if (book) {
+                book.progress = progress;
+                if (lastCfi) book.lastCfi = lastCfi;
+                // 同时更新状态为"阅读中"
+                if (progress > 0 && progress < 100) {
+                    book.status = 'reading';
+                } else if (progress >= 100) {
+                    book.status = 'finished';
+                }
+                await dbOperations.put(STORE_BOOKS, book);
+                console.log(`[Progress] Saved: ${book.title} - ${progress}% (CFI: ${lastCfi})`);
+            } else {
+                console.warn(`[Progress] Book not found: ${id}`);
+            }
+        } catch (e) {
+            console.error('[Progress] Failed to save:', e);
+        }
+    },
+
+    // 保存 CEFR 分析结果
+    updateCefrAnalysis: async (id: string, analysis: CefrAnalysisSummary) => {
         const books = await LibraryStore.getBooks();
         const book = books.find(b => b.id === id);
         if (book) {
-            book.progress = progress;
+            book.cefrAnalysis = analysis;
+            await dbOperations.put(STORE_BOOKS, book);
+            return true;
+        }
+        return false;
+    },
+
+    // 清除 CEFR 分析结果
+    clearCefrAnalysis: async (id: string) => {
+        const books = await LibraryStore.getBooks();
+        const book = books.find(b => b.id === id);
+        if (book) {
+            delete book.cefrAnalysis;
             await dbOperations.put(STORE_BOOKS, book);
         }
     }

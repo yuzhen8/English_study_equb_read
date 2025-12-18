@@ -37,7 +37,7 @@ const BottomNav: React.FC = () => {
     }
 
     return (
-        <div className="h-16 border-t border-gray-200 bg-white flex items-center justify-around fixed bottom-0 left-0 right-0 z-50">
+        <div className="h-16 border-t border-gray-200 bg-white flex items-center justify-around z-50">
             {navItemsFull.map((item) => {
                 const active = isActive(item.path);
                 const Icon = item.icon;

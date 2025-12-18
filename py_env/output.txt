@@ -1,0 +1,27 @@
+﻿uv :   File "<string>
+", line 1
+At line:1 char:1
++ uv run python -c "e
+xec(open('analyzer.py
+', encoding='utf-8').
+read().r ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (  File    
+ "<string>", line    
+ 1:String) [], R    e
+moteException
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+    \))
+     ^
+SyntaxError: unexpect
+ed character after li
+ne continuation chara
+cter

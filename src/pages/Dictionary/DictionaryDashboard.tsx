@@ -26,11 +26,11 @@ const DictionaryDashboard: React.FC = () => {
     // 加载统计数据
     useEffect(() => {
         const loadStats = async () => {
-            const data = await WordStore.getStats();
+            const data = await WordStore.getStats(timeFilter);
             setStats(data);
         };
         loadStats();
-    }, []);
+    }, [timeFilter]);
 
     // 加载群组数据
     useEffect(() => {
@@ -68,7 +68,7 @@ const DictionaryDashboard: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="bg-gray-50">
             {/* Header */}
             <div className="bg-white px-4 pt-12 pb-4 sticky top-0 z-10 shadow-sm">
                 <div className="flex justify-between items-center mb-4">

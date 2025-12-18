@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '../../lib/utils';
-import { Zap, Layers, Type, MousePointerClick, Pencil, HelpCircle, RefreshCw, Clock, Headphones, FileText, Settings2 } from 'lucide-react';
+import { Zap, Layers, Type, MousePointerClick, Headphones, FileText, Settings2, RefreshCw, Clock, HelpCircle } from 'lucide-react';
 import { WordStore } from '../../services/WordStore';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, ResponsiveContainer, Cell } from 'recharts';
 import ExerciseSettings, { loadSettings } from './ExerciseSettings';
+import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
 const ExerciseHub: React.FC = () => {
     const navigate = useNavigate();
@@ -16,10 +16,8 @@ const ExerciseHub: React.FC = () => {
         masteredCount: 0,
         totalCount: 0
     });
-    const [dailyGoal, setDailyGoal] = useState(10);
-    const [todayLearned, setTodayLearned] = useState(0);
-    const [weekData, setWeekData] = useState<{ day: string; count: number }[]>([]);
     const [nextReviewHours, setNextReviewHours] = useState<number | null>(null);
+    const [weekData, setWeekData] = useState<any[]>([]);
     const [showSettings, setShowSettings] = useState(false);
 
     useEffect(() => {
@@ -38,31 +36,13 @@ const ExerciseHub: React.FC = () => {
             totalCount: data.total || 0
         });
 
-        // 计算今天学习的单词数（基于reviewCount > 0的单词）
+        if (data.weeklyData) {
+            setWeekData(data.weeklyData);
+        }
+
+        // 计算今天学习的单词数
         const allWords = await WordStore.getWords();
         const now = Date.now();
-        const oneDay = 24 * 60 * 60 * 1000;
-        const todayStart = now - (now % oneDay);
-
-        // 今天复习过的单词
-        const todayReviewed = allWords.filter(w =>
-            w.lastReviewedAt && w.lastReviewedAt >= todayStart
-        ).length;
-        setTodayLearned(todayReviewed || allWords.filter(w => now - w.addedAt < oneDay).length);
-
-        // 生成最近7天的数据
-        const days = ['周三', '周四', '周五', '周六', '周日', '周一', '周二'];
-        const today = new Date().getDay();
-        const weekStats = days.map((day, index) => {
-            // 简化：随机生成模拟数据
-            const isToday = index === days.length - 1;
-            return {
-                day,
-                count: isToday ? todayReviewed : Math.floor(Math.random() * 15)
-            };
-        });
-        setWeekData(weekStats);
-
         // 计算下一次复习时间
         const dueWords = await WordStore.getDueWords();
         if (dueWords.length === 0) {
@@ -84,20 +64,24 @@ const ExerciseHub: React.FC = () => {
         navigate(`/exercise/scope/${mode}`);
     };
 
-    // 开始混合练习（直接进入，只学习新词）
+    // 开始混合练习 (只学习新词)
     const handleStartMixedPractice = () => {
         const settings = loadSettings();
-        // 直接进入训练，只选择未学习过的单词（status=new）
         navigate(`/exercise/session/mixed?scope=new&limit=${settings.wordCount}`);
     };
 
-    // 未学习过的单词数量（新词）
+    // 开始到期复习
+    const handleStartDueReview = () => {
+        const settings = loadSettings();
+        navigate(`/exercise/session/mixed?scope=review&limit=${settings.wordCount}`);
+    };
+
     const newWordsCount = stats.newCount;
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="bg-gray-50 flex flex-col h-screen overflow-hidden">
             {/* Header */}
-            <div className="bg-white px-4 pt-12 pb-4 flex items-center justify-between">
+            <div className="bg-white px-4 pt-12 pb-4 flex items-center justify-between flex-shrink-0">
                 <h1 className="text-2xl font-bold text-gray-900">锻炼</h1>
                 <button
                     onClick={() => setShowSettings(true)}
@@ -107,164 +91,161 @@ const ExerciseHub: React.FC = () => {
                 </button>
             </div>
 
-            <div className="p-4 space-y-6">
-                {/* 训练的每日统计 */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-gray-900 mb-4">训练的每日统计</h3>
-
-                    <div className="flex gap-4">
-                        {/* 左侧：图表 */}
-                        <div className="flex-1">
-                            <p className="text-xs text-gray-400 mb-2">平均3个单词</p>
-                            <div className="h-24">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={weekData} barCategoryGap="20%">
-                                        <XAxis
-                                            dataKey="day"
-                                            axisLine={false}
-                                            tickLine={false}
-                                            tick={{ fontSize: 10, fill: '#9ca3af' }}
-                                        />
-                                        <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                                            {weekData.map((entry, index) => (
-                                                <Cell
-                                                    key={`cell-${index}`}
-                                                    fill={index === weekData.length - 1 ? '#3b82f6' : '#e5e7eb'}
-                                                />
-                                            ))}
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-
-                        {/* 右侧：目标和今天 */}
-                        <div className="w-24 flex flex-col gap-3">
-                            <div className="text-right">
-                                <p className="text-xs text-gray-400">每日目标</p>
-                                <div className="flex items-center justify-end gap-1">
-                                    <span className="text-xl font-bold text-gray-900">{dailyGoal}</span>
-                                    <span className="text-xs text-gray-400">单词</span>
-                                    <button
-                                        className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                        onClick={() => {
-                                            const newGoal = prompt('设置每日目标单词数:', String(dailyGoal));
-                                            if (newGoal) setDailyGoal(parseInt(newGoal) || 10);
-                                        }}
-                                    >
-                                        <Pencil size={12} className="text-gray-400" />
-                                    </button>
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                <div className="p-4 space-y-6">
+                    {/* 每日学习统计 */}
+                    <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold text-gray-900">训练统计</h3>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                                    <span className="text-[10px] text-gray-500 font-medium">学习</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
+                                    <span className="text-[10px] text-gray-500 font-medium">复习</span>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <p className="text-xs text-gray-400">今天</p>
-                                <span className="text-2xl font-bold text-gray-900">{todayLearned}</span>
+                        </div>
+
+                        <div className="h-32 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={weekData}>
+                                    <XAxis
+                                        dataKey="name"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fontSize: 10, fill: '#9CA3AF' }}
+                                        dy={10}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: '#F3F4F6' }}
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '11px' }}
+                                    />
+                                    <Bar dataKey="learned" stackId="a" fill="#10B981" radius={[2, 2, 0, 0]} barSize={16} />
+                                    <Bar dataKey="reviewed" stackId="a" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={16} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+
+                        <div className="mt-6 grid grid-cols-2 gap-4">
+                            <div className="bg-emerald-50 rounded-2xl p-3">
+                                <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">今日学习</p>
+                                <p className="text-xl font-black text-emerald-700">{weekData[weekData.length - 1]?.learned || 0}</p>
+                            </div>
+                            <div className="bg-blue-50 rounded-2xl p-3">
+                                <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">今日复习</p>
+                                <p className="text-xl font-black text-blue-700">{weekData[weekData.length - 1]?.reviewed || 0}</p>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* 间隔学习 */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between px-1">
-                        <h3 className="font-bold text-gray-900">间隔学习</h3>
-                        <button className="text-gray-400 hover:text-gray-600">
-                            <HelpCircle size={18} />
+                    {/* 间隔学习 */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between px-1">
+                            <h3 className="font-bold text-gray-900">间隔学习</h3>
+                            <button className="text-gray-400 hover:text-gray-600">
+                                <HelpCircle size={18} />
+                            </button>
+                        </div>
+
+                        {/* 准备好学习了 - 绿色大卡片 */}
+                        <button
+                            onClick={handleStartMixedPractice}
+                            className="w-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-2xl p-4 flex items-center justify-between text-white shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white/20 rounded-xl">
+                                    <Zap size={20} />
+                                </div>
+                                <span className="font-bold text-lg">准备好学习了</span>
+                            </div>
+                            <span className="font-bold">{newWordsCount} 个单词</span>
                         </button>
-                    </div>
 
-                    {/* 准备好学习了 - 绿色大卡片 */}
-                    <button
-                        onClick={handleStartMixedPractice}
-                        className="w-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-2xl p-4 flex items-center justify-between text-white shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white/20 rounded-xl">
-                                <Zap size={20} />
+                        {/* 准备复习 */}
+                        <button
+                            onClick={handleStartDueReview}
+                            className="w-full bg-white rounded-xl p-4 flex items-center justify-between border border-gray-100 hover:border-blue-200 transition-all active:scale-[0.98]"
+                        >
+                            <div className="flex items-center gap-3">
+                                <RefreshCw size={18} className="text-blue-500" />
+                                <span className="text-gray-700 font-medium">准备复习</span>
                             </div>
-                            <span className="font-bold text-lg">准备好学习了</span>
-                        </div>
-                        <span className="font-bold">{newWordsCount} 个单词</span>
-                    </button>
+                            <span className="text-gray-400 font-bold">{stats.dueCount} 个单词</span>
+                        </button>
 
-                    {/* 准备复习 */}
-                    <div className="bg-white rounded-xl p-4 flex items-center justify-between border border-gray-100">
-                        <div className="flex items-center gap-3">
-                            <RefreshCw size={18} className="text-gray-400" />
-                            <span className="text-gray-600">准备复习</span>
-                        </div>
-                        <span className="text-gray-400">{stats.dueCount} 个单词</span>
+                        {/* 下一次重复时间 */}
+                        {nextReviewHours !== null && (
+                            <div className="flex items-center gap-2 px-1 text-sm text-gray-400">
+                                <Clock size={14} />
+                                <span>下一次重复在{nextReviewHours}小时</span>
+                            </div>
+                        )}
                     </div>
 
-                    {/* 下一次重复时间 */}
-                    {nextReviewHours !== null && (
-                        <div className="flex items-center gap-2 px-1 text-sm text-gray-400">
-                            <Clock size={14} />
-                            <span>下一次重复在{nextReviewHours}小时</span>
-                        </div>
-                    )}
-                </div>
+                    {/* 训练模式 */}
+                    <div className="space-y-3">
+                        <h3 className="font-bold text-gray-900 px-1">训练模式</h3>
 
-                {/* 训练模式 - 混合练习在最上面 */}
-                <div className="space-y-3">
-                    <h3 className="font-bold text-gray-900 px-1">训练模式</h3>
-
-                    <ExerciseItem
-                        icon={Zap}
-                        color="bg-gradient-to-br from-blue-500 to-indigo-600"
-                        title="混合练习"
-                        subtitle="基于遗忘曲线的综合复习"
-                        count={stats.dueCount}
-                        onClick={() => handleStartMode('mixed')}
-                    />
-                    <ExerciseItem
-                        icon={Layers}
-                        color="bg-orange-500"
-                        title="单词闪卡"
-                        subtitle="快速回忆释义"
-                        count={stats.dueCount}
-                        onClick={() => handleStartMode('flashcard')}
-                    />
-                    <ExerciseItem
-                        icon={MousePointerClick}
-                        color="bg-purple-500"
-                        title="多项选择"
-                        subtitle="从选项中找出正确答案"
-                        count={stats.dueCount}
-                        onClick={() => handleStartMode('choice')}
-                    />
-                    <ExerciseItem
-                        icon={Type}
-                        color="bg-teal-500"
-                        title="拼写构建"
-                        subtitle="根据释义拼写单词"
-                        count={stats.dueCount}
-                        onClick={() => handleStartMode('spelling')}
-                    />
-                    <ExerciseItem
-                        icon={Headphones}
-                        color="bg-pink-500"
-                        title="听力选择"
-                        subtitle="根据发音选择正确释义"
-                        count={stats.dueCount}
-                        onClick={() => handleStartMode('listening-choice')}
-                    />
-                    <ExerciseItem
-                        icon={Headphones}
-                        color="bg-amber-500"
-                        title="听力拼写"
-                        subtitle="根据发音拼写单词"
-                        count={stats.dueCount}
-                        onClick={() => handleStartMode('listening-spelling')}
-                    />
-                    <ExerciseItem
-                        icon={FileText}
-                        color="bg-cyan-500"
-                        title="选词填空"
-                        subtitle="根据语境选择正确单词"
-                        count={stats.dueCount}
-                        onClick={() => handleStartMode('fill-blank')}
-                    />
+                        <ExerciseItem
+                            icon={Zap}
+                            color="bg-gradient-to-br from-blue-500 to-indigo-600"
+                            title="混合练习"
+                            subtitle="基于遗忘曲线的综合复习"
+                            count={stats.dueCount}
+                            onClick={() => handleStartMode('mixed')}
+                        />
+                        <ExerciseItem
+                            icon={Layers}
+                            color="bg-orange-500"
+                            title="单词闪卡"
+                            subtitle="快速回忆释义"
+                            count={stats.dueCount}
+                            onClick={() => handleStartMode('flashcard')}
+                        />
+                        <ExerciseItem
+                            icon={MousePointerClick}
+                            color="bg-purple-500"
+                            title="多项选择"
+                            subtitle="从选项中找出正确答案"
+                            count={stats.dueCount}
+                            onClick={() => handleStartMode('choice')}
+                        />
+                        <ExerciseItem
+                            icon={Type}
+                            color="bg-teal-500"
+                            title="拼写构建"
+                            subtitle="根据释义拼写单词"
+                            count={stats.dueCount}
+                            onClick={() => handleStartMode('spelling')}
+                        />
+                        <ExerciseItem
+                            icon={Headphones}
+                            color="bg-pink-500"
+                            title="听力选择"
+                            subtitle="根据发音选择正确释义"
+                            count={stats.dueCount}
+                            onClick={() => handleStartMode('listening-choice')}
+                        />
+                        <ExerciseItem
+                            icon={Headphones}
+                            color="bg-amber-500"
+                            title="听力拼写"
+                            subtitle="根据发音拼写单词"
+                            count={stats.dueCount}
+                            onClick={() => handleStartMode('listening-spelling')}
+                        />
+                        <ExerciseItem
+                            icon={FileText}
+                            color="bg-cyan-500"
+                            title="选词填空"
+                            subtitle="根据语境选择正确单词"
+                            count={stats.dueCount}
+                            onClick={() => handleStartMode('fill-blank')}
+                        />
+                    </div>
                 </div>
             </div>
 

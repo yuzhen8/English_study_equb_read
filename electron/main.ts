@@ -6,7 +6,7 @@ import fs from 'fs/promises'
 
 import { ConfigManager } from './store';
 import { setupDictionaryHandlers } from './dictionary';
-
+import { setupCefrAnalyzerHandlers } from './cefrAnalyzer';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -24,12 +24,18 @@ const createWindow = () => {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
+            webSecurity: app.isPackaged ? false : true, // Allow local resources in production
+            allowRunningInsecureContent: true
         },
     });
 
-    // For now, always load from localhost (dev mode)
-    mainWindow.loadURL('http://localhost:5173');
-    // mainWindow.webContents.openDevTools();
+    if (app.isPackaged) {
+        // Use loadFile which handles ASAR paths natively and correctly
+        mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    } else {
+        mainWindow.loadURL('http://localhost:5173');
+        // mainWindow.webContents.openDevTools();
+    }
 };
 
 app.on('ready', async () => {
@@ -47,6 +53,7 @@ app.on('ready', async () => {
     }
 
     setupDictionaryHandlers();
+    setupCefrAnalyzerHandlers();
 
     ipcMain.handle('translate-text', (event, { text, targetLang }) => {
         return new Promise((resolve) => {
@@ -275,6 +282,58 @@ app.on('ready', async () => {
             console.error('SRS Log error:', error);
             return { success: false, error: String(error) };
         }
+    });
+
+    // Generic AI Fetch Proxy to bypass CORS
+    ipcMain.handle('ai:fetch', async (event, { url, method = 'GET', headers = {}, body }) => {
+        return new Promise((resolve) => {
+            try {
+                const request = net.request({
+                    url,
+                    method
+                });
+
+                Object.entries(headers).forEach(([key, value]) => {
+                    request.setHeader(key, value as string);
+                });
+
+                request.on('response', (response) => {
+                    let data = '';
+                    response.on('data', (chunk) => { data += chunk.toString(); });
+                    response.on('end', () => {
+                        resolve({
+                            ok: response.statusCode >= 200 && response.statusCode < 300,
+                            status: response.statusCode,
+                            statusText: response.statusMessage,
+                            data: data
+                        });
+                    });
+                });
+
+                request.on('error', (error) => {
+                    console.error('AI Proxy request error:', error);
+                    resolve({
+                        ok: false,
+                        status: 500,
+                        statusText: 'Internal Error',
+                        error: error.message
+                    });
+                });
+
+                if (body) {
+                    request.write(typeof body === 'string' ? body : JSON.stringify(body));
+                }
+                request.end();
+            } catch (err) {
+                console.error('AI Proxy setup error:', err);
+                resolve({
+                    ok: false,
+                    status: 500,
+                    statusText: 'Setup Error',
+                    error: String(err)
+                });
+            }
+        });
     });
 });
 

@@ -6,7 +6,7 @@ const Profile: React.FC = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="bg-gray-50">
             <div className="bg-white px-4 pt-12 pb-6 mb-4 shadow-sm">
                 <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">

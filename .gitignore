@@ -124,4 +124,10 @@ node_modules/
 resources/dict.db
 stardict/stardict.csv
 
+dist-python/
+build/
+*.spec
 
+# 忽略 Python 缓存
+__pycache__/
+*.pyc

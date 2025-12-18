@@ -117,7 +117,7 @@ export const WordStore = {
         }
     },
 
-    getStats: async () => {
+    getStats: async (timeFilter: 'week' | 'month' | 'year' = 'week') => {
         const words = await WordStore.getWords();
         const now = Date.now();
         const oneDay = 24 * 60 * 60 * 1000;
@@ -152,32 +152,68 @@ export const WordStore = {
 
         const total = words.length;
 
-        // Group by day for chart (Last 7 days - Added Words)
-        const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        // Group by day for chart (Based on timeFilter)
         const chartData = [];
+        const weeklyData = []; // Specific for Exercise daily stats (Learned vs Reviewed)
 
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date(now - i * oneDay); // approximate days
-            const date = new Date(d);
-            const dayStr = dayLabels[date.getDay()];
-            const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-            const endOfDay = startOfDay + oneDay;
+        if (timeFilter === 'week' || timeFilter === 'month') {
+            const daysToFetch = timeFilter === 'week' ? 7 : 30;
+            const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-            const count = words.filter(w => w.addedAt >= startOfDay && w.addedAt < endOfDay).length;
-            chartData.push({ name: dayStr, words: count });
+            for (let i = daysToFetch - 1; i >= 0; i--) {
+                const date = new Date(now - i * oneDay);
+                const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+                const endOfDay = startOfDay + oneDay;
+
+                const count = words.filter(w => w.addedAt >= startOfDay && w.addedAt < endOfDay).length;
+
+                let label = '';
+                if (timeFilter === 'week') {
+                    label = dayLabels[date.getDay()];
+
+                    // Also gather Exercise specific data for the last 7 days
+                    const learnedCount = words.filter(w => w.addedAt >= startOfDay && w.addedAt < endOfDay).length;
+                    const reviewedCount = words.filter(w => w.lastReviewedAt && w.lastReviewedAt >= startOfDay && w.lastReviewedAt < endOfDay).length;
+                    weeklyData.push({
+                        name: label,
+                        learned: learnedCount,
+                        reviewed: reviewedCount
+                    });
+                } else {
+                    // Month view: show "MM-DD"
+                    label = `${date.getMonth() + 1}-${date.getDate()}`;
+                }
+
+                chartData.push({ name: label, words: count });
+            }
+        } else if (timeFilter === 'year') {
+            // Year view: group by month (last 12 months)
+            for (let i = 11; i >= 0; i--) {
+                const date = new Date(now);
+                date.setMonth(date.getMonth() - i);
+                const year = date.getFullYear();
+                const month = date.getMonth();
+
+                const startOfMonth = new Date(year, month, 1).getTime();
+                const endOfMonth = new Date(year, month + 1, 1).getTime();
+
+                const count = words.filter(w => w.addedAt >= startOfMonth && w.addedAt < endOfMonth).length;
+                const label = `${month + 1}月`;
+
+                chartData.push({ name: label, words: count });
+            }
         }
 
         // Forecast (Next 7 days - Due Words)
+        const dayLabelsFull = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const futureReviews = [];
         for (let i = 0; i < 7; i++) {
             const d = new Date(now + i * oneDay);
             const date = new Date(d);
-            const dayStr = dayLabels[date.getDay()];
+            const dayStr = dayLabelsFull[date.getDay()];
             const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
             const endOfDay = startOfDay + oneDay;
 
-            // Count words due on this day
-            // Note: Words strictly due *on* this day (not cumulative overdue)
             const count = words.filter(w => w.nextReviewAt && w.nextReviewAt >= startOfDay && w.nextReviewAt < endOfDay).length;
             futureReviews.push({ name: dayStr, count });
         }
@@ -189,7 +225,8 @@ export const WordStore = {
             dueCount,
             reviewedToday,
             chartData,
-            futureReviews // [NEW] For Exercise Forecast
+            weeklyData,
+            futureReviews
         };
     },
 

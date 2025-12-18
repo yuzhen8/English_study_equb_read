@@ -78,6 +78,15 @@ const TranslationPopup: React.FC<TranslationPopupProps> = ({
                         </ul>
                     </div>
                 )}
+
+                {result.grammarAnalysis && (
+                    <div className="translation-grammar">
+                        <strong>语法分析:</strong>
+                        <div className="grammar-content">
+                            {result.grammarAnalysis}
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="translation-actions">

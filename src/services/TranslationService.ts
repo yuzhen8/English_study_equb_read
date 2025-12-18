@@ -5,6 +5,7 @@ export interface TranslationResult {
     pronunciation?: string;
     definitions?: string[];
     examples?: string[];
+    grammarAnalysis?: string;
     source: 'google' | 'deepseek' | 'ollama' | 'microsoft';
 }
 

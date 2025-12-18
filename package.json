@@ -2,6 +2,8 @@
     "name": "linga-windows",
     "private": true,
     "version": "0.0.0",
+    "description": "An elegant English learning reader based on Electron.",
+    "author": "User",
     "main": "dist-electron/main.js",
     "scripts": {
         "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && npm run build:electron && electron .\"",

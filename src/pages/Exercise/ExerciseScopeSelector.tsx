@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Zap, Layers, Type, MousePointerClick, Check, Headphones, FileText, HelpCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { WordStore, Word } from '../../services/WordStore';
+import { WordStore } from '../../services/WordStore';
 import { GroupStore, WordGroup } from '../../services/GroupStore';
 
 // 练习模式图标和颜色映射
@@ -32,11 +32,11 @@ const ExerciseScopeSelector: React.FC = () => {
     const navigate = useNavigate();
 
     const [scopes, setScopes] = useState<ScopeOption[]>([]);
-    const [groups, setGroups] = useState<WordGroup[]>([]);
+    const [_groups, setGroups] = useState<WordGroup[]>([]);
     const [selectedScope, setSelectedScope] = useState<string>('today');
     const [loading, setLoading] = useState(true);
     const [showHelpPanel, setShowHelpPanel] = useState(false);  // 全局帮助面板状态
-    const [wordCounts, setWordCounts] = useState<{
+    const [_wordCounts, setWordCounts] = useState<{
         today: number;
         random: number;
         newWords: number;
@@ -185,9 +185,9 @@ const ExerciseScopeSelector: React.FC = () => {
     const groupOptions = scopes.filter(s => s.type === 'group');
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-40 overflow-x-hidden">
+        <div className="min-h-screen bg-gray-50 flex flex-col overflow-x-hidden">
             {/* Header */}
-            <div className="bg-white px-4 pt-12 pb-4 sticky top-0 z-10 shadow-sm">
+            <div className="bg-white px-4 h-16 flex items-center sticky top-0 z-10 shadow-sm">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => navigate('/exercise')}
@@ -203,7 +203,7 @@ const ExerciseScopeSelector: React.FC = () => {
             </div>
 
             {/* Scope Options */}
-            <div className="px-4 py-4 space-y-6">
+            <div className="flex-1 px-4 py-4 space-y-6">
                 {/* 随机范围 */}
                 <div className="space-y-2">
                     <div className="flex items-center justify-between px-1">
@@ -262,8 +262,8 @@ const ExerciseScopeSelector: React.FC = () => {
                 )}
             </div>
 
-            {/* Start Button */}
-            <div className="fixed bottom-20 left-0 right-0 p-4 bg-white border-t border-gray-100 z-20">
+            {/* Start Button - Sticky Footer */}
+            <div className="sticky bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <button
                     onClick={handleStart}
                     disabled={!canStart}

@@ -20,6 +20,7 @@ export interface DictionaryResult {
         ai: string | null;
     };
     translations?: string[]; // Basic translations (from local/AI)
+    grammarAnalysis?: string; // Sentence grammar analysis (from AI)
     lemma?: string; // Word prototype/base form (from ECDICT exchange field)
     frequency?: number; // Word frequency rank from ECDICT (frq field)
 }
@@ -180,7 +181,8 @@ export class HybridDictionaryService {
                 phonetics: aiData.pronunciation ? [{ text: aiData.pronunciation }] : [],
                 meanings: [], // AI usually returns flat translation, structure if needed
                 source: { local: null, online: null, ai: 'AI' }, // Or use aiData.source
-                translations: aiData.translation ? [aiData.translation] : []
+                translations: aiData.translation ? [aiData.translation] : [],
+                grammarAnalysis: aiData.grammarAnalysis
             };
 
             // If definitions are returned

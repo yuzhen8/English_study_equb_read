@@ -26,31 +26,25 @@ export const initTranslationServices = async () => {
         if (settings) {
             // Configure API keys
             if (settings.apiKeys?.google) googleProvider.setApiKey(settings.apiKeys.google);
+            // Configure DeepSeek
             if (settings.apiKeys?.deepseek) deepSeekProvider.setApiKey(settings.apiKeys.deepseek);
+            if (settings.deepseekModel) deepSeekProvider.setModel(settings.deepseekModel);
 
-            // Configure Ollama - only if enabled
-            if (settings.ollamaEnabled) {
-                if (settings.ollamaUrl) ollamaProvider.setBaseUrl(settings.ollamaUrl);
-                if (settings.ollamaModel) ollamaProvider.setModel(settings.ollamaModel);
-                if (settings.ollamaPrompt) ollamaProvider.setPromptTemplate(settings.ollamaPrompt);
+            // Configure Ollama
+            if (settings.ollamaUrl) ollamaProvider.setBaseUrl(settings.ollamaUrl);
+            if (settings.ollamaModel) ollamaProvider.setModel(settings.ollamaModel);
+            ollamaProvider.setContextEnabled(settings.ollamaContextEnabled ?? true);
+            ollamaProvider.setThinkEnabled(settings.ollamaThinkEnabled ?? false);
 
-                // New settings
-                ollamaProvider.setContextEnabled(settings.ollamaContextEnabled ?? true);
-                ollamaProvider.setThinkEnabled(settings.ollamaThinkEnabled ?? false);
-
-                // If it was the saved provider, set it active
-                if (settings.translationProvider === 'ollama') {
-                    translationService.setActiveProvider('ollama');
-                }
-            } else {
-                // If disabled but was selected, fallback to google
-                if (settings.translationProvider === 'ollama') {
-                    translationService.setActiveProvider('google');
-                }
+            // Apply Global Prompt if available
+            const globalPrompt = settings.activePromptContent || settings.ollamaPrompt;
+            if (globalPrompt) {
+                ollamaProvider.setPromptTemplate(globalPrompt);
+                deepSeekProvider.setPromptTemplate(globalPrompt);
             }
 
-            // Set active provider (for others)
-            if (settings.translationProvider && settings.translationProvider !== 'ollama') {
+            // Set active provider
+            if (settings.translationProvider) {
                 translationService.setActiveProvider(settings.translationProvider);
             }
         }

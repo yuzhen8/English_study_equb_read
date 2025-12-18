@@ -1,9 +1,10 @@
 export const DB_NAME = 'LingaDB';
-export const DB_VERSION = 4; // Version bump for groups
+export const DB_VERSION = 5; // Version bump for categories
 export const STORE_BOOKS = 'books';
 export const STORE_BOOK_DATA = 'book_data';
 export const STORE_WORDS = 'words';
 export const STORE_GROUPS = 'groups';
+export const STORE_CATEGORIES = 'categories';
 
 
 let dbInstance: IDBDatabase | null = null;
@@ -34,6 +35,11 @@ export const initDB = (): Promise<IDBDatabase> => {
                 const groupStore = db.createObjectStore(STORE_GROUPS, { keyPath: 'id' });
                 groupStore.createIndex('name', 'name', { unique: false });
                 groupStore.createIndex('createdAt', 'createdAt', { unique: false });
+            }
+            if (!db.objectStoreNames.contains(STORE_CATEGORIES)) {
+                const categoryStore = db.createObjectStore(STORE_CATEGORIES, { keyPath: 'id' });
+                categoryStore.createIndex('name', 'name', { unique: false });
+                categoryStore.createIndex('createdAt', 'createdAt', { unique: false });
             }
         };
 

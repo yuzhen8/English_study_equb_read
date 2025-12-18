@@ -12,6 +12,29 @@ interface ElectronAPI {
     searchLocal: (word: string) => Promise<{ success: boolean; found: boolean; message?: string; data?: any }>;
     // SRS 调试日志
     logSRS: (data: any) => Promise<{ success: boolean; path?: string; error?: string }>;
+    // CEFR 分析
+    analyzeCEFR: (text: string) => Promise<{ success: boolean; data?: CefrAnalysisResult; error?: string }>;
+    checkCEFR: () => Promise<{ success: boolean; cefrDictPath?: string; cefrDictSize?: number; error?: string }>;
+}
+
+// CEFR 分析结果接口
+interface CefrAnalysisResult {
+    totalWords: number;
+    uniqueWords: number;
+    knownWordsCount: number;
+    unknownWordsCount: number;
+    unknownWordsRatio: number;
+    distribution: {
+        [key: string]: {
+            count: number;
+            percentage: number;
+            uniqueWords: number;
+        };
+    };
+    difficultyScore: number;
+    primaryLevel: string;
+    sampleUnknownWords: string[];
+    cefrDictionarySize: number;
 }
 
 interface Window {

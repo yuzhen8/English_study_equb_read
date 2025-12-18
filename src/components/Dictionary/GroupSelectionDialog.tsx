@@ -8,7 +8,7 @@ interface GroupSelectionDialogProps {
     onSelect: (groupId: string) => void;
 }
 
-const GroupSelectionDialog: React.FC<GroupSelectionDialogProps> = ({ wordIds, onClose, onSelect }) => {
+const GroupSelectionDialog: React.FC<GroupSelectionDialogProps> = ({ onClose, onSelect }) => {
     const [groups, setGroups] = useState<WordGroup[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
 

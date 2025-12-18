@@ -362,8 +362,8 @@ const ExerciseSession: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
-            {/* Header - Fixed at top */}
-            <header className="fixed top-0 left-0 right-0 bg-white shadow-sm px-4 h-16 flex items-center justify-between z-10">
+            {/* Header - Sticky at top */}
+            <header className="sticky top-0 bg-white shadow-sm px-4 h-16 flex items-center justify-between z-10">
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate('/exercise')} className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
                         <ArrowLeft size={24} />
@@ -391,8 +391,8 @@ const ExerciseSession: React.FC = () => {
                 </div>
             </header>
 
-            {/* Content - Add padding for fixed header, no scrollbar unless needed */}
-            <div className="flex-1 flex flex-col items-center justify-center p-4 pt-20 overflow-hidden">
+            {/* Content - No padding needed for sticky header */}
+            <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-hidden">
                 <div className="w-full max-w-md">
                     {effectiveMode === 'choice' ? (
                         <ChoiceMode

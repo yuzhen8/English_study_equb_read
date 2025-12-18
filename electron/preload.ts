@@ -23,5 +23,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAudio: (url: string, word: string) => ipcRenderer.invoke('dict:get-audio', { url, word }),
     searchLocal: (word: string) => ipcRenderer.invoke('dict:search-local', word),
     // SRS 调试日志
-    logSRS: (data: any) => ipcRenderer.invoke('debug:log-srs', data)
+    logSRS: (data: any) => ipcRenderer.invoke('debug:log-srs', data),
+    // CEFR 分析
+    analyzeCEFR: (text: string) => ipcRenderer.invoke('cefr:analyze', { text }),
+    checkCEFR: () => ipcRenderer.invoke('cefr:check'),
+    aiFetch: (options: { url: string, method?: string, headers?: any, body?: any }) => ipcRenderer.invoke('ai:fetch', options)
 })
+

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, MoreHorizontal, Trash2, Edit2, Dumbbell, Plus, X } from 'lucide-react';
+import { ArrowLeft, Search, MoreHorizontal, Trash2, Edit2, Dumbbell, Plus, X, RefreshCw, ChevronDown, ArrowDown, ArrowUp } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 import { GroupStore, WordGroup } from '../../services/GroupStore';
@@ -24,6 +24,11 @@ const GroupDetail: React.FC = () => {
     const [showEditDialog, setShowEditDialog] = useState(false);
     const [editName, setEditName] = useState('');
     const [editDescription, setEditDescription] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('new');
+    const [sortBy, setSortBy] = useState<string>('progress');
+    const [sortAscending, setSortAscending] = useState(true);
+    const [showSortMenu, setShowSortMenu] = useState(false);
+    const [selectedWordId, setSelectedWordId] = useState<string>('');
 
     // 加载群组数据
     useEffect(() => {
@@ -51,11 +56,77 @@ const GroupDetail: React.FC = () => {
         setLoading(false);
     };
 
-    // 过滤单词
-    const filteredWords = words.filter(w =>
-        w.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        w.translation.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // 过滤和排序逻辑
+    const getFilteredAndSortedWords = () => {
+        let filtered = words.filter(w => {
+            if (!statusFilter) return true;
+            if (statusFilter === 'new') return w.status === 'new';
+            if (statusFilter === 'learning') {
+                return w.status === 'learning' || w.status === 'reviewed';
+            }
+            if (statusFilter === 'reviewed') {
+                return w.status === 'mastered';
+            }
+            return w.status === statusFilter;
+        });
+
+        if (searchQuery) {
+            filtered = filtered.filter(w =>
+                w.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                w.translation.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+
+        // 排序逻辑
+        filtered.sort((a, b) => {
+            let result = 0;
+            switch (sortBy) {
+                case 'alpha':
+                    result = a.text.localeCompare(b.text);
+                    break;
+                case 'progress':
+                    const progressOrder: Record<string, number> = { 'new': 0, 'learning': 1, 'reviewed': 2, 'mastered': 3 };
+                    result = (progressOrder[a.status] || 0) - (progressOrder[b.status] || 0);
+                    break;
+                case 'date':
+                    result = b.addedAt - a.addedAt;
+                    break;
+                case 'lastReview':
+                    result = (b.lastReviewedAt || 0) - (a.lastReviewedAt || 0);
+                    break;
+                case 'nextReview':
+                    result = (a.nextReviewAt || 0) - (b.nextReviewAt || 0);
+                    break;
+                case 'repeatCount':
+                    result = (b.reviewCount || 0) - (a.reviewCount || 0);
+                    break;
+                case 'frequency':
+                    result = (b.reviewCount || 0) - (a.reviewCount || 0);
+                    break;
+            }
+            return sortAscending ? result : -result;
+        });
+
+        return filtered;
+    };
+
+    const filteredWords = getFilteredAndSortedWords();
+
+    const statusTabs = [
+        { value: 'new', label: '新的' },
+        { value: 'learning', label: '学习' },
+        { value: 'reviewed', label: '已学习' }
+    ];
+
+    const sortOptions = [
+        { value: 'alpha', label: '字母顺序' },
+        { value: 'progress', label: '进度' },
+        { value: 'lastReview', label: '最后训练' },
+        { value: 'nextReview', label: '下一次训练' },
+        { value: 'repeatCount', label: '重复次数' },
+        { value: 'date', label: '添加时间' },
+        { value: 'frequency', label: '频率' }
+    ];
 
     // 删除群组
     const handleDeleteGroup = async () => {
@@ -220,6 +291,63 @@ const GroupDetail: React.FC = () => {
                         </div>
                     </div>
                 )}
+
+                {/* Status Tabs */}
+                <div className="flex gap-2 overflow-x-auto pb-2 mt-3 no-scrollbar">
+                    {statusTabs.map(tab => (
+                        <button
+                            key={tab.value}
+                            onClick={() => setStatusFilter(tab.value)}
+                            className={cn(
+                                "px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors border",
+                                statusFilter === tab.value
+                                    ? 'bg-gray-900 text-white border-gray-900'
+                                    : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
+                            )}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Sort Controls */}
+                <div className="flex items-center gap-2 mt-3 relative">
+                    <span className="text-sm text-gray-500">按照排序:</span>
+                    <button
+                        onClick={() => setShowSortMenu(!showSortMenu)}
+                        className="flex items-center gap-1 text-sm text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                    >
+                        <RefreshCw size={14} className="text-gray-400" />
+                        <span>{sortOptions.find(o => o.value === sortBy)?.label}</span>
+                        <ChevronDown size={14} />
+                    </button>
+                    <button
+                        onClick={() => setSortAscending(!sortAscending)}
+                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                    >
+                        {sortAscending ? <ArrowDown size={16} className="text-gray-500" /> : <ArrowUp size={16} className="text-gray-500" />}
+                    </button>
+
+                    {showSortMenu && (
+                        <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-30 min-w-[140px]">
+                            {sortOptions.map(option => (
+                                <button
+                                    key={option.value}
+                                    onClick={() => {
+                                        setSortBy(option.value);
+                                        setShowSortMenu(false);
+                                    }}
+                                    className={cn(
+                                        "w-full px-4 py-2 text-left text-sm hover:bg-gray-50",
+                                        sortBy === option.value ? 'text-blue-600 font-bold' : 'text-gray-700'
+                                    )}
+                                >
+                                    {option.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Stats Bar */}
@@ -264,19 +392,25 @@ const GroupDetail: React.FC = () => {
                         )}
                     </div>
                 ) : (
-                    <div className="space-y-2">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
                         {filteredWords.map((word) => (
                             <div
                                 key={word.id}
                                 className={cn(
-                                    "bg-white rounded-xl p-4 shadow-sm border transition-colors",
+                                    "p-4 transition-colors cursor-pointer",
                                     isEditMode
                                         ? selectedWordIds.has(word.id)
-                                            ? "border-red-300 bg-red-50"
-                                            : "border-gray-100"
-                                        : "border-gray-100"
+                                            ? "bg-red-50"
+                                            : "hover:bg-gray-50"
+                                        : "hover:bg-gray-50"
                                 )}
-                                onClick={() => isEditMode && toggleWordSelection(word.id)}
+                                onClick={() => {
+                                    if (isEditMode) {
+                                        toggleWordSelection(word.id);
+                                    } else {
+                                        setSelectedWordId(word.id);
+                                    }
+                                }}
                             >
                                 <div className="flex items-center gap-3">
                                     {isEditMode && (
@@ -298,11 +432,11 @@ const GroupDetail: React.FC = () => {
                                         <p className="text-sm text-gray-500 line-clamp-2 whitespace-pre-line mt-0.5">{word.translation.replace(/\\n/g, '\n')}</p>
                                     </div>
                                     <span className={cn(
-                                        "px-2 py-0.5 rounded-full text-xs font-medium",
-                                        word.status === 'new' && "bg-blue-100 text-blue-700",
-                                        word.status === 'learning' && "bg-orange-100 text-orange-700",
-                                        word.status === 'reviewed' && "bg-green-100 text-green-700",
-                                        word.status === 'mastered' && "bg-purple-100 text-purple-700"
+                                        "px-2 py-0.5 rounded-full text-[10px] font-bold",
+                                        word.status === 'new' && "bg-blue-50 text-blue-600",
+                                        word.status === 'learning' && "bg-orange-50 text-orange-600",
+                                        word.status === 'reviewed' && "bg-green-50 text-green-600",
+                                        word.status === 'mastered' && "bg-purple-50 text-purple-600"
                                     )}>
                                         {word.status === 'new' && '新词'}
                                         {word.status === 'learning' && '学习中'}
@@ -351,10 +485,12 @@ const GroupDetail: React.FC = () => {
                 </button>
             )}
 
-            {/* Word Detail Popup for Adding */}
-            {showWordPopup && (
+            {/* Word Detail Popup */}
+            {(selectedWordId || showWordPopup) && (
                 <WordDetailPopup
+                    wordId={selectedWordId}
                     onClose={() => {
+                        setSelectedWordId('');
                         setShowWordPopup(false);
                         loadGroupData(); // 重新加载以更新列表
                     }}
