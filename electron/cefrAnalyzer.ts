@@ -103,8 +103,12 @@ function mapWasmToResult(wasmResult: WasmAnalysisResult): CefrAnalysisResult {
     const details = wasmResult.details;
 
     // Distribution
+    // Distribution
     const counts: Record<string, number> = {
         'A1': 0, 'A2': 0, 'B1': 0, 'B2': 0, 'C1': 0, 'C2': 0, 'Unknown': 0
+    };
+    const uniqueSets: Record<string, Set<string>> = {
+        'A1': new Set(), 'A2': new Set(), 'B1': new Set(), 'B2': new Set(), 'C1': new Set(), 'C2': new Set(), 'Unknown': new Set()
     };
 
     let unknownWordsCount = 0;
@@ -112,11 +116,13 @@ function mapWasmToResult(wasmResult: WasmAnalysisResult): CefrAnalysisResult {
     details.forEach(token => {
         // Clean level string (unquote if needed, though serde handles it)
         let level = token.level.replace(/"/g, '');
-        if (counts[level] !== undefined) {
-            counts[level]++;
-        } else {
-            counts['Unknown']++;
+        // Validate level key to avoid crashing on unexpected values
+        if (!counts.hasOwnProperty(level)) {
+            level = 'Unknown';
         }
+
+        counts[level]++;
+        uniqueSets[level].add(token.lemma);
     });
 
     unknownWordsCount = counts['Unknown'];
@@ -126,9 +132,9 @@ function mapWasmToResult(wasmResult: WasmAnalysisResult): CefrAnalysisResult {
     const distribution: any = {};
     for (const level of ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Unknown']) {
         distribution[level] = {
-            count: counts[level],
+            count: counts[level], // Token count
             percentage: totalWords > 0 ? (counts[level] / totalWords) * 100 : 0,
-            uniqueWords: 0 // Simplification: Not calculating unique per level yet
+            uniqueWords: uniqueSets[level].size // Unique lemma count
         };
     }
 

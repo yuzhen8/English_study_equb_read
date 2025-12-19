@@ -80,6 +80,42 @@ impl Dictionary {
         }
     }
 
+    pub fn lookup_all(&self, word: &str) -> Option<&Vec<WordEntry>> {
+        // 1. Exact match
+        if let Some(entries) = self.words.get(word) {
+            return Some(entries);
+        }
+
+        // 2. Case-insensitive
+        let lower = word.to_lowercase();
+        if let Some(entries) = self.words.get(&lower) {
+            return Some(entries);
+        }
+
+        // 3. Simple Morphology Fallback
+        if lower.ends_with('s') {
+            let lemma = &lower[0..lower.len()-1];
+            if let Some(entries) = self.words.get(lemma) {
+                return Some(entries);
+            }
+            if lower.ends_with("es") {
+                let lemma = &lower[0..lower.len()-2];
+                 if let Some(entries) = self.words.get(lemma) {
+                    return Some(entries);
+                }
+            }
+        }
+        
+        if lower.ends_with("ed") {
+             let lemma = &lower[0..lower.len()-2];
+             if let Some(entries) = self.words.get(lemma) {
+                return Some(entries);
+            }
+        }
+
+        None
+    }
+
     pub fn lookup(&self, word: &str, pos_tag: Option<&str>) -> Option<&WordEntry> {
         // 1. Exact match
         if let Some(entries) = self.words.get(word) {
