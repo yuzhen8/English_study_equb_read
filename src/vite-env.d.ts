@@ -48,6 +48,21 @@ interface CefrAnalysisResult {
     primaryLevel: string;
     sampleUnknownWords: string[];
     cefrDictionarySize: number;
+    metrics?: {
+        lexical_score?: number;
+        adjusted_score?: number;
+        syntax: {
+            clause_density: number;
+            passive_ratio: number;
+            avg_tree_depth: number;
+        };
+        discourse: {
+            connective_sophistication: number;
+            abstract_noun_ratio: number;
+        };
+        sentence_count: number;
+        avg_sentence_length: number;
+    };
 }
 
 interface Window {

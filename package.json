@@ -45,6 +45,13 @@
                 "filter": [
                     "**/*"
                 ]
+            },
+            {
+                "from": "cefr-core/pkg",
+                "to": "cefr-core/pkg",
+                "filter": [
+                    "**/*"
+                ]
             }
         ]
     },

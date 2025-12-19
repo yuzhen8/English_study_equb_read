@@ -60,6 +60,7 @@
         - [ ] **[NEW]** 优化查词响应速度 (UI 优先策略)
             - [x] **阅读器即时弹窗**: 移除 Reader 中的阻塞式翻译等待，点击后立即打开弹窗，将翻译任务移至弹窗内部异步执行
             - [x] **渐进式数据加载**: 优化 `hybridDictionary.query` 逻辑，优先返回并显示本地结果 (ECDICT 中文释义)，随后后台加载 Free Dictionary API (英英/音频) 并更新 UI
+            - [x] **[NEW]** 使用 Rust/WASM 引擎替换 Python CEFR 分析器 (性能与分发优化)
     - [x] **[NEW]** UI/UX 交互优化 (查词体验) - **方案 C: 无遮罩浮窗**
         - [x] **移除模态遮罩**: 修改 `WordDetailPopup`，移除全屏黑色背景 (`bg-black bg-opacity-30`)，允许用户看到背后的文本
         - [x] **实现点击外部关闭**: 添加点击监听 (Click Outside)，在点击弹窗外部区域时自动关闭详情页

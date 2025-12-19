@@ -80,7 +80,8 @@ export const CefrAnalysisPopup: React.FC<CefrAnalysisPopupProps> = ({
                     analyzedAt: Date.now(),
                     distribution: response.data.distribution,
                     unknownWordsRatio: response.data.unknownWordsRatio,
-                    sampleUnknownWords: response.data.sampleUnknownWords
+                    sampleUnknownWords: response.data.sampleUnknownWords,
+                    metrics: response.data.metrics
                 };
                 setResult(summary);
                 // 通知父组件分析完成
@@ -236,11 +237,98 @@ export const CefrAnalysisPopup: React.FC<CefrAnalysisPopupProps> = ({
                                     </div>
                                 </div>
                             )}
+
+                            {/* 详细分析指标 (New) */}
+                            {result.metrics && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {/* 句法复杂度 */}
+                                    <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3">
+                                        <h4 className="text-xs font-bold text-blue-700 mb-2 uppercase tracking-wider">句法分析</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">平均句长</span>
+                                                <span className="font-medium text-gray-900">{(result.metrics.avg_sentence_length || 0).toFixed(1)} 词</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">从句密度</span>
+                                                <span className="font-medium text-gray-900">{((result.metrics.syntax?.clause_density || 0) * 100).toFixed(0)}%</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">句子嵌套</span>
+                                                <span className="font-medium text-gray-900">{(result.metrics.syntax?.avg_tree_depth || 0).toFixed(1)} 层</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 语篇与认知 */}
+                                    <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3">
+                                        <h4 className="text-xs font-bold text-indigo-700 mb-2 uppercase tracking-wider">语篇分析</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">抽象词比例</span>
+                                                <span className="font-medium text-gray-900">{((result.metrics.discourse?.abstract_noun_ratio || 0) * 100).toFixed(1)}%</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">逻辑连词</span>
+                                                <span className="font-medium text-gray-900">{(result.metrics.discourse?.connective_sophistication || 0) > 0.1 ? '丰富' : '基础'}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">句子总数</span>
+                                                <span className="font-medium text-gray-900">{result.metrics.sentence_count || 0}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+
+                            {/* 评级逻辑说明 (New) */}
+                            {result.metrics?.lexical_score !== undefined && (
+                                <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-4">
+                                    <h4 className="text-sm font-bold text-orange-800 mb-3 flex items-center gap-2">
+                                        <div className="w-1.5 h-4 bg-orange-500 rounded-full"></div>
+                                        评级判定逻辑
+                                    </h4>
+                                    <div className="space-y-3 text-sm">
+                                        <div className="flex justify-between items-center pb-2 border-b border-orange-200/50">
+                                            <span className="text-gray-600">词汇基准分 (Lexical)</span>
+                                            <span className="font-mono font-medium text-gray-900">{result.metrics.lexical_score?.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs text-gray-500">
+                                            <span>+ 句法复杂度加成</span>
+                                            <span className="font-mono text-green-600">
+                                                +{((result.metrics.syntax?.clause_density || 0) * 0.5).toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs text-gray-500 pb-2 border-b border-orange-200/50">
+                                            <span>+ 语篇复杂度加成</span>
+                                            <span className="font-mono text-green-600">
+                                                +{((result.metrics.discourse?.connective_sophistication || 0) * 0.5).toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-1">
+                                            <span className="font-bold text-orange-900">最终得分</span>
+                                            <div className="text-right">
+                                                <div className="font-mono font-bold text-xl text-orange-600">
+                                                    {result.metrics.adjusted_score?.toFixed(2)}
+                                                </div>
+                                                <div className="text-[10px] text-gray-400">
+                                                    (对应等级: {result.primaryLevel})
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="bg-white/50 rounded p-2 text-[10px] text-gray-500 leading-relaxed mt-2">
+                                            <span className="font-semibold">评分标准：</span>
+                                            1.0-1.5=A1, 1.5-2.5=A2, 2.5-3.5=B1, 3.5-4.5=B2, 4.5-5.5=C1, &gt;5.5=C2
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ) : null}
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

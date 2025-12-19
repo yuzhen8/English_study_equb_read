@@ -1,19 +1,20 @@
 /**
- * CEFR Analyzer Module
+ * CEFR Analyzer Module (WASM Version)
  * 
- * Handles EPUB text extraction and Python analyzer invocation
+ * Handles EPUB text extraction and Rust/WASM analyzer invocation.
+ * Replaces the legacy Python analyzer.
  */
 
 import { ipcMain, app } from 'electron';
-import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import fs from 'fs/promises';
-import os from 'os';
 
-// CEFR Analysis Result Interface
+// --- Interfaces ---
+
+// The result format expected by the frontend (Legacy compatibility)
 export interface CefrAnalysisResult {
     totalWords: number;
-    uniqueWords: number;
+    uniqueWords: number; // Not strictly calculated in WASM yet, can approximate
     knownWordsCount: number;
     unknownWordsCount: number;
     unknownWordsRatio: number;
@@ -28,195 +29,170 @@ export interface CefrAnalysisResult {
     primaryLevel: string;
     sampleUnknownWords: string[];
     cefrDictionarySize: number;
+    // New fields from WASM engine
+    metrics?: {
+        lexical_score?: number;
+        adjusted_score?: number;
+        syntax: any;
+        discourse: any;
+        sentence_count: number;
+        avg_sentence_length: number;
+    };
 }
 
+// The raw result from WASM
+interface WasmAnalysisResult {
+    cefr_level: string;
+    lexical_score: number;
+    adjusted_score: number;
+    metrics: {
+        sentence_count: number;
+        word_count: number;
+        unique_word_count: number;
+        avg_sentence_length: number;
+        syntax: any;
+        discourse: any;
+    };
+    details: Array<{
+        text: string;
+        lemma: string;
+        pos: string;
+        level: string; // "A1", "B2", "Unknown", etc.
+        is_phrase: boolean;
+    }>;
+}
+
+
+
 /**
- * Get the path to the Python analyzer script
- * In development: py_env/analyzer.py
- * In production: resources/analyzer.exe (TODO: PyInstaller)
+ * Load the WASM module dynamically.
  */
-function getAnalyzerPath(): { executable: string; args: string[]; cwd: string } {
+async function loadWasmModule(): Promise<any> {
     const isDev = !app.isPackaged;
 
+    // Path resolution logic
+    // Dev: ../cefr-core/pkg/cefr_core.js (relative to electron/)
+    // Prod: resources/cefr-core/pkg/cefr_core.js (Assuming copy)
+
+    let wasmPath;
     if (isDev) {
-        // Development mode: use uv run
-        const projectRoot = path.resolve(__dirname, '..');
-        const pyEnvPath = path.join(projectRoot, 'py_env');
-        const analyzerScript = path.join(pyEnvPath, 'analyzer.py');
-
-        return {
-            executable: 'uv',
-            args: ['run', 'python', analyzerScript],
-            cwd: pyEnvPath
-        };
-    } else {
-        // Production mode: use bundled executable
-        const resourcesPath = process.resourcesPath || path.join(__dirname, '..', 'resources');
-        const analyzerExe = path.join(resourcesPath, 'analyzer.exe');
-
-        return {
-            executable: analyzerExe,
-            args: [],
-            cwd: resourcesPath
-        };
-    }
-}
-
-/**
- * Get the path to the CEFR vocabulary CSV file
- */
-function getCefrDictPath(): string {
-    const isDev = !app.isPackaged;
-
-    if (isDev) {
-        return path.resolve(__dirname, '..', 'resources', 'cefrj-vocabulary-profile-1.5.csv');
+        // Use process.cwd() which points to the project root in standard dev environments
+        wasmPath = path.join(process.cwd(), 'cefr-core', 'pkg', 'cefr_core.js');
     } else {
         const resourcesPath = process.resourcesPath || path.join(__dirname, '..', 'resources');
-        return path.join(resourcesPath, 'cefrj-vocabulary-profile-1.5.csv');
+        wasmPath = path.join(resourcesPath, 'cefr-core', 'pkg', 'cefr_core.js');
     }
-}
 
-/**
- * Run the Python analyzer on the given text file
- */
-async function runPythonAnalyzer(textFilePath: string): Promise<CefrAnalysisResult> {
-    const analyzerConfig = getAnalyzerPath();
-    const cefrPath = getCefrDictPath();
-
-    // Build command args
-    const fullArgs = [
-        ...analyzerConfig.args,
-        textFilePath,
-        '--cefr',
-        cefrPath
-    ];
-
-    console.log(`[CEFR] Running analyzer: ${analyzerConfig.executable} ${fullArgs.join(' ')}`);
-
-    return new Promise((resolve, reject) => {
-        const childProc: ChildProcess = spawn(analyzerConfig.executable, fullArgs, {
-            cwd: analyzerConfig.cwd,
-            env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
-        });
-
-        let stdout = '';
-        let stderr = '';
-
-        childProc.stdout?.on('data', (data: Buffer) => {
-            stdout += data.toString('utf-8');
-        });
-
-        childProc.stderr?.on('data', (data: Buffer) => {
-            stderr += data.toString('utf-8');
-        });
-
-        childProc.on('close', (code: number | null) => {
-            if (code === 0) {
-                try {
-                    const result = JSON.parse(stdout);
-                    if (result.error) {
-                        reject(new Error(result.error));
-                    } else {
-                        resolve(result as CefrAnalysisResult);
-                    }
-                } catch (e) {
-                    reject(new Error(`Failed to parse analyzer output: ${e}`));
-                }
-            } else {
-                reject(new Error(`Analyzer exited with code ${code}: ${stderr}`));
-            }
-        });
-
-        childProc.on('error', (err: Error) => {
-            reject(new Error(`Failed to start analyzer: ${err.message}`));
-        });
-    });
-}
-
-/**
- * Extract plain text from EPUB content
- * This function receives the already-extracted text from the frontend
- */
-async function createTempTextFile(text: string): Promise<string> {
-    const tempDir = os.tmpdir();
-    const tempFile = path.join(tempDir, `epub_text_${Date.now()}.txt`);
-
-    await fs.writeFile(tempFile, text, 'utf-8');
-
-    // Verify file was created
-    const stats = await fs.stat(tempFile);
-    console.log(`[CEFR] Temp file created: ${tempFile} (${stats.size} bytes)`);
-
-    return tempFile;
-}
-
-/**
- * Clean up temporary file
- */
-async function cleanupTempFile(filePath: string): Promise<void> {
     try {
-        // Check if file exists before trying to delete
-        await fs.access(filePath);
-        await fs.unlink(filePath);
-        console.log(`[CEFR] Temp file cleaned up: ${filePath}`);
-    } catch (e: any) {
-        // Only log if it's not a "file not found" error
-        if (e.code !== 'ENOENT') {
-            console.error(`[CEFR] Failed to delete temp file: ${e}`);
-        }
+        console.log(`[CEFR] Loading WASM from: ${wasmPath}`);
+        // In Node environment, we can require it
+        // Note: In a real webpack/vite build, this might need external handling or copy-webpack-plugin
+        return require(wasmPath);
+    } catch (e) {
+        console.error(`[CEFR] Failed to load WASM module:`, e);
+        throw new Error(`Failed to load CEFR Engine. Please ensure wasm-pack build is run. Path: ${wasmPath}`);
     }
 }
+
+/**
+ * Map WASM result to Frontend result
+ */
+function mapWasmToResult(wasmResult: WasmAnalysisResult): CefrAnalysisResult {
+    const totalWords = wasmResult.metrics.word_count;
+    const uniqueWords = wasmResult.metrics.unique_word_count;
+    const details = wasmResult.details;
+
+    // Distribution
+    const counts: Record<string, number> = {
+        'A1': 0, 'A2': 0, 'B1': 0, 'B2': 0, 'C1': 0, 'C2': 0, 'Unknown': 0
+    };
+
+    let unknownWordsCount = 0;
+
+    details.forEach(token => {
+        // Clean level string (unquote if needed, though serde handles it)
+        let level = token.level.replace(/"/g, '');
+        if (counts[level] !== undefined) {
+            counts[level]++;
+        } else {
+            counts['Unknown']++;
+        }
+    });
+
+    unknownWordsCount = counts['Unknown'];
+    const knownWordsCount = totalWords - unknownWordsCount;
+
+    // Safe division
+    const distribution: any = {};
+    for (const level of ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Unknown']) {
+        distribution[level] = {
+            count: counts[level],
+            percentage: totalWords > 0 ? (counts[level] / totalWords) * 100 : 0,
+            uniqueWords: 0 // Simplification: Not calculating unique per level yet
+        };
+    }
+
+    // Heuristic difficulty score
+    const levelMap: Record<string, number> = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5, 'C2': 6 };
+    const score = levelMap[wasmResult.cefr_level] || 0;
+
+    return {
+        totalWords,
+        uniqueWords: uniqueWords,
+        knownWordsCount,
+        unknownWordsCount,
+        unknownWordsRatio: totalWords > 0 ? unknownWordsCount / totalWords : 0,
+        distribution,
+        difficultyScore: score, // Returns 1-6 to match the UI's "/6" denominator
+        primaryLevel: wasmResult.cefr_level,
+        sampleUnknownWords: details.filter(d => d.level === 'Unknown').slice(0, 10).map(d => d.text),
+        cefrDictionarySize: 5000,
+        metrics: {
+            // Include raw scores for frontend "Assesment Logic" display
+            lexical_score: wasmResult.lexical_score,
+            adjusted_score: wasmResult.adjusted_score,
+            syntax: wasmResult.metrics.syntax,
+            discourse: wasmResult.metrics.discourse,
+            sentence_count: wasmResult.metrics.sentence_count,
+            avg_sentence_length: wasmResult.metrics.avg_sentence_length
+        }
+    };
+}
+
 
 /**
  * Setup CEFR analyzer IPC handlers
  */
 export function setupCefrAnalyzerHandlers(): void {
-    /**
-     * Analyze EPUB text content
-     * Input: { text: string } - The extracted text content from EPUB
-     * Output: CefrAnalysisResult
-     */
+
     ipcMain.handle('cefr:analyze', async (event, { text }: { text: string }) => {
         // Validate input
         if (!text || typeof text !== 'string') {
-            console.error('[CEFR] Invalid input: text is empty or not a string');
             return { success: false, error: '无效的输入：文本为空' };
         }
 
         const textLength = text.trim().length;
-        console.log(`[CEFR] Starting analysis of ${textLength} characters...`);
-
-        if (textLength === 0) {
-            console.error('[CEFR] Text is empty after trimming');
-            return { success: false, error: '提取的文本为空，请确保书籍内容可读' };
-        }
-
-        if (textLength < 50) {
-            console.warn(`[CEFR] Very short text (${textLength} chars), results may be unreliable`);
-        }
-
-        let tempFile: string | null = null;
+        console.log(`[CEFR] Starting WASM analysis of ${textLength} characters...`);
 
         try {
-            // Create temporary text file
-            tempFile = await createTempTextFile(text);
+            const wasmModule = await loadWasmModule();
 
-            // Run Python analyzer
-            const result = await runPythonAnalyzer(tempFile);
-            console.log(`[CEFR] Analysis complete: ${result.totalWords} words, primary level: ${result.primaryLevel}`);
+            // Invoke Rust function
+            // analyze(text: &str) -> JsValue (JSON)
+            const rawResult = wasmModule.analyze(text);
 
-            return { success: true, data: result };
+            // Note: If using serde_json::to_value, the result is already a JS object/JSON
+            console.log(`[CEFR] Raw WASM result received. Level: ${rawResult.cefr_level}`);
+
+            const finalResult = mapWasmToResult(rawResult);
+
+            return { success: true, data: finalResult };
         } catch (error) {
             console.error('[CEFR] Analysis failed:', error);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : String(error)
             };
-        } finally {
-            // Clean up temp file
-            if (tempFile) {
-                await cleanupTempFile(tempFile);
-            }
         }
     });
 
@@ -225,16 +201,12 @@ export function setupCefrAnalyzerHandlers(): void {
      */
     ipcMain.handle('cefr:check', async () => {
         try {
-            const cefrPath = getCefrDictPath();
-            await fs.access(cefrPath);
-
-            // Check if CEFR dict exists
-            const stats = await fs.stat(cefrPath);
-
+            // Check if WASM can be loaded
+            await loadWasmModule();
             return {
                 success: true,
-                cefrDictPath: cefrPath,
-                cefrDictSize: stats.size
+                cefrDictPath: 'Embedded in WASM',
+                cefrDictSize: 'WASM'
             };
         } catch (error) {
             return {
@@ -244,5 +216,5 @@ export function setupCefrAnalyzerHandlers(): void {
         }
     });
 
-    console.log('[CEFR] Analyzer handlers registered');
+    console.log('[CEFR] WASM Analyzer handlers registered');
 }
