@@ -141,23 +141,23 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
 
     return (
         <>
-            <div className="flex flex-col h-screen bg-gray-50 text-slate-900">
+            <div className="flex flex-col h-screen bg-transparent text-white">
                 {/* Header */}
-                <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+                <header className="flex items-center justify-between px-4 py-3 bg-transparent">
                     <button
                         onClick={() => navigate('/exercise')}
-                        className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+                        className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
                     >
-                        <ArrowLeft size={24} className="text-gray-700" />
+                        <ArrowLeft size={24} className="text-white/80" />
                     </button>
                     <div className="text-center">
-                        <span className="text-sm text-gray-500">{currentIndex} / {totalCount}</span>
+                        <span className="text-sm text-white/60">{currentIndex} / {totalCount}</span>
                     </div>
                     <button
                         onClick={() => setShowSettings(true)}
-                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                        className="p-2 hover:bg-white/10 rounded-full transition-colors"
                     >
-                        <Settings2 size={20} className="text-gray-500" />
+                        <Settings2 size={20} className="text-white/60" />
                     </button>
                 </header>
 
@@ -165,10 +165,10 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
                 <div className="flex-1 flex flex-col items-center justify-center px-4 py-4">
                     <div className="w-full max-w-md">
                         {/* 卡片内容 */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+                        <div className="glass-card p-6 mb-4 border border-white/10 shadow-lg">
                             {/* 模式标签 */}
-                            <div className="text-center mb-3">
-                                <span className="inline-block px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <div className="text-center mb-6">
+                                <span className="inline-block px-3 py-1 bg-white/10 text-amber-300 border border-amber-500/30 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md shadow-[0_0_10px_rgba(245,158,11,0.2)]">
                                     Listening Spelling
                                 </span>
                             </div>
@@ -184,18 +184,18 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
                             </div>
 
                             {/* 提示和详情按钮 - 始终显示 */}
-                            <div className="flex items-center justify-center gap-3 mb-3">
+                            <div className="flex items-center justify-center gap-3 mb-6">
                                 {!showHint && !isComplete && (
                                     <button
                                         onClick={() => { setShowHint(true); setUsedHint(true); }}
-                                        className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                                        className="text-sm text-white/40 hover:text-white transition-colors"
                                     >
                                         显示提示
                                     </button>
                                 )}
                                 <button
                                     onClick={() => setShowWordDetail(true)}
-                                    className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-700 transition-colors px-3 py-1 rounded-full hover:bg-purple-50 text-sm"
+                                    className="inline-flex items-center gap-1 text-purple-300 hover:text-white transition-colors px-3 py-1 rounded-full hover:bg-white/10 text-sm"
                                 >
                                     <BookOpen size={14} />
                                     <span>详情</span>
@@ -205,7 +205,7 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
                             {/* 翻译提示 - 点击后显示 */}
                             {showHint && !isComplete && (
                                 <div className="text-center mb-3 animate-fade-in">
-                                    <p className="text-sm text-gray-600 whitespace-pre-line">
+                                    <p className="text-sm text-white/80 whitespace-pre-line">
                                         {word.translation.replace(/\\n/g, '\n')}
                                     </p>
                                 </div>
@@ -213,9 +213,9 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
 
                             {/* 完成后显示单词和翻译 */}
                             {isComplete && (
-                                <div className="text-center mb-3 animate-fade-in">
-                                    <p className="text-green-600 font-medium mb-1">正确! 🎉</p>
-                                    <p className="text-gray-600 whitespace-pre-line text-sm text-left">
+                                <div className="text-center mb-4 animate-fade-in">
+                                    <p className="text-emerald-400 font-bold text-lg mb-1 drop-shadow-md">正确! 🎉</p>
+                                    <p className="text-white/90 whitespace-pre-line text-sm text-left">
                                         {word.translation.replace(/\\n/g, '\n')}
                                     </p>
                                 </div>
@@ -225,7 +225,7 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
                             <div className="flex justify-center">
                                 <button
                                     onClick={handleReset}
-                                    className="px-3 py-1 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-500 text-xs font-medium transition-colors flex items-center gap-1"
+                                    className="px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white/40 hover:text-white text-xs font-medium transition-colors flex items-center gap-1"
                                 >
                                     <RotateCcw size={12} />
                                     重置
@@ -234,28 +234,28 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
                         </div>
 
                         {/* Progress Bar */}
-                        <div className="mb-4">
-                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="mb-6 px-1">
+                            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                                 <div
-                                    className="h-full bg-amber-500 transition-all duration-300 rounded-full"
+                                    className="h-full bg-amber-400 box-shadow-glow transition-all duration-300 rounded-full"
                                     style={{ width: `${(slots.filter(s => s !== null).length / slots.length) * 100}%` }}
                                 />
                             </div>
                         </div>
 
                         {/* Slots */}
-                        <div className="flex flex-wrap justify-center gap-1.5 mb-4">
+                        <div className="flex flex-wrap justify-center gap-2 mb-6">
                             {slots.map((letter, idx) => (
                                 <div
                                     key={idx}
                                     className={cn(
-                                        "w-10 h-12 border-2 rounded-lg flex items-center justify-center text-lg font-bold transition-all",
+                                        "w-12 h-14 border rounded-xl flex items-center justify-center text-xl font-bold transition-all shadow-md",
                                         letter
-                                            ? "bg-amber-100 border-amber-300 text-amber-800"
+                                            ? "bg-amber-400/20 border-amber-400/50 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.2)]"
                                             : idx === nextEmptySlot
-                                                ? "border-amber-400 bg-amber-50"
-                                                : "border-gray-200 bg-white",
-                                        shakeIndex === idx && "animate-shake border-red-400 bg-red-50"
+                                                ? "border-amber-400/80 bg-white/5 shadow-[0_0_8px_rgba(251,191,36,0.3)] animate-pulse"
+                                                : "border-white/10 bg-black/20 text-white/20",
+                                        shakeIndex === idx && "animate-shake border-red-500 bg-red-500/20"
                                     )}
                                 >
                                     {letter || ''}
@@ -265,12 +265,12 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
 
                         {/* Letter Pool */}
                         {!isComplete && (
-                            <div className="flex flex-wrap justify-center gap-1.5">
+                            <div className="flex flex-wrap justify-center gap-2">
                                 {availableLetters.map((letter, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => handleLetterClick(letter, idx)}
-                                        className="w-10 h-10 bg-white border-2 border-gray-200 rounded-lg text-base font-bold text-gray-700 hover:border-amber-400 hover:bg-amber-50 transition-colors active:scale-95"
+                                        className="w-11 h-11 bg-white/5 border border-white/10 rounded-xl text-lg font-bold text-white hover:border-amber-400/60 hover:bg-amber-400/10 transition-colors active:scale-95 shadow-sm"
                                     >
                                         {letter}
                                     </button>

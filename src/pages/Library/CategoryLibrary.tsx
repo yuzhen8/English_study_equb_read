@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ePub from 'epubjs';
 import {
     Plus, Clock, FolderOpen, Pencil, Trash2,
-    ChevronRight, BookOpen, Menu, X, BarChart3, Info,
+    BookOpen, Menu, X, BarChart3, Info,
     ChevronDown, Upload, Library
 } from 'lucide-react';
 import { Category, CategoryStore, SYSTEM_CATEGORY_ALL, SYSTEM_CATEGORY_READING, SYSTEM_CATEGORY_UNCATEGORIZED } from '../../services/CategoryStore';
@@ -16,11 +16,19 @@ const CategoryLibrary: React.FC = () => {
     const navigate = useNavigate();
     const [categories, setCategories] = useState<Category[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string>(SYSTEM_CATEGORY_ALL);
-    const [books, setBooks] = useState<Book[]>([]);
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
 
-    // 模态框状态
+    const [books, setBooks] = useState<Book[]>([]);
     const [showCreateModal, setShowCreateModal] = useState(false);
+
+    // Add resize listener to auto-manage sidebar
+    useEffect(() => {
+        const handleResize = () => {
+            setSidebarOpen(window.innerWidth >= 1024);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
     const [showRenameModal, setShowRenameModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
@@ -202,28 +210,35 @@ const CategoryLibrary: React.FC = () => {
     };
 
     return (
-        <div className="flex h-full bg-gray-50 overflow-hidden">
+        <div className="flex h-full bg-transparent overflow-hidden">
             {/* Mobile Sidebar Toggle */}
             <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
+                className="lg:hidden fixed top-4 left-4 z-50 p-2 glass-button"
             >
                 {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
 
+            {/* Mobile Sidebar Backdrop */}
+            {sidebarOpen && (
+                <div
+                    className="lg:hidden fixed inset-0 z-30 bg-black/50 backdrop-blur-sm transition-opacity"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
             <aside className={cn(
-                "w-56 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 z-40",
-                "fixed inset-y-0 left-0 lg:static lg:h-full",
+                "w-60 glass-container flex flex-col transition-transform duration-300 z-40 m-4 ml-2 backdrop-blur-3xl",
+                "fixed inset-y-0 left-0 lg:static lg:h-[calc(100%-32px)] lg:mt-4 lg:ml-4",
                 sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}>
-                {/* Sidebar Header */}
-                <div className="p-4 border-b border-gray-100">
-                    <h2 className="text-lg font-bold text-gray-900">我的书库</h2>
+                <div className="p-6 border-b border-white/10">
+                    <h2 className="text-xl font-bold text-white tracking-wide">我的书库</h2>
                 </div>
 
                 {/* System Categories */}
-                <div className="p-2">
+                <div className="p-3 space-y-1">
                     <SidebarItem
                         icon={<FolderOpen size={18} />}
                         label="全部书籍"
@@ -245,11 +260,11 @@ const CategoryLibrary: React.FC = () => {
                 </div>
 
                 {/* Divider */}
-                <div className="h-px bg-gray-100 mx-4 my-2" />
+                <div className="h-px bg-white/10 mx-6 my-2" />
 
                 {/* Custom Categories */}
-                <div className="flex-1 overflow-y-auto p-2">
-                    <p className="text-xs text-gray-400 font-medium px-3 py-2">我的分类</p>
+                <div className="flex-1 overflow-y-auto p-3 space-y-1">
+                    <p className="text-xs text-white/50 font-medium px-4 py-2 uppercase tracking-wider">我的分类</p>
                     {categories.map(cat => (
                         <div
                             key={cat.id}
@@ -294,7 +309,7 @@ const CategoryLibrary: React.FC = () => {
                     {/* Add Category Button (Moved Inline) */}
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="w-full mt-2 py-2 px-3 border border-dashed border-gray-300 rounded-lg text-gray-500 text-sm font-medium hover:border-indigo-300 hover:text-indigo-600 hover:bg-gray-50 transition-all flex items-center justify-center gap-2 opacity-80 hover:opacity-100"
+                        className="w-full mt-2 py-2 px-3 border border-dashed border-white/20 rounded-lg text-white/40 text-sm font-medium hover:border-indigo-400 hover:text-indigo-300 hover:bg-white/5 transition-all flex items-center justify-center gap-2 opacity-80 hover:opacity-100"
                     >
                         <Plus size={16} />
                         新建分类...
@@ -303,13 +318,14 @@ const CategoryLibrary: React.FC = () => {
             </aside>
 
             {/* Main Content */}
+            {/* Main Content */}
             <main className="flex-1 flex flex-col h-full overflow-hidden lg:ml-0">
                 {/* Header */}
-                <div className="bg-gray-50 z-10 px-6 py-4 border-b border-gray-100 shrink-0">
+                <div className="z-10 px-8 py-6 shrink-0">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-xl font-bold text-gray-900">{getCategoryName(selectedCategory)}</h1>
-                            <p className="text-sm text-gray-500">{books.length} 本书</p>
+                            <h1 className="text-3xl font-bold text-white mb-1 drop-shadow-md">{getCategoryName(selectedCategory)}</h1>
+                            <p className="text-sm text-white/60">{books.length} 本书</p>
                         </div>
                         {selectedCategory !== SYSTEM_CATEGORY_ALL && selectedCategory !== SYSTEM_CATEGORY_READING && (
                             <div className="relative">
@@ -419,13 +435,13 @@ const CategoryLibrary: React.FC = () => {
                         value={newCategoryName}
                         onChange={(e) => setNewCategoryName(e.target.value)}
                         placeholder="输入分类名称"
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-4 py-2 border border-white/20 bg-white/5 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-white/30"
                         autoFocus
                     />
                     <div className="flex justify-end gap-2 mt-4">
                         <button
                             onClick={() => setShowCreateModal(false)}
-                            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="px-4 py-2 text-white/60 hover:bg-white/10 rounded-lg transition-colors"
                         >
                             取消
                         </button>
@@ -448,13 +464,13 @@ const CategoryLibrary: React.FC = () => {
                         value={newCategoryName}
                         onChange={(e) => setNewCategoryName(e.target.value)}
                         placeholder="输入新名称"
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-4 py-2 border border-white/20 bg-white/5 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-white/30"
                         autoFocus
                     />
                     <div className="flex justify-end gap-2 mt-4">
                         <button
                             onClick={() => setShowRenameModal(false)}
-                            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="px-4 py-2 text-white/60 hover:bg-white/10 rounded-lg transition-colors"
                         >
                             取消
                         </button>
@@ -565,15 +581,17 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, selected, onClic
     <button
         onClick={onClick}
         className={cn(
-            "w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium transition-all text-left mb-1",
+            "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all text-left mb-1 relative overflow-hidden group",
             selected
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
-                : "text-slate-600 hover:bg-slate-100"
+                ? "bg-white/20 text-white shadow-[0_0_20px_rgba(255,255,255,0.1)] border border-white/10"
+                : "text-white/60 hover:bg-white/10 hover:text-white"
         )}
     >
-        <span className={selected ? "text-white" : "text-slate-400 group-hover:text-slate-600"}>{icon}</span>
-        <span className="truncate flex-1">{label}</span>
-        {/* Removed redundant chevron for cleaner look */}
+        {selected && (
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-400 to-purple-400" />
+        )}
+        <span className={cn("transition-colors", selected ? "text-white" : "text-white/60 group-hover:text-white")}>{icon}</span>
+        <span className="truncate flex-1 tracking-wide">{label}</span>
     </button>
 );
 
@@ -630,21 +648,22 @@ const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, on
             onTouchStart={startPress}
             onTouchEnd={endPress}
             onClick={handleClick}
-            className="bg-white rounded-xl p-3 shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group select-none relative"
+            className="glass-card hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] relative group p-3 border border-white/5"
         >
-            <div className="aspect-[2/3] bg-gray-100 rounded-md mb-2 overflow-hidden relative">
+            <div className="aspect-[2/3] bg-black/20 rounded-lg mb-3 overflow-hidden relative shadow-inner">
                 {book.cover ? (
-                    <img src={book.cover} alt={book.title} className="w-full h-full object-cover pointer-events-none" />
+                    <img src={book.cover} alt={book.title} className="w-full h-full object-cover pointer-events-none opacity-90 group-hover:opacity-100 transition-opacity" />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                        <span className="text-[10px] text-gray-400 text-center px-1 line-clamp-3">{book.title}</span>
+                    <div className="w-full h-full flex items-center justify-center bg-white/5">
+                        <span className="text-xs text-white/40 text-center px-2 line-clamp-3 font-medium">{book.title}</span>
                     </div>
                 )}
                 {/* CEFR 等级标签 - 左上角常驻显示 */}
                 {hasCefrResult && book.cefrAnalysis && (
                     <CefrLevelBadge
                         level={book.cefrAnalysis.primaryLevel}
-                        className="absolute top-1 left-1"
+                        className="absolute top-1 left-1 z-10"
+                        onClick={onAnalyze}
                     />
                 )}
                 {/* 阅读中标签 - 如果有 CEFR 标签则移到右上角 */}
@@ -658,7 +677,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, on
                 )}
                 {/* 悬停时显示分析/查看按钮 */}
                 {onAnalyze && (
-                    <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
                         <button
                             onClick={onAnalyze}
                             className={cn(
@@ -711,9 +730,9 @@ interface ModalProps {
 
 const Modal: React.FC<ModalProps> = ({ title, onClose, children }) => (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-        <div className="relative bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">{title}</h3>
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative glass-card bg-black/40 p-6 w-full max-w-md mx-4 shadow-2xl border border-white/20">
+            <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
             {children}
         </div>
     </div>

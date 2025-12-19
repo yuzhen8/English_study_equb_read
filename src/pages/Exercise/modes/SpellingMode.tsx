@@ -164,28 +164,28 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
             const score = calculateScore();
             const timer = setTimeout(() => {
                 onResult(score);
-            }, 1500);
+            }, 600);
             return () => clearTimeout(timer);
         }
     }, [isComplete, onResult, usedReset, mistakeCount]);
 
     return (
         <>
-            <div className="flex flex-col h-screen bg-gray-50 text-slate-900">
+            <div className="flex flex-col h-screen bg-transparent text-white">
                 {/* Header - Minimal, just back button and progress */}
-                <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+                <header className="flex items-center justify-between px-4 py-3 bg-transparent">
                     <button
                         onClick={() => navigate('/exercise')}
-                        className="p-2 hover:bg-slate-100 rounded-full text-slate-600"
+                        className="p-2 hover:bg-white/10 rounded-full text-white/80 transition-colors"
                     >
                         <ArrowLeft size={20} />
                     </button>
-                    <span className="text-sm font-medium text-slate-600">
+                    <span className="text-sm font-medium text-white/60">
                         {currentIndex} / {totalCount}
                     </span>
                     <button
                         onClick={() => setShowSettings(true)}
-                        className="p-2 hover:bg-slate-100 rounded-full text-slate-600"
+                        className="p-2 hover:bg-white/10 rounded-full text-white/60 transition-colors"
                     >
                         <Settings2 size={20} />
                     </button>
@@ -195,27 +195,27 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
                 <div className="flex-1 overflow-y-auto">
                     <div className="max-w-2xl mx-auto px-4 py-8">
                         {/* Content Card */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-6">
+                        <div className="glass-card p-8 mb-6 border border-white/10 shadow-lg">
                             {/* Audio Button */}
                             <div className="flex justify-center mb-6">
                                 <button
                                     onClick={playAudio}
-                                    className="w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full text-white flex items-center justify-center shadow-md transition-all hover:scale-105 active:scale-95"
+                                    className="w-16 h-16 bg-blue-500 hover:bg-blue-600 rounded-full text-white flex items-center justify-center shadow-lg shadow-blue-500/30 transition-all hover:scale-105 active:scale-95 border border-white/10"
                                 >
-                                    <Volume2 size={24} />
+                                    <Volume2 size={28} />
                                 </button>
                             </div>
 
                             {/* Translation - 左对齐 */}
                             <div className="mb-4">
-                                <p className="text-2xl font-medium text-slate-900 whitespace-pre-line text-left">{word.translation.replace(/\\n/g, '\n')}</p>
+                                <p className="text-2xl font-medium text-white whitespace-pre-line text-left leading-relaxed">{word.translation.replace(/\\n/g, '\n')}</p>
                             </div>
 
                             {/* 单词详情按钮 */}
                             <div className="text-center mb-4">
                                 <button
                                     onClick={() => setShowWordDetail(true)}
-                                    className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-700 transition-colors px-3 py-1.5 rounded-full hover:bg-purple-50 text-sm"
+                                    className="inline-flex items-center gap-1 text-purple-300 hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-white/10 text-sm"
                                 >
                                     <BookOpen size={16} />
                                     <span>查看详情</span>
@@ -226,7 +226,7 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
                             <div className="flex justify-center">
                                 <button
                                     onClick={handleReset}
-                                    className="px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-500 text-sm font-medium transition-colors flex items-center gap-2"
+                                    className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white/40 hover:text-white text-sm font-medium transition-colors flex items-center gap-2"
                                 >
                                     <RotateCcw size={14} />
                                     重置
@@ -235,10 +235,10 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
                         </div>
 
                         {/* Progress Bar */}
-                        <div className="mb-4">
-                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="mb-4 px-1">
+                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                                 <div
-                                    className="h-full bg-blue-600 transition-all duration-300 rounded-full"
+                                    className="h-full bg-blue-500 box-shadow-glow transition-all duration-300 rounded-full"
                                     style={{ width: `${progress * 100}%` }}
                                 />
                             </div>
@@ -251,12 +251,12 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
                                     key={index}
                                     onClick={() => handleSlotClick(index)}
                                     className={cn(
-                                        "w-12 h-14 rounded-lg border-b-4 flex items-center justify-center transition-all font-bold text-2xl",
+                                        "w-12 h-14 rounded-xl border border-white/20 flex items-center justify-center transition-all font-bold text-2xl shadow-md backdrop-blur-sm",
                                         letter === null
-                                            ? "bg-gray-100 border-gray-300 text-gray-400"
-                                            : "bg-blue-50 text-blue-700 border-blue-500",
-                                        nextEmptySlot === index && letter === null && "ring-2 ring-blue-600 ring-offset-2",
-                                        shakeIndex === index && "animate-shake bg-red-50 border-red-500"
+                                            ? "bg-white/5 text-white/20"
+                                            : "bg-blue-500/20 text-blue-300 border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.2)]",
+                                        nextEmptySlot === index && letter === null && "ring-2 ring-blue-500/50 ring-offset-0 bg-white/10 animate-pulse",
+                                        shakeIndex === index && "animate-shake bg-red-500/20 border-red-500/50"
                                     )}
                                 >
                                     {letter ? letter : ''}
@@ -271,7 +271,7 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
                                     <button
                                         key={`${letter}-${index}`}
                                         onClick={() => handleLetterClick(letter, index)}
-                                        className="w-11 h-11 bg-gray-100 hover:bg-blue-50 rounded-lg shadow-sm font-bold text-xl text-slate-900 transition-all active:scale-95 hover:shadow-md"
+                                        className="w-12 h-12 bg-white/5 hover:bg-white/15 border border-white/10 rounded-xl shadow-sm font-bold text-xl text-white transition-all active:scale-95 hover:shadow-lg hover:-translate-y-0.5"
                                     >
                                         {letter}
                                     </button>

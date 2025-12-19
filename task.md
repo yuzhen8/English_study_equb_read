@@ -12,6 +12,34 @@
         - [x] 调整标签顺序 (书库在词典左侧)
         - [x] Configure React Router structure
         - [x] Beautify Navigation Bar (BottomNav)
+    - [x] **[NEW]** Glassmorphism UI Refactor (毛玻璃拟态重构)
+        - [x] Global CSS Variables & Utility Classes
+        - [x] Tailwind Config (Animations)
+        - [x] Main Layout (Dark Gradient Background)
+        - [x] Key Page Migration (Library, Dictionary, Exercise, Profile)
+        - [x] Migrate `Settings` page (incl. sub-components)
+        - [x] Migrate `ExerciseSession` page
+        - [x] Migrate Exercise Modes (Flashcard, Choice, Spelling, etc.)
+        - [x] Migrate Popups (WordDetail, SentenceAnalysis)
+    - [x] Phase 3: Data & Dictionary UI (Current Focus)
+        - [x] Dictionary Data & UI Refactor
+            - [x] Fix `WordList` syntax error and apply Glassmorphism
+            - [x] Apply Glassmorphism to `GroupDetail` (Header, List, Dialogs)
+        - [x] Exercise UI Refactor - Part 2
+            - [x] Apply Glassmorphism to `ExerciseScopeSelector`
+            - [x] Apply Glassmorphism to `SessionSummary`
+        - [ ] Backup & Restore UIt
+    - [x] Phase 4: Personalization (Theme Switcher)
+        - [x] Implement `ThemeContext` & Storage
+        - [x] Update `MainLayout` for dynamic backgrounds
+        - [x] Add Theme Switcher to `Settings.tsx`
+    - [x] Phase 5: Bug Fixes & Refinements
+        - [x] Fix Library layout issue (sidebar blocking content on tablet/portrait)
+        - [x] Fix Reader footer issue (page number and menu bar invisible)
+        - [x] Fix Chinese translation display (ECDICT lookup failure)
+        - [x] Add 'Grey' and 'Pink' themes
+        - [x] Change Reader text selection to "long press and drag"
+        - [x] Troubleshoot Ollama LAN access timeout
     - [/] **[NEW]** Testing & QA
         - [x] 配置 Vitest & React Testing Library 环境
         - [x] 编写核心服务单元测试 (Services)
@@ -64,8 +92,8 @@
             - [x] 进入群组专属练习
         - [/] **添加单词到群组**
             - [x] **搜索添加**: 在群组详情页搜索字典并添加单词
-            - [ ] **多选添加**: 从"全部单词"页面多选后添加到群组
-            - [ ] **上传添加**: 支持导入单词列表 (CSV/TXT 格式)
+            - [x] **多选添加**: 从"全部单词"页面多选后添加到群组
+            - [x] **上传添加**: 支持导入单词列表 (CSV/TXT 格式)
         - [x] **群组练习入口**
             - [x] 从群组详情页启动练习 (限定范围为该群组单词)
     - [x] **[NEW]** 实现单词详情/查询弹窗 (Popup)
@@ -200,14 +228,14 @@
         - [x] 副标签改为"未开始学习"
 
 - [ ] 数据与设置
-    - [ ] 设置 SQLite/Store 数据库 (用于单词和图书记录)
+    - [x] 设置 SQLite/Store 数据库 (用于单词和图书记录)
     - [x] **[NEW]** 设置页面 UI 开发
         - [x] 实现 Ollama 配置模块 (服务器地址, 模型 ID, 自定义提示词)
         - [x] 配置持久化存储 (保存用户设置)
         - [x] 连接测试功能 (验证 Ollama 是否在线)
     - [/] 多源翻译支持 (Google API, DeepSeek, **Ollama**)
-    - [ ] 生词状态管理 (New -> Learning -> Review)
-    - [ ] 个人资料页 UI
+    - [x] 生词状态管理 (New -> Learning -> Review)
+    - [x] 个人资料页 UI
 
 - [x]  SRS 评分逻辑重构 (Weighted Aggregation Strategy)
         - [x] **定义模式权重 (Mode Weights)**: 在 `ExerciseSession` 中配置权重常量 `MODE_WEIGHTS`
@@ -230,10 +258,6 @@
         - [x] 捕获 SRS 变更前状态 (Before State)
         - [x] 捕获 SRS 变更后状态 (After State - via Refetch)
         - [x] 生成完整差异报告并调用日志接口
-    - [ ] **执行验证测试**:
-        - [ ] 运行一次混合练习，包含“全部掌握”、“部分错误”、“完全忘记”三种情况
-        - [ ] 检查桌面 `linga_srs_debug.json`
-        - [ ] 确认 Interval 和 EF 值的变化符合 SM-2 算法预期
     - [x] 在设置界面添加开关，是否启用这个功能
 - [x] 修复复习模式筛选逻辑 (Review Mode Logic)
         - [x] **问题描述**: 当前 `ExerciseSession` 的 `loadSession` 方法缺少针对 "review" (复习) scope 的处理分支，导致点击“开始复习”时错误地加载了所有“学习中”的单词，而非仅加载“到期”单词。
@@ -245,3 +269,7 @@
     - [x] **实现逻辑**: 修改 `src/services/WordStore.ts` 中的 `submitReview` 方法。
         - [x] 计算 `nextReviewAt` 时，不直接使用 `now + interval`。
         - [x] 将时间标准化为 **目标日期的凌晨 04:00** (Day Start Threshold)。这样只要跨过凌晨4点，所有当天的复习任务都会激活，无需等待具体时刻。
+
+- [ ] 体验优化 (UX Improvements)
+    - [ ] **[NEW]** 优化练习题切换速度
+        - [ ] 减少 `ChoiceMode`, `ListeningChoiceMode`, `FillBlankMode`, `SpellingMode` 的结果反馈延迟 (1.5s -> 0.6s)

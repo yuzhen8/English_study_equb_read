@@ -45,43 +45,46 @@ const FlashcardMode: React.FC<FlashcardModeProps> = ({ word, onResult }) => {
                 >
                     {/* Front */}
                     <div
-                        className="absolute inset-0 bg-white rounded-3xl shadow-xl flex flex-col items-center justify-center p-8 border-2 border-transparent hover:border-blue-100 transition-colors"
+                        className="absolute inset-0 glass-card flex flex-col items-center justify-center p-8 border border-white/20 hover:border-indigo-400/50 transition-colors shadow-[0_0_40px_rgba(0,0,0,0.2)]"
                         style={{
                             backfaceVisibility: 'hidden',
                             WebkitBackfaceVisibility: 'hidden'
                         }}
                     >
-                        <div className="text-center space-y-6">
-                            <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase tracking-wider">
+                        {/* Glow effect */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+
+                        <div className="text-center space-y-6 relative z-10">
+                            <span className="inline-block px-3 py-1 bg-white/10 text-indigo-300 border border-indigo-500/30 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md">
                                 Flashcard
                             </span>
 
                             <div>
-                                <h2 className="text-5xl font-bold text-gray-900 mb-4">{word.lemma || word.text}</h2>
-                                <div className="flex items-center justify-center gap-2">
+                                <h2 className="text-5xl font-bold text-white mb-4 drop-shadow-lg tracking-tight">{word.lemma || word.text}</h2>
+                                <div className="flex items-center justify-center gap-3">
                                     <button
                                         onClick={playAudio}
-                                        className="inline-flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-blue-50"
+                                        className="inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors p-3 rounded-full hover:bg-white/10 glass-button"
                                     >
-                                        <Volume2 size={24} />
+                                        <Volume2 size={28} />
                                     </button>
                                     <button
                                         onClick={handleShowDetail}
-                                        className="inline-flex items-center gap-2 text-gray-500 hover:text-purple-600 transition-colors p-2 rounded-full hover:bg-purple-50"
+                                        className="inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors p-3 rounded-full hover:bg-white/10 glass-button"
                                         title="查看单词详情"
                                     >
-                                        <BookOpen size={24} />
+                                        <BookOpen size={28} />
                                     </button>
                                 </div>
                             </div>
 
-                            <p className="text-gray-400 text-sm">Tap to flip</p>
+                            <p className="text-white/30 text-sm animate-pulse">Tap to flip</p>
                         </div>
                     </div>
 
                     {/* Back */}
                     <div
-                        className="absolute inset-0 bg-white rounded-3xl shadow-xl flex flex-col overflow-hidden"
+                        className="absolute inset-0 glass-card bg-black/80 flex flex-col overflow-hidden border border-white/20"
                         style={{
                             backfaceVisibility: 'hidden',
                             WebkitBackfaceVisibility: 'hidden',
@@ -90,63 +93,63 @@ const FlashcardMode: React.FC<FlashcardModeProps> = ({ word, onResult }) => {
                     >
                         <div className="flex-1 flex flex-col justify-center p-8 space-y-6">
                             <div className="text-center">
-                                <h3 className="text-2xl font-bold text-gray-900 mb-2">{word.lemma || word.text}</h3>
-                                <div className="w-12 h-1 bg-blue-500 rounded-full mx-auto" />
+                                <h3 className="text-2xl font-bold text-white mb-2 tracking-wide">{word.lemma || word.text}</h3>
+                                <div className="w-12 h-1 bg-indigo-500 rounded-full mx-auto box-shadow-glow" />
                             </div>
 
                             <div className="space-y-4 w-full">
                                 {/* Phonetic */}
                                 {word.phonetic && (
                                     <div className="text-center">
-                                        <p className="text-lg text-gray-600">/{word.phonetic}/</p>
+                                        <p className="text-lg text-indigo-300 font-mono">/{word.phonetic}/</p>
                                     </div>
                                 )}
 
                                 {/* Translation - 左对齐 */}
                                 <div>
-                                    <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-1">释义</h4>
-                                    <p className="text-xl text-gray-800 font-medium whitespace-pre-line text-left">{word.translation.replace(/\\n/g, '\n')}</p>
+                                    <h4 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">释义</h4>
+                                    <p className="text-xl text-white font-medium whitespace-pre-line text-left leading-relaxed">{word.translation.replace(/\\n/g, '\n')}</p>
                                 </div>
 
                                 {/* Context/Original sentence */}
                                 {word.context && (
                                     <div>
-                                        <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-1">原句</h4>
-                                        <p className="text-gray-600 italic text-left">"{word.context}"</p>
+                                        <h4 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">原句</h4>
+                                        <p className="text-white/80 italic text-left border-l-2 border-white/10 pl-3">"{word.context}"</p>
                                     </div>
                                 )}
                             </div>
 
                             {/* 单词详情按钮 */}
-                            <div className="text-center">
+                            <div className="text-center pt-2">
                                 <button
                                     onClick={handleShowDetail}
-                                    className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 transition-colors px-4 py-2 rounded-full hover:bg-purple-50"
+                                    className="inline-flex items-center gap-2 text-indigo-300 hover:text-white transition-colors px-4 py-2 rounded-full hover:bg-white/10 border border-white/5 hover:border-white/20"
                                 >
-                                    <BookOpen size={18} />
+                                    <BookOpen size={16} />
                                     <span className="text-sm font-medium">查看详情</span>
                                 </button>
                             </div>
                         </div>
 
                         {/* Gradient overlay for bottom separation */}
-                        <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+                        <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
                         {/* Controls - Only 2 buttons */}
-                        <div className="p-4 grid grid-cols-2 gap-3 bg-gray-50">
+                        <div className="p-4 grid grid-cols-2 gap-3 bg-black/40 backdrop-blur-md">
                             <button
                                 onClick={(e) => { e.stopPropagation(); onResult(1); }}
-                                className="flex flex-col items-center py-3 px-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-600 transition-colors group border border-orange-200"
+                                className="flex flex-col items-center py-3 px-2 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 transition-colors group border border-orange-500/20 hover:border-orange-500/40"
                             >
                                 <span className="text-base font-bold mb-1 group-hover:scale-110 transition-transform">学习</span>
-                                <span className="text-xs text-orange-400">继续学习</span>
+                                <span className="text-xs text-orange-400/60">继续学习</span>
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); onResult(5); }}
-                                className="flex flex-col items-center py-3 px-2 rounded-xl bg-green-50 hover:bg-green-100 text-green-600 transition-colors group border border-green-200"
+                                className="flex flex-col items-center py-3 px-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-colors group border border-emerald-500/20 hover:border-emerald-500/40"
                             >
                                 <span className="text-base font-bold mb-1 group-hover:scale-110 transition-transform">悉知</span>
-                                <span className="text-xs text-green-400">已掌握</span>
+                                <span className="text-xs text-emerald-400/60">已掌握</span>
                             </button>
                         </div>
                     </div>

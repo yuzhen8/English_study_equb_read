@@ -1,35 +1,34 @@
 import { useNavigate } from 'react-router-dom';
-import { User, Settings, Bell, Shield, Database } from 'lucide-react';
+import { User, Settings, Database } from 'lucide-react';
 
 const Profile: React.FC = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="bg-gray-50">
-            <div className="bg-white px-4 pt-12 pb-6 mb-4 shadow-sm">
+        <div className="h-full overflow-y-auto custom-scrollbar bg-transparent text-white">
+            <div className="bg-transparent px-4 pt-12 pb-6 mb-4">
                 <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
-                        <User size={32} className="text-gray-400" />
+                    <div className="w-16 h-16 glass-container rounded-full flex items-center justify-center border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                        <User size={32} className="text-white" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold text-gray-900">Guest User</h1>
-                        <p className="text-sm text-gray-500">Local Account</p>
+                        <h1 className="text-xl font-bold text-white tracking-wide">Guest User</h1>
+                        <p className="text-sm text-white/60">Local Account</p>
                     </div>
                 </div>
             </div>
 
             <div className="p-4 space-y-4">
-                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+                <div className="glass-card overflow-hidden">
                     <MenuItem
                         icon={Settings}
                         label="设置"
                         onClick={() => navigate('/settings')}
+                        border={false}
                     />
-                    <MenuItem icon={Bell} label="通知" />
-                    <MenuItem icon={Shield} label="隐私" border={false} />
                 </div>
 
-                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+                <div className="glass-card overflow-hidden">
                     {/* Data Management Submenu */}
                     <MenuItem
                         icon={Database}
@@ -45,11 +44,11 @@ const Profile: React.FC = () => {
 
 const MenuItem: React.FC<{ icon: React.ElementType, label: string, border?: boolean, onClick?: () => void }> = ({ icon: Icon, label, border = true, onClick }) => (
     <button
-        className={`w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left ${border ? 'border-b border-gray-100' : ''}`}
+        className={`w-full flex items-center gap-3 p-4 hover:bg-white/10 transition-colors text-left ${border ? 'border-b border-white/5' : ''}`}
         onClick={onClick}
     >
-        <Icon size={20} className="text-gray-400" />
-        <span className="font-medium text-gray-700 flex-1">{label}</span>
+        <Icon size={20} className="text-white/60" />
+        <span className="font-medium text-white flex-1">{label}</span>
     </button>
 );
 

@@ -280,20 +280,20 @@ const ExerciseSession: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="min-h-screen flex items-center justify-center bg-transparent">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
             </div>
         );
     }
 
     if (!sessionComplete && exerciseItems.length === 0) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-center space-y-4">
-                <h2 className="text-2xl font-bold text-gray-900">没有单词需要学习</h2>
-                <p className="text-gray-500">当前没有待学习的单词。</p>
+            <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-8 text-center space-y-4">
+                <h2 className="text-2xl font-bold text-white">没有单词需要学习</h2>
+                <p className="text-white/60">当前没有待学习的单词。</p>
                 <button
                     onClick={() => navigate(-1)}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-colors"
+                    className="bg-white/10 text-white border border-white/20 px-6 py-2 rounded-xl font-bold hover:bg-white/20 transition-colors"
                 >
                     返回
                 </button>
@@ -303,9 +303,9 @@ const ExerciseSession: React.FC = () => {
 
     if (sessionComplete) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col">
-                <header className="bg-white shadow-sm p-4 flex items-center">
-                    <button onClick={() => navigate('/exercise')} className="p-2 hover:bg-gray-100 rounded-full">
+            <div className="min-h-screen bg-transparent flex flex-col">
+                <header className="bg-transparent p-4 flex items-center text-white">
+                    <button onClick={() => navigate('/exercise')} className="p-2 hover:bg-white/10 rounded-full glass-button">
                         <ArrowLeft size={24} />
                     </button>
                     <span className="ml-4 font-bold text-lg">学习完成</span>
@@ -361,30 +361,24 @@ const ExerciseSession: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-transparent flex flex-col">
             {/* Header - Sticky at top */}
-            <header className="sticky top-0 bg-white shadow-sm px-4 h-16 flex items-center justify-between z-10">
+            <header className="sticky top-0 glass-card mx-4 mt-4 px-4 h-16 flex items-center justify-between z-10 rounded-2xl animate-fade-in">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('/exercise')} className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
+                    <button onClick={() => navigate('/exercise')} className="p-2 hover:bg-white/10 rounded-full text-white/80 transition-colors">
                         <ArrowLeft size={24} />
                     </button>
                     <div className="flex flex-col">
-                        <span className="text-sm font-medium text-gray-500">{getModeDisplayName(effectiveMode)}</span>
-                        <span className="text-xs text-gray-400">{currentIndex + 1} / {exerciseItems.length}</span>
+                        <span className="text-sm font-medium text-white">{getModeDisplayName(effectiveMode)}</span>
+                        <span className="text-xs text-white/40">{currentIndex + 1} / {exerciseItems.length}</span>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {/* Progress Bar */}
-                    <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-blue-500 transition-all duration-300"
-                            style={{ width: `${((currentIndex) / exerciseItems.length) * 100}%` }}
-                        />
-                    </div>
+
                     <button
                         onClick={() => setShowSettings(true)}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full"
+                        className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-full transition-colors"
                     >
                         <Settings2 size={20} />
                     </button>

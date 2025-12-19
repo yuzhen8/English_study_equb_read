@@ -84,7 +84,7 @@ export function setupDictionaryHandlers() {
             // However, our script outputs to `windows/resources/dict.db`. 
             // `app.getAppPath()` in dev usually is `windows`.
 
-            const dbLocation = path.join(app.getAppPath(), 'resources/dict.db');
+            const dbLocation = RESOURCES_PATH;
 
             if (!fs.existsSync(dbLocation)) {
                 console.warn(`Local dictionary DB not found at ${dbLocation}`);

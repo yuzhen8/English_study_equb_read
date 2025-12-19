@@ -5,15 +5,15 @@ import { cn } from '../../lib/utils';
 import { WordStore } from '../../services/WordStore';
 import { GroupStore, WordGroup } from '../../services/GroupStore';
 
-// 练习模式图标和颜色映射
+// 练习模式图标和颜色映射 (Updated colors for dark mode)
 const modeConfig: Record<string, { icon: React.ElementType; color: string; title: string }> = {
-    mixed: { icon: Zap, color: 'text-blue-600', title: '混合练习' },
-    flashcard: { icon: Layers, color: 'text-orange-500', title: '单词闪卡' },
-    choice: { icon: MousePointerClick, color: 'text-purple-500', title: '多项选择' },
-    spelling: { icon: Type, color: 'text-teal-500', title: '拼写构建' },
-    'listening-choice': { icon: Headphones, color: 'text-pink-500', title: '听力选择' },
-    'listening-spelling': { icon: Headphones, color: 'text-amber-500', title: '听力拼写' },
-    'fill-blank': { icon: FileText, color: 'text-cyan-500', title: '选词填空' },
+    mixed: { icon: Zap, color: 'text-blue-300', title: '混合练习' },
+    flashcard: { icon: Layers, color: 'text-orange-300', title: '单词闪卡' },
+    choice: { icon: MousePointerClick, color: 'text-purple-300', title: '多项选择' },
+    spelling: { icon: Type, color: 'text-teal-300', title: '拼写构建' },
+    'listening-choice': { icon: Headphones, color: 'text-pink-300', title: '听力选择' },
+    'listening-spelling': { icon: Headphones, color: 'text-amber-300', title: '听力拼写' },
+    'fill-blank': { icon: FileText, color: 'text-cyan-300', title: '选词填空' },
 };
 
 // 范围选项类型
@@ -174,8 +174,8 @@ const ExerciseScopeSelector: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+            <div className="min-h-screen bg-transparent flex items-center justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
             </div>
         );
     }
@@ -185,19 +185,19 @@ const ExerciseScopeSelector: React.FC = () => {
     const groupOptions = scopes.filter(s => s.type === 'group');
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col overflow-x-hidden">
+        <div className="min-h-screen bg-transparent flex flex-col overflow-x-hidden">
             {/* Header */}
-            <div className="bg-white px-4 h-16 flex items-center sticky top-0 z-10 shadow-sm">
+            <div className="bg-transparent px-4 h-16 flex items-center sticky top-0 z-10">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => navigate('/exercise')}
-                        className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+                        className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
                     >
-                        <ArrowLeft size={24} className="text-gray-700" />
+                        <ArrowLeft size={24} className="text-white/80" />
                     </button>
                     <div className="flex items-center gap-2">
                         <ModeIcon size={24} className={currentMode.color} />
-                        <h1 className="text-xl font-bold text-gray-900">{currentMode.title}</h1>
+                        <h1 className="text-xl font-bold text-white">{currentMode.title}</h1>
                     </div>
                 </div>
             </div>
@@ -207,14 +207,14 @@ const ExerciseScopeSelector: React.FC = () => {
                 {/* 随机范围 */}
                 <div className="space-y-2">
                     <div className="flex items-center justify-between px-1">
-                        <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider">随机</h3>
+                        <h3 className="text-xs font-medium text-white/40 uppercase tracking-wider">随机</h3>
                         <button
                             onClick={() => setShowHelpPanel(!showHelpPanel)}
                             className={cn(
                                 "p-1 rounded-full transition-colors",
                                 showHelpPanel
-                                    ? "text-blue-500 bg-blue-50"
-                                    : "text-gray-400 hover:text-blue-500 hover:bg-blue-50"
+                                    ? "text-blue-300 bg-blue-500/20"
+                                    : "text-white/40 hover:text-blue-300 hover:bg-white/10"
                             )}
                             title="查看说明"
                         >
@@ -224,7 +224,7 @@ const ExerciseScopeSelector: React.FC = () => {
 
                     {/* 帮助面板 */}
                     {showHelpPanel && (
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 space-y-2">
+                        <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm text-blue-200 space-y-2 animate-in fade-in-up">
                             <div><strong>今天添加的单词</strong>：显示今天（0:00 起）添加到词典的单词</div>
                             <div><strong>随机词汇</strong>：从所有单词中随机选择，包括新词、学习中和已掌握的单词</div>
                             <div><strong>随机新词</strong>：从未开始学习的单词中随机选择（状态为"新"的单词）</div>
@@ -247,7 +247,7 @@ const ExerciseScopeSelector: React.FC = () => {
                 {/* 我的小组 */}
                 {groupOptions.length > 0 && (
                     <div className="space-y-2">
-                        <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider px-1">我的小组</h3>
+                        <h3 className="text-xs font-medium text-white/40 uppercase tracking-wider px-1">我的小组</h3>
                         <div className="space-y-2">
                             {groupOptions.map((option) => (
                                 <ScopeOptionItem
@@ -263,18 +263,18 @@ const ExerciseScopeSelector: React.FC = () => {
             </div>
 
             {/* Start Button - Sticky Footer */}
-            <div className="sticky bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            <div className="sticky bottom-0 left-0 right-0 p-4 bg-black/60 backdrop-blur-md border-t border-white/10 z-20">
                 <button
                     onClick={handleStart}
                     disabled={!canStart}
                     className={cn(
                         "w-full py-4 rounded-2xl font-bold text-lg transition-all",
                         canStart
-                            ? "bg-gray-900 text-white hover:bg-black active:scale-[0.98]"
-                            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:scale-[1.02] shadow-[0_0_20px_rgba(79,70,229,0.4)] border border-white/20"
+                            : "bg-white/10 text-white/20 cursor-not-allowed border border-white/5"
                     )}
                 >
-                    开始
+                    开始 ({selectedOption?.count || 0})
                 </button>
             </div>
         </div>
@@ -293,18 +293,18 @@ const ScopeOptionItem: React.FC<ScopeOptionItemProps> = ({ option, selected, onS
         <button
             onClick={onSelect}
             className={cn(
-                "w-full p-4 rounded-xl flex items-center gap-3 transition-all text-left",
+                "w-full p-4 rounded-xl flex items-center gap-3 transition-all text-left glass-card",
                 selected
-                    ? "bg-white border-2 border-green-500 shadow-sm"
-                    : "bg-white border border-gray-100 hover:border-gray-200"
+                    ? "bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                    : "bg-black/20 border-white/10 hover:bg-white/10 hover:border-white/20"
             )}
         >
             {/* Selection Indicator */}
             <div className={cn(
                 "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0",
                 selected
-                    ? "border-green-500 bg-green-500"
-                    : "border-gray-300"
+                    ? "border-blue-500 bg-blue-500"
+                    : "border-white/20 bg-white/5"
             )}>
                 {selected && (
                     <Check size={12} className="text-white" strokeWidth={3} />
@@ -313,16 +313,21 @@ const ScopeOptionItem: React.FC<ScopeOptionItemProps> = ({ option, selected, onS
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-gray-900">{option.label}</h4>
+                <h4 className={cn(
+                    "font-medium transition-colors",
+                    selected ? "text-white" : "text-white/80"
+                )}>
+                    {option.label}
+                </h4>
                 {option.subLabel && (
-                    <p className="text-xs text-orange-500 mt-0.5">{option.subLabel}</p>
+                    <p className="text-xs text-orange-300 mt-0.5">{option.subLabel}</p>
                 )}
             </div>
 
             {/* Count */}
             <span className={cn(
                 "text-sm font-medium",
-                option.count > 0 ? "text-gray-600" : "text-gray-300"
+                option.count > 0 ? "text-blue-300" : "text-white/20"
             )}>
                 {option.count}
             </span>

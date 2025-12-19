@@ -56,7 +56,7 @@ const ReaderView: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
+            <div className="h-full flex items-center justify-center bg-gray-900 text-white">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
         );
@@ -64,7 +64,7 @@ const ReaderView: React.FC = () => {
 
     if (!data) {
         return (
-            <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
+            <div className="h-full flex items-center justify-center bg-gray-900 text-white">
                 <div className="text-center">
                     <h2 className="text-xl font-bold mb-4">No Book Loaded</h2>
                     <p className="text-gray-400 mb-6">Please select a book from the library.</p>

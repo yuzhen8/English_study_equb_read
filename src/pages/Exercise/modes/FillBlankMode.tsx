@@ -66,7 +66,7 @@ const FillBlankMode: React.FC<FillBlankModeProps> = ({ word, onResult }) => {
 
         setTimeout(() => {
             onResult(quality);
-        }, 1500);
+        }, 600);
     };
 
     if (options.length === 0) {
@@ -85,7 +85,7 @@ const FillBlankMode: React.FC<FillBlankModeProps> = ({ word, onResult }) => {
             return (
                 <span
                     key={index}
-                    className={isWord ? "font-bold text-cyan-600 underline underline-offset-4" : ""}
+                    className={isWord ? "font-bold text-cyan-400 underline underline-offset-4 decoration-cyan-400" : ""}
                 >
                     {part}
                 </span>
@@ -100,7 +100,7 @@ const FillBlankMode: React.FC<FillBlankModeProps> = ({ word, onResult }) => {
             <React.Fragment key={index}>
                 {part}
                 {index < arr.length - 1 && (
-                    <span className="inline-block w-20 h-8 mx-1 border-b-2 border-cyan-400 align-bottom" />
+                    <span className="inline-block w-20 h-8 mx-1 border-b-2 border-cyan-400 box-shadow-glow align-bottom" />
                 )}
             </React.Fragment>
         ));
@@ -111,60 +111,60 @@ const FillBlankMode: React.FC<FillBlankModeProps> = ({ word, onResult }) => {
             <div className="max-w-md w-full mx-auto space-y-6">
                 {/* 标题区域 */}
                 <div className="text-center py-4">
-                    <span className="inline-block px-3 py-1 bg-cyan-50 text-cyan-600 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
+                    <span className="inline-block px-3 py-1 bg-white/10 text-cyan-300 border border-cyan-500/30 rounded-full text-xs font-bold uppercase tracking-wider mb-4 backdrop-blur-md shadow-[0_0_10px_rgba(6,182,212,0.2)]">
                         Fill in the Blank
                     </span>
-                    <p className="text-gray-500 text-sm mb-3">选择正确的单词填入空白处</p>
+                    <p className="text-white/40 text-sm mb-6">选择正确的单词填入空白处</p>
                     {/* 音频和详情按钮 */}
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-3">
                         <button
                             onClick={playAudio}
-                            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 transition-colors px-3 py-1.5 rounded-full hover:bg-blue-50 text-sm"
+                            className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors px-4 py-2 rounded-full hover:bg-white/10 border border-white/5 hover:border-white/20 shadow-sm glass-button"
                         >
-                            <Volume2 size={16} />
-                            <span>播放</span>
+                            <Volume2 size={18} />
+                            <span className="text-sm font-medium">播放</span>
                         </button>
                         <button
                             onClick={() => setShowWordDetail(true)}
-                            className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-700 transition-colors px-3 py-1.5 rounded-full hover:bg-purple-50 text-sm"
+                            className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors px-4 py-2 rounded-full hover:bg-white/10 border border-white/5 hover:border-white/20 shadow-sm glass-button"
                         >
-                            <BookOpen size={16} />
-                            <span>详情</span>
+                            <BookOpen size={18} />
+                            <span className="text-sm font-medium">详情</span>
                         </button>
                     </div>
                 </div>
 
                 {/* 原句显示区域 */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="glass-card p-6 border border-white/10 shadow-lg">
                     {hasValidContext ? (
-                        <p className="text-xl text-gray-800 leading-relaxed text-center">
+                        <p className="text-xl text-white leading-relaxed text-center font-medium">
                             {selectedId ? renderHighlightedSentence() : renderBlankSentence()}
                         </p>
                     ) : (
-                        <div className="text-center text-gray-400">
+                        <div className="text-center text-white/40">
                             <p className="mb-2">该单词没有原句</p>
-                            <p className="text-lg">请选择正确的单词：<span className="font-bold text-cyan-600">{word.translation}</span></p>
+                            <p className="text-lg text-white/60">请选择正确的单词：<span className="font-bold text-cyan-400">{word.translation}</span></p>
                         </div>
                     )}
 
                     {/* 翻译提示 */}
                     {selectedId && (
-                        <div className="mt-4 pt-4 border-t border-gray-100 animate-fade-in">
-                            <p className="text-gray-600 text-sm whitespace-pre-line text-left">
-                                <span className="font-medium text-gray-800">{word.lemma || word.text}：</span>
+                        <div className="mt-4 pt-4 border-t border-white/10 animate-fade-in">
+                            <p className="text-white/60 text-sm whitespace-pre-line text-left">
+                                <span className="font-medium text-white">{word.lemma || word.text}：</span>
                                 {word.translation.replace(/\\n/g, '\n')}
                             </p>
-                            <div className="flex items-center justify-center gap-3 mt-3">
+                            <div className="flex items-center justify-center gap-3 mt-4">
                                 <button
                                     onClick={playAudio}
-                                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 transition-colors px-3 py-1.5 rounded-full hover:bg-blue-50 text-sm"
+                                    className="inline-flex items-center gap-2 text-cyan-300 hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-white/10 text-sm"
                                 >
                                     <Volume2 size={16} />
                                     <span>播放</span>
                                 </button>
                                 <button
                                     onClick={() => setShowWordDetail(true)}
-                                    className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-700 transition-colors px-3 py-1.5 rounded-full hover:bg-purple-50 text-sm"
+                                    className="inline-flex items-center gap-2 text-purple-300 hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-white/10 text-sm"
                                 >
                                     <BookOpen size={16} />
                                     <span>详情</span>
@@ -182,17 +182,17 @@ const FillBlankMode: React.FC<FillBlankModeProps> = ({ word, onResult }) => {
                         const showCorrect = selectedId !== null && isCorrect;
                         const showWrong = isSelected && !isCorrect;
 
-                        let buttonClass = "bg-white border-gray-100 hover:border-cyan-300 hover:bg-cyan-50 text-gray-700";
+                        let buttonClass = "glass-card bg-white/5 border-white/10 hover:bg-white/10 hover:border-cyan-400/50 text-white shadow-sm hover:shadow-cyan-500/20";
                         let icon = null;
 
                         if (showCorrect) {
-                            buttonClass = "bg-green-100 border-green-300 text-green-800 ring-1 ring-green-300";
-                            icon = <Check size={18} className="text-green-600" />;
+                            buttonClass = "bg-emerald-500/20 border-emerald-500/50 text-emerald-300 ring-1 ring-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]";
+                            icon = <Check size={18} className="text-emerald-400" />;
                         } else if (showWrong) {
-                            buttonClass = "bg-red-100 border-red-300 text-red-800 ring-1 ring-red-300";
-                            icon = <X size={18} className="text-red-600" />;
+                            buttonClass = "bg-red-500/20 border-red-500/50 text-red-300 ring-1 ring-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]";
+                            icon = <X size={18} className="text-red-400" />;
                         } else if (selectedId && !isCorrect && !isSelected) {
-                            buttonClass = "bg-gray-50 border-transparent text-gray-300";
+                            buttonClass = "bg-white/5 border-transparent text-white/20 opacity-50 cursor-not-allowed";
                         }
 
                         return (

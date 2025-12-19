@@ -51,27 +51,29 @@ const DataManagement: React.FC = () => {
     };
 
     return (
-        <div className="bg-gray-50 min-h-screen">
-            <div className="bg-white px-4 pt-6 pb-4 shadow-sm sticky top-0 z-10">
+        <div className="bg-transparent min-h-screen">
+            <div className="px-4 pt-6 pb-4 z-10 sticky top-0 bg-transparent">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate(-1)} className="p-1 -ml-1 text-gray-600">
+                    <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors">
                         <ChevronLeft size={24} />
                     </button>
-                    <h1 className="text-xl font-bold text-gray-900">数据备份与恢复</h1>
+                    <h1 className="text-xl font-bold text-white tracking-tight">数据备份与恢复</h1>
                 </div>
             </div>
 
-            <div className="p-4 space-y-6">
+            <div className="p-4 space-y-8">
                 {/* 核心数据区 */}
-                <div className="space-y-2">
-                    <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider ml-1">学习数据</h2>
-                    <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 divide-y divide-gray-50">
+                <div className="space-y-4">
+                    <h2 className="text-xs font-bold text-indigo-300/80 uppercase tracking-widest ml-1">学习数据</h2>
+                    <div className="glass-card overflow-hidden shadow-lg border border-white/10 divide-y divide-white/10">
                         <ActionButton
                             icon={Database}
                             title="备份学习数据"
                             desc="导出单词本、阅读进度、生词本等记录"
                             onClick={handleBackupData}
                             loading={loading}
+                            color="text-emerald-300"
+                            iconBg="bg-emerald-500/20"
                         />
                         <ActionButton
                             icon={Upload}
@@ -79,26 +81,29 @@ const DataManagement: React.FC = () => {
                             desc="从备份文件导入，合并到当前记录"
                             onClick={handleRestoreData}
                             loading={loading}
-                            color="text-indigo-600"
+                            color="text-indigo-300"
+                            iconBg="bg-indigo-500/20"
                         />
                     </div>
                 </div>
 
                 {/* 文件导出区 */}
-                <div className="space-y-2">
-                    <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider ml-1">文件管理</h2>
-                    <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+                <div className="space-y-4">
+                    <h2 className="text-xs font-bold text-indigo-300/80 uppercase tracking-widest ml-1">文件管理</h2>
+                    <div className="glass-card overflow-hidden shadow-lg border border-white/10">
                         <ActionButton
                             icon={FolderArchive}
                             title="导出电子书文件"
                             desc="将所有 EPUB 书籍源文件导出到文件夹"
                             onClick={handleBackupBooks}
                             loading={loading}
+                            color="text-amber-300"
+                            iconBg="bg-amber-500/20"
                         />
                     </div>
                 </div>
 
-                <p className="text-xs text-gray-400 px-2 leading-relaxed">
+                <p className="text-xs text-white/40 px-2 leading-relaxed tracking-wide">
                     特别说明：<br />
                     1. 恢复数据时，如果记录已存在（如相同的单词或书籍），将会更新为备份中的状态。<br />
                     2. 导出电子书仅导出文件本身，不包含阅读进度（阅读进度请使用“备份学习数据”）。
@@ -106,10 +111,10 @@ const DataManagement: React.FC = () => {
             </div>
 
             {loading && (
-                <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-                    <div className="bg-white p-4 rounded-xl shadow-lg flex items-center gap-3">
-                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-indigo-500 border-t-transparent"></div>
-                        <span className="text-sm font-medium text-gray-700">处理中...</span>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="glass-card p-6 rounded-2xl shadow-xl flex items-center gap-4 border border-white/20">
+                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-400 border-t-transparent shadow-[0_0_10px_rgba(129,140,248,0.5)]"></div>
+                        <span className="text-sm font-medium text-white/90">处理中...</span>
                     </div>
                 </div>
             )}
@@ -124,20 +129,21 @@ interface ActionButtonProps {
     onClick: () => void;
     loading?: boolean;
     color?: string;
+    iconBg?: string;
 }
 
-const ActionButton: React.FC<ActionButtonProps> = ({ icon: Icon, title, desc, onClick, loading, color = "text-gray-700" }) => (
+const ActionButton: React.FC<ActionButtonProps> = ({ icon: Icon, title, desc, onClick, loading, color = "text-white", iconBg = "bg-white/10" }) => (
     <button
         onClick={onClick}
         disabled={loading}
-        className="w-full flex items-center gap-4 p-5 hover:bg-gray-50 transition-colors text-left disabled:opacity-50"
+        className="w-full flex items-center gap-4 p-5 hover:bg-white/5 transition-colors text-left disabled:opacity-50 group"
     >
-        <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0">
+        <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform`}>
             <Icon size={24} className={color} />
         </div>
         <div className="flex-1 min-w-0">
-            <h3 className={`font-bold text-base mb-1 ${color}`}>{title}</h3>
-            <p className="text-xs text-gray-500">{desc}</p>
+            <h3 className={`font-bold text-base mb-1 ${color} group-hover:text-white transition-colors`}>{title}</h3>
+            <p className="text-xs text-white/40">{desc}</p>
         </div>
     </button>
 );

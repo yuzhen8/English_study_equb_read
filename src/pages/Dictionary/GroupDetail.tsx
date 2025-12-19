@@ -175,19 +175,19 @@ const GroupDetail: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-gray-500">加载中...</div>
+            <div className="min-h-screen bg-transparent flex items-center justify-center">
+                <div className="text-white/60">加载中...</div>
             </div>
         );
     }
 
     if (!group) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
-                <div className="text-gray-500 mb-4">群组不存在</div>
+            <div className="min-h-screen bg-transparent flex flex-col items-center justify-center">
+                <div className="text-white/60 mb-4">群组不存在</div>
                 <button
                     onClick={() => navigate('/')}
-                    className="text-blue-600 font-medium"
+                    className="text-blue-300 font-medium"
                 >
                     返回首页
                 </button>
@@ -196,45 +196,45 @@ const GroupDetail: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="h-full overflow-y-auto custom-scrollbar bg-transparent pb-20">
             {/* Header */}
-            <div className="bg-white px-4 pt-12 pb-4 sticky top-0 z-10 shadow-sm">
+            <div className="bg-transparent px-4 pt-12 pb-4 sticky top-0 z-10">
                 <div className="flex items-center gap-3 mb-2">
                     <button
                         onClick={() => navigate('/')}
-                        className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+                        className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
                     >
-                        <ArrowLeft size={24} className="text-gray-700" />
+                        <ArrowLeft size={24} className="text-white/80" />
                     </button>
                     <div className="flex-1">
-                        <h1 className="text-xl font-bold text-gray-900">{group.name}</h1>
+                        <h1 className="text-xl font-bold text-white">{group.name}</h1>
                         {group.description && (
-                            <p className="text-sm text-gray-500 mt-0.5">{group.description}</p>
+                            <p className="text-sm text-white/50 mt-0.5">{group.description}</p>
                         )}
                     </div>
                     <div className="flex items-center gap-1">
                         <button
                             onClick={() => setShowSearch(!showSearch)}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                            className="p-2 hover:bg-white/10 rounded-full transition-colors"
                         >
-                            <Search size={20} className="text-gray-500" />
+                            <Search size={20} className="text-white/60" />
                         </button>
                         <div className="relative">
                             <button
                                 onClick={() => setShowMenu(!showMenu)}
-                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                className="p-2 hover:bg-white/10 rounded-full transition-colors"
                             >
-                                <MoreHorizontal size={20} className="text-gray-500" />
+                                <MoreHorizontal size={20} className="text-white/60" />
                             </button>
                             {/* Dropdown Menu */}
                             {showMenu && (
-                                <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 min-w-[140px] z-20">
+                                <div className="absolute right-0 top-full mt-1 glass-card border border-white/10 py-1 min-w-[140px] z-20 backdrop-blur-xl animate-in fade-in zoom-in-95">
                                     <button
                                         onClick={() => {
                                             setShowMenu(false);
                                             setShowEditDialog(true);
                                         }}
-                                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                        className="w-full px-4 py-2.5 text-left text-sm text-white/80 hover:bg-white/10 flex items-center gap-2 transition-colors"
                                     >
                                         <Edit2 size={16} />
                                         编辑群组
@@ -245,18 +245,18 @@ const GroupDetail: React.FC = () => {
                                             setIsEditMode(!isEditMode);
                                             setSelectedWordIds(new Set());
                                         }}
-                                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                        className="w-full px-4 py-2.5 text-left text-sm text-white/80 hover:bg-white/10 flex items-center gap-2 transition-colors"
                                     >
                                         <Trash2 size={16} />
                                         {isEditMode ? '退出编辑' : '移除单词'}
                                     </button>
-                                    <div className="h-px bg-gray-100 my-1" />
+                                    <div className="h-px bg-white/10 my-1" />
                                     <button
                                         onClick={() => {
                                             setShowMenu(false);
                                             setShowDeleteConfirm(true);
                                         }}
-                                        className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                        className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-white/10 flex items-center gap-2 transition-colors"
                                     >
                                         <Trash2 size={16} />
                                         删除群组
@@ -269,21 +269,21 @@ const GroupDetail: React.FC = () => {
 
                 {/* Search Bar */}
                 {showSearch && (
-                    <div className="mt-3">
+                    <div className="mt-3 animate-fade-in-down">
                         <div className="relative">
-                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
                             <input
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="搜索群组内单词..."
-                                className="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full pl-10 pr-4 py-2.5 bg-black/20 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500/50 placeholder:text-white/30"
                                 autoFocus
                             />
                             {searchQuery && (
                                 <button
                                     onClick={() => setSearchQuery('')}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
                                 >
                                     <X size={16} />
                                 </button>
@@ -299,10 +299,10 @@ const GroupDetail: React.FC = () => {
                             key={tab.value}
                             onClick={() => setStatusFilter(tab.value)}
                             className={cn(
-                                "px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors border",
+                                "px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-all border backdrop-blur-md",
                                 statusFilter === tab.value
-                                    ? 'bg-gray-900 text-white border-gray-900'
-                                    : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
+                                    ? 'bg-white/10 text-white border-white/20 shadow-[0_0_10px_rgba(255,255,255,0.1)]'
+                                    : 'bg-black/20 text-white/50 hover:bg-white/5 border-transparent hover:text-white/80'
                             )}
                         >
                             {tab.label}
@@ -312,24 +312,24 @@ const GroupDetail: React.FC = () => {
 
                 {/* Sort Controls */}
                 <div className="flex items-center gap-2 mt-3 relative">
-                    <span className="text-sm text-gray-500">按照排序:</span>
+                    <span className="text-sm text-white/40">按照排序:</span>
                     <button
                         onClick={() => setShowSortMenu(!showSortMenu)}
-                        className="flex items-center gap-1 text-sm text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                        className="flex items-center gap-1 text-sm text-blue-300 hover:bg-white/10 px-2 py-1 rounded transition-colors"
                     >
-                        <RefreshCw size={14} className="text-gray-400" />
+                        <RefreshCw size={14} className="text-white/40" />
                         <span>{sortOptions.find(o => o.value === sortBy)?.label}</span>
                         <ChevronDown size={14} />
                     </button>
                     <button
                         onClick={() => setSortAscending(!sortAscending)}
-                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                        className="p-1 hover:bg-white/10 rounded transition-colors"
                     >
-                        {sortAscending ? <ArrowDown size={16} className="text-gray-500" /> : <ArrowUp size={16} className="text-gray-500" />}
+                        {sortAscending ? <ArrowDown size={16} className="text-white/40" /> : <ArrowUp size={16} className="text-white/40" />}
                     </button>
 
                     {showSortMenu && (
-                        <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-30 min-w-[140px]">
+                        <div className="absolute top-full left-0 mt-1 glass-card border border-white/10 py-2 z-30 min-w-[140px] backdrop-blur-xl animate-in fade-in zoom-in-95">
                             {sortOptions.map(option => (
                                 <button
                                     key={option.value}
@@ -338,8 +338,8 @@ const GroupDetail: React.FC = () => {
                                         setShowSortMenu(false);
                                     }}
                                     className={cn(
-                                        "w-full px-4 py-2 text-left text-sm hover:bg-gray-50",
-                                        sortBy === option.value ? 'text-blue-600 font-bold' : 'text-gray-700'
+                                        "w-full px-4 py-2 text-left text-sm transition-colors hover:bg-white/10",
+                                        sortBy === option.value ? 'text-blue-300 font-bold' : 'text-white/70'
                                     )}
                                 >
                                     {option.label}
@@ -351,14 +351,14 @@ const GroupDetail: React.FC = () => {
             </div>
 
             {/* Stats Bar */}
-            <div className="px-4 py-3 flex items-center justify-between bg-white border-b border-gray-100">
-                <span className="text-sm text-gray-500">
-                    共 <span className="font-bold text-gray-900">{words.length}</span> 个单词
+            <div className="mx-4 mt-2 mb-4 p-3 flex items-center justify-between glass-card border border-white/10">
+                <span className="text-sm text-white/60">
+                    共 <span className="font-bold text-white">{words.length}</span> 个单词
                 </span>
                 {words.length > 0 && (
                     <button
                         onClick={handleStartExercise}
-                        className="flex items-center gap-1.5 text-sm text-blue-600 font-medium"
+                        className="flex items-center gap-1.5 text-sm text-blue-300 font-medium hover:text-blue-200 transition-colors"
                     >
                         <Dumbbell size={16} />
                         开始练习
@@ -370,21 +370,21 @@ const GroupDetail: React.FC = () => {
             <div className="px-4 py-2">
                 {filteredWords.length === 0 ? (
                     <div className="py-16 text-center">
-                        <div className="text-gray-400 mb-4">
+                        <div className="text-white/20 mb-4">
                             <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        <h3 className="text-lg font-semibold text-white/60 mb-2">
                             {searchQuery ? '未找到匹配的单词' : '群组内还没有单词'}
                         </h3>
-                        <p className="text-sm text-gray-500 mb-6">
+                        <p className="text-sm text-white/40 mb-6">
                             {searchQuery ? '尝试其他搜索词' : '点击下方按钮添加单词'}
                         </p>
                         {!searchQuery && (
                             <button
                                 onClick={() => setShowWordPopup(true)}
-                                className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+                                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium hover:scale-105 transition-all shadow-lg shadow-blue-500/20"
                             >
                                 <Plus size={18} />
                                 添加单词
@@ -392,17 +392,17 @@ const GroupDetail: React.FC = () => {
                         )}
                     </div>
                 ) : (
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
+                    <div className="space-y-3">
                         {filteredWords.map((word) => (
                             <div
                                 key={word.id}
                                 className={cn(
-                                    "p-4 transition-colors cursor-pointer",
+                                    "glass-card border border-white/5 p-4 transition-all duration-200 cursor-pointer",
                                     isEditMode
                                         ? selectedWordIds.has(word.id)
-                                            ? "bg-red-50"
-                                            : "hover:bg-gray-50"
-                                        : "hover:bg-gray-50"
+                                            ? "bg-red-500/10 border-red-500/30"
+                                            : "hover:bg-white/10"
+                                        : "hover:bg-white/10 hover:border-white/20 active:scale-[0.98]"
                                 )}
                                 onClick={() => {
                                     if (isEditMode) {
@@ -415,10 +415,10 @@ const GroupDetail: React.FC = () => {
                                 <div className="flex items-center gap-3">
                                     {isEditMode && (
                                         <div className={cn(
-                                            "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                                            "w-5 h-5 rounded-md border transition-all flex items-center justify-center",
                                             selectedWordIds.has(word.id)
-                                                ? "border-red-500 bg-red-500"
-                                                : "border-gray-300"
+                                                ? "border-red-500 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+                                                : "border-white/30 bg-white/5"
                                         )}>
                                             {selectedWordIds.has(word.id) && (
                                                 <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -428,15 +428,15 @@ const GroupDetail: React.FC = () => {
                                         </div>
                                     )}
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-gray-900">{word.text}</h3>
-                                        <p className="text-sm text-gray-500 line-clamp-2 whitespace-pre-line mt-0.5">{word.translation.replace(/\\n/g, '\n')}</p>
+                                        <h3 className="font-bold text-white text-lg">{word.text}</h3>
+                                        <p className="text-sm text-white/60 line-clamp-2 whitespace-pre-line mt-0.5">{word.translation.replace(/\\n/g, '\n')}</p>
                                     </div>
                                     <span className={cn(
-                                        "px-2 py-0.5 rounded-full text-[10px] font-bold",
-                                        word.status === 'new' && "bg-blue-50 text-blue-600",
-                                        word.status === 'learning' && "bg-orange-50 text-orange-600",
-                                        word.status === 'reviewed' && "bg-green-50 text-green-600",
-                                        word.status === 'mastered' && "bg-purple-50 text-purple-600"
+                                        "px-2 py-0.5 rounded-full text-[10px] font-bold border",
+                                        word.status === 'new' && "bg-blue-500/10 text-blue-300 border-blue-500/20",
+                                        word.status === 'learning' && "bg-orange-500/10 text-orange-300 border-orange-500/20",
+                                        word.status === 'reviewed' && "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
+                                        word.status === 'mastered' && "bg-purple-500/10 text-purple-300 border-purple-500/20"
                                     )}>
                                         {word.status === 'new' && '新词'}
                                         {word.status === 'learning' && '学习中'}
@@ -452,21 +452,21 @@ const GroupDetail: React.FC = () => {
 
             {/* Edit Mode Action Bar */}
             {isEditMode && selectedWordIds.size > 0 && (
-                <div className="fixed bottom-24 left-4 right-4 bg-red-600 text-white rounded-2xl p-4 shadow-xl flex items-center justify-between z-20">
-                    <span className="font-medium">已选择 {selectedWordIds.size} 个单词</span>
+                <div className="fixed bottom-24 left-4 right-4 glass-card border border-red-500/30 bg-red-900/40 p-4 flex items-center justify-between z-20 backdrop-blur-xl animate-in slide-in-from-bottom-4">
+                    <span className="font-medium text-red-200">已选择 {selectedWordIds.size} 个单词</span>
                     <div className="flex gap-2">
                         <button
                             onClick={() => {
                                 setSelectedWordIds(new Set());
                                 setIsEditMode(false);
                             }}
-                            className="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+                            className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors text-white text-sm"
                         >
                             取消
                         </button>
                         <button
                             onClick={handleRemoveWords}
-                            className="px-4 py-2 bg-white text-red-600 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors text-sm shadow-[0_0_10px_rgba(239,68,68,0.4)]"
                         >
                             移除
                         </button>
@@ -478,7 +478,7 @@ const GroupDetail: React.FC = () => {
             {!isEditMode && (
                 <button
                     onClick={() => setShowWordPopup(true)}
-                    className="fixed bottom-24 right-4 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 hover:bg-black transition-colors z-20"
+                    className="fixed bottom-24 right-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-3 rounded-full shadow-[0_0_20px_rgba(79,70,229,0.4)] flex items-center gap-2 hover:scale-105 transition-all z-20 border border-white/20"
                 >
                     <Plus size={20} />
                     <span className="font-bold">添加单词</span>
@@ -500,28 +500,28 @@ const GroupDetail: React.FC = () => {
 
             {/* Delete Confirm Dialog */}
             {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="glass-card rounded-2xl max-w-sm w-full shadow-2xl border border-white/10 animate-fade-in-up">
                         <div className="p-6 text-center">
-                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Trash2 size={24} className="text-red-600" />
+                            <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/30">
+                                <Trash2 size={24} className="text-red-400" />
                             </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">删除群组</h3>
-                            <p className="text-sm text-gray-500">
+                            <h3 className="text-lg font-bold text-white mb-2">删除群组</h3>
+                            <p className="text-sm text-white/60">
                                 确定要删除"{group.name}"吗？群组内的 {words.length} 个单词不会被删除。
                             </p>
                         </div>
-                        <div className="flex border-t border-gray-100">
+                        <div className="flex border-t border-white/10">
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
-                                className="flex-1 py-3 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                                className="flex-1 py-3 text-white/60 font-medium hover:bg-white/5 transition-colors"
                             >
                                 取消
                             </button>
-                            <div className="w-px bg-gray-100" />
+                            <div className="w-px bg-white/10" />
                             <button
                                 onClick={handleDeleteGroup}
-                                className="flex-1 py-3 text-red-600 font-medium hover:bg-red-50 transition-colors"
+                                className="flex-1 py-3 text-red-400 font-medium hover:bg-red-500/10 transition-colors"
                             >
                                 删除
                             </button>
@@ -532,52 +532,52 @@ const GroupDetail: React.FC = () => {
 
             {/* Edit Group Dialog */}
             {showEditDialog && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
-                        <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                            <h2 className="text-lg font-bold text-gray-900">编辑群组</h2>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="glass-card rounded-2xl max-w-md w-full shadow-2xl border border-white/10 animate-fade-in-up">
+                        <div className="flex items-center justify-between p-4 border-b border-white/10">
+                            <h2 className="text-lg font-bold text-white">编辑群组</h2>
                             <button
                                 onClick={() => setShowEditDialog(false)}
-                                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
                             >
-                                <X size={20} className="text-gray-500" />
+                                <X size={20} className="text-white/60" />
                             </button>
                         </div>
                         <div className="p-4 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    群组名称 <span className="text-red-500">*</span>
+                                <label className="block text-sm font-medium text-white/70 mb-1.5">
+                                    群组名称 <span className="text-red-400">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={editName}
                                     onChange={(e) => setEditName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500/50"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                <label className="block text-sm font-medium text-white/70 mb-1.5">
                                     描述
                                 </label>
                                 <textarea
                                     value={editDescription}
                                     onChange={(e) => setEditDescription(e.target.value)}
                                     rows={3}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                    className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500/50 resize-none"
                                 />
                             </div>
                         </div>
-                        <div className="flex gap-2 p-4 border-t border-gray-100">
+                        <div className="flex gap-2 p-4 border-t border-white/10">
                             <button
                                 onClick={() => setShowEditDialog(false)}
-                                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                                className="flex-1 py-2.5 border border-white/10 rounded-lg text-white/70 font-medium hover:bg-white/10 transition-colors"
                             >
                                 取消
                             </button>
                             <button
                                 onClick={handleUpdateGroup}
                                 disabled={!editName.trim()}
-                                className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed"
                             >
                                 保存
                             </button>

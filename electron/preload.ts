@@ -33,5 +33,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveBackupData: (data: string) => ipcRenderer.invoke('backup:saveData', data),
     loadBackupData: () => ipcRenderer.invoke('backup:loadData'),
     exportBooks: () => ipcRenderer.invoke('backup:exportBooks'),
-    aiFetch: (options: { url: string, method?: string, headers?: any, body?: any }) => ipcRenderer.invoke('ai:fetch', options)
+    aiFetch: (options: { url: string, method?: string, headers?: any, body?: any }) => ipcRenderer.invoke('ai:fetch', options),
+
+    // Window Controls
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+    close: () => ipcRenderer.invoke('window:close'),
+    onMaximizedChange: (callback: (isMaximized: boolean) => void) => {
+        const handler = (_: any, value: boolean) => callback(value);
+        ipcRenderer.on('window:maximized-change', handler);
+        return () => ipcRenderer.removeListener('window:maximized-change', handler);
+    }
 })

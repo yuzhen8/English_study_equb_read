@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
-import { Plus, MoreHorizontal, ChevronRight, FolderPlus, Zap, CheckCircle2 } from 'lucide-react';
+import { Plus, ChevronRight, FolderPlus, Zap, CheckCircle2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 import { WordStore } from '../../services/WordStore';
@@ -68,39 +68,36 @@ const DictionaryDashboard: React.FC = () => {
     };
 
     return (
-        <div className="bg-gray-50">
+        <div className="h-full overflow-y-auto custom-scrollbar bg-transparent text-white">
             {/* Header */}
-            <div className="bg-white px-4 pt-12 pb-4 sticky top-0 z-10 shadow-sm">
+            <div className="bg-transparent px-4 pt-8 pb-4 sticky top-0 z-10">
                 <div className="flex justify-between items-center mb-4">
-                    <h1 className="text-2xl font-bold text-slate-900">词典</h1>
-                    <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
-                        <MoreHorizontal size={20} />
-                    </button>
+                    <h1 className="text-3xl font-bold text-white drop-shadow-md">词典</h1>
                 </div>
 
-                <div className="flex space-x-6 border-b border-gray-100">
+                <div className="flex space-x-6 border-b border-white/10">
                     <button
                         onClick={() => setActiveTab('my-words')}
                         className={cn(
                             "pb-2 text-sm font-medium transition-colors relative",
-                            activeTab === 'my-words' ? "text-blue-600" : "text-gray-500"
+                            activeTab === 'my-words' ? "text-white" : "text-white/50 hover:text-white/80"
                         )}
                     >
                         我的单词
                         {activeTab === 'my-words' && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full" />
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-t-full shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
                         )}
                     </button>
                     <button
                         onClick={() => setActiveTab('groups')}
                         className={cn(
                             "pb-2 text-sm font-medium transition-colors relative",
-                            activeTab === 'groups' ? "text-blue-600" : "text-gray-500"
+                            activeTab === 'groups' ? "text-white" : "text-white/50 hover:text-white/80"
                         )}
                     >
                         群组
                         {activeTab === 'groups' && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full" />
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-t-full shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
                         )}
                     </button>
                 </div>
@@ -109,13 +106,13 @@ const DictionaryDashboard: React.FC = () => {
             {/* All Words Bar */}
             <div className="px-4 mt-2 mb-2">
                 <button
-                    className="w-full bg-white rounded-xl p-4 flex justify-between items-center shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors"
+                    className="w-full glass-card p-4 flex justify-between items-center hover:bg-white/10"
                     onClick={() => navigate('/dictionary/list')}
                 >
-                    <span className="font-bold text-gray-900">所有单词</span>
+                    <span className="font-bold text-white text-lg">所有单词</span>
                     <div className="flex items-center gap-2">
-                        <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs font-bold">{stats.total}</span>
-                        <ChevronRight size={20} className="text-gray-400" />
+                        <span className="bg-white/10 text-white/80 px-2 py-0.5 rounded-full text-xs font-bold">{stats.total}</span>
+                        <ChevronRight size={20} className="text-white/40" />
                     </div>
                 </button>
             </div>
@@ -127,16 +124,16 @@ const DictionaryDashboard: React.FC = () => {
                     {groups.length === 0 ? (
                         /* 空状态 */
                         <div className="py-16 text-center">
-                            <div className="text-gray-400 mb-4">
+                            <div className="text-white/20 mb-4">
                                 <FolderPlus size={64} className="mx-auto" strokeWidth={1.5} />
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">还没有群组</h3>
-                            <p className="text-sm text-gray-500 mb-6">
+                            <h3 className="text-lg font-semibold text-white mb-2">还没有群组</h3>
+                            <p className="text-sm text-white/50 mb-6">
                                 创建群组来组织和管理您的单词
                             </p>
                             <button
                                 onClick={() => setShowCreateGroupDialog(true)}
-                                className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+                                className="inline-flex items-center gap-2 glass-button bg-blue-500/20 text-blue-200 px-5 py-2.5 font-medium hover:bg-blue-500/30 transition-colors"
                             >
                                 <Plus size={18} />
                                 创建第一个群组
@@ -149,17 +146,17 @@ const DictionaryDashboard: React.FC = () => {
                                 <button
                                     key={group.id}
                                     onClick={() => navigate(`/dictionary/group/${group.id}`)}
-                                    className="w-full bg-white rounded-xl p-4 flex justify-between items-center shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors text-left"
+                                    className="w-full glass-card p-4 flex justify-between items-center hover:bg-white/10 text-left"
                                 >
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-gray-900 truncate">{group.name}</h3>
-                                        <p className="text-xs text-gray-400 mt-0.5">
+                                        <h3 className="font-bold text-white truncate">{group.name}</h3>
+                                        <p className="text-xs text-white/40 mt-0.5">
                                             {formatTimeAgo(group.updatedAt)}
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2 ml-4">
-                                        <span className="text-gray-600 font-medium">{group.wordIds.length}</span>
-                                        <ChevronRight size={20} className="text-gray-400" />
+                                        <span className="text-white/60 font-medium">{group.wordIds.length}</span>
+                                        <ChevronRight size={20} className="text-white/40" />
                                     </div>
                                 </button>
                             ))}
@@ -173,56 +170,57 @@ const DictionaryDashboard: React.FC = () => {
                         {/* Stats Grid */}
                         <div className="grid grid-cols-2 gap-4">
                             {/* New Words Card */}
-                            <div className="bg-blue-600 rounded-2xl p-4 text-white flex flex-col justify-between shadow-lg shadow-blue-200">
-                                <div className="flex justify-between items-start">
+                            <div className="glass-card bg-gradient-to-br from-blue-600/40 to-indigo-600/40 p-5 text-white flex flex-col justify-between border-blue-400/20 relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-blue-500/10 blur-xl group-hover:bg-blue-500/20 transition-colors" />
+                                <div className="flex justify-between items-start relative z-10">
                                     <span className="text-blue-100 text-sm font-medium">新的</span>
-                                    <div className="bg-white/20 p-1.5 rounded-lg">
+                                    <div className="bg-white/10 p-1.5 rounded-lg backdrop-blur-sm">
                                         <Plus size={16} className="text-white" />
                                     </div>
                                 </div>
-                                <div>
-                                    <span className="text-4xl font-bold">{stats.statusCounts.new}</span>
-                                    <p className="text-blue-100 text-xs mt-1">未开始学习</p>
+                                <div className="relative z-10">
+                                    <span className="text-4xl font-bold tracking-tight text-white drop-shadow-sm">{stats.statusCounts.new}</span>
+                                    <p className="text-blue-100/70 text-xs mt-1">未开始学习</p>
                                 </div>
                             </div>
 
                             {/* Progress Stats */}
                             <div className="flex flex-col gap-3">
-                                <div className="bg-orange-50/80 rounded-2xl p-4 flex-1 flex flex-col justify-center border border-orange-100 relative overflow-hidden group">
-                                    <div className="absolute top-2 right-2 bg-orange-100 p-1.5 rounded-lg text-orange-500 opacity-50 group-hover:opacity-100 transition-opacity">
+                                <div className="glass-card bg-orange-500/10 p-4 flex-1 flex flex-col justify-center border-orange-500/20 relative overflow-hidden group">
+                                    <div className="absolute top-2 right-2 bg-orange-500/20 p-1.5 rounded-lg text-orange-400 opacity-70 group-hover:opacity-100 transition-opacity">
                                         <Zap size={14} />
                                     </div>
-                                    <span className="text-orange-600/80 text-xs mb-1 font-medium">进行中</span>
+                                    <span className="text-orange-300 text-xs mb-1 font-medium">进行中</span>
                                     <div className="flex items-baseline gap-1 relative z-10">
-                                        <span className="text-2xl font-bold text-slate-900">{stats.statusCounts.learning + stats.statusCounts.reviewed}</span>
-                                        <span className="text-xs text-orange-500 font-bold">待复习</span>
+                                        <span className="text-2xl font-bold text-white">{stats.statusCounts.learning + stats.statusCounts.reviewed}</span>
+                                        <span className="text-xs text-orange-400 font-bold">待复习</span>
                                     </div>
                                 </div>
-                                <div className="bg-emerald-50/80 rounded-2xl p-4 flex-1 flex flex-col justify-center border border-emerald-100 relative overflow-hidden group">
-                                    <div className="absolute top-2 right-2 bg-emerald-100 p-1.5 rounded-lg text-emerald-500 opacity-50 group-hover:opacity-100 transition-opacity">
+                                <div className="glass-card bg-emerald-500/10 p-4 flex-1 flex flex-col justify-center border-emerald-500/20 relative overflow-hidden group">
+                                    <div className="absolute top-2 right-2 bg-emerald-500/20 p-1.5 rounded-lg text-emerald-400 opacity-70 group-hover:opacity-100 transition-opacity">
                                         <CheckCircle2 size={14} />
                                     </div>
-                                    <span className="text-emerald-600/80 text-xs mb-1 font-medium">已掌握</span>
+                                    <span className="text-emerald-300 text-xs mb-1 font-medium">已掌握</span>
                                     <div className="flex items-baseline gap-1 relative z-10">
-                                        <span className="text-2xl font-bold text-slate-900">{stats.statusCounts.mastered}</span>
-                                        <span className="text-xs text-emerald-500 font-bold">个单词</span>
+                                        <span className="text-2xl font-bold text-white">{stats.statusCounts.mastered}</span>
+                                        <span className="text-xs text-emerald-400 font-bold">个单词</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Chart Section */}
-                        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                        <div className="glass-card p-5">
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-gray-900">学习曲线</h3>
-                                <div className="flex bg-gray-100 rounded-lg p-0.5">
+                                <h3 className="font-bold text-white">学习曲线</h3>
+                                <div className="flex bg-black/20 rounded-lg p-0.5 backdrop-blur-sm">
                                     {(['week', 'month', 'year'] as const).map((t) => (
                                         <button
                                             key={t}
                                             onClick={() => setTimeFilter(t)}
                                             className={cn(
                                                 "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                                                timeFilter === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                                                timeFilter === t ? "bg-white/10 text-white shadow-sm border border-white/5" : "text-white/40 hover:text-white/60"
                                             )}
                                         >
                                             {t === 'week' ? '周' : t === 'month' ? '月' : '年'}
@@ -236,22 +234,31 @@ const DictionaryDashboard: React.FC = () => {
                                     <AreaChart data={stats.chartData}>
                                         <defs>
                                             <linearGradient id="colorWords" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                                                <stop offset="5%" stopColor="#818cf8" stopOpacity={0.5} />
+                                                <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
                                         <XAxis
                                             dataKey="name"
                                             axisLine={false}
                                             tickLine={false}
-                                            tick={{ fontSize: 12, fill: '#9ca3af' }}
+                                            tick={{ fontSize: 12, fill: 'rgba(255,255,255,0.4)' }}
                                             dy={10}
                                         />
-                                        <Tooltip />
+                                        <Tooltip
+                                            contentStyle={{
+                                                backgroundColor: 'rgba(23, 23, 23, 0.8)',
+                                                backdropFilter: 'blur(8px)',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                borderRadius: '12px',
+                                                color: '#fff'
+                                            }}
+                                            itemStyle={{ color: '#fff' }}
+                                        />
                                         <Area
                                             type="monotone"
                                             dataKey="words"
-                                            stroke="#2563eb"
+                                            stroke="#818cf8"
                                             strokeWidth={3}
                                             fillOpacity={1}
                                             fill="url(#colorWords)"
@@ -268,7 +275,7 @@ const DictionaryDashboard: React.FC = () => {
             {activeTab === 'groups' ? (
                 <button
                     onClick={() => setShowCreateGroupDialog(true)}
-                    className="fixed bottom-24 right-4 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 hover:bg-black transition-colors z-20"
+                    className="fixed bottom-24 right-4 glass-button bg-indigo-600/80 hover:bg-indigo-500 px-5 py-3 rounded-2xl flex items-center gap-2 z-20 shadow-[0_0_20px_rgba(79,70,229,0.4)] animate-pulse-glow"
                 >
                     <Plus size={20} />
                     <span className="font-bold">创建群组</span>
@@ -276,7 +283,7 @@ const DictionaryDashboard: React.FC = () => {
             ) : (
                 <button
                     onClick={() => setShowWordPopup(true)}
-                    className="fixed bottom-24 right-4 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 hover:bg-black transition-colors z-20"
+                    className="fixed bottom-24 right-4 glass-button bg-indigo-600/80 hover:bg-indigo-500 px-5 py-3 rounded-2xl flex items-center gap-2 z-20 shadow-[0_0_20px_rgba(79,70,229,0.4)] animate-pulse-glow"
                 >
                     <Plus size={20} />
                     <span className="font-bold">添加单词</span>

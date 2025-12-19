@@ -228,23 +228,23 @@ const WordList: React.FC = () => {
 
     return (
         <>
-            <div className="min-h-screen bg-gray-50 pb-20">
+            <div className="h-full overflow-y-auto custom-scrollbar bg-transparent pb-20">
                 {/* Header */}
-                <div className="bg-white px-4 pt-12 pb-4 sticky top-0 z-10 shadow-sm">
+                <div className="bg-transparent px-4 pt-12 pb-4 sticky top-0 z-10">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => navigate('/')}
-                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/80"
                             >
                                 <ArrowLeft size={20} />
                             </button>
                             <div>
-                                <h1 className="text-2xl font-bold text-gray-900">
+                                <h1 className="text-2xl font-bold text-white tracking-tight">
                                     {isMultiSelectMode ? '多选模式' : '我的单词'}
                                 </h1>
                                 {isMultiSelectMode && selectedWordIds.size > 0 && (
-                                    <p className="text-sm text-gray-500 mt-0.5">
+                                    <p className="text-sm text-white/60 mt-0.5">
                                         已选词语 {selectedWordIds.size}
                                     </p>
                                 )}
@@ -253,7 +253,7 @@ const WordList: React.FC = () => {
                         {!isMultiSelectMode && (
                             <button
                                 onClick={() => setIsMultiSelectMode(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-blue-300 hover:bg-white/10 rounded-lg transition-colors border border-blue-500/30 font-medium"
                             >
                                 <CheckSquare size={16} />
                                 <span>多选</span>
@@ -262,16 +262,16 @@ const WordList: React.FC = () => {
                     </div>
 
                     {/* Status Tabs */}
-                    <div className="flex gap-2 overflow-x-auto pb-2">
+                    <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                         {statusTabs.map(tab => (
                             <button
                                 key={tab.value}
                                 onClick={() => setStatusFilter(tab.value)}
                                 className={cn(
-                                    "px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors border",
+                                    "px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-all border backdrop-blur-md",
                                     statusFilter === tab.value
-                                        ? 'bg-gray-900 text-white border-gray-900'
-                                        : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
+                                        ? 'bg-white/10 text-white border-white/20 shadow-[0_0_10px_rgba(255,255,255,0.1)]'
+                                        : 'bg-black/20 text-white/50 hover:bg-white/5 border-transparent hover:text-white/80'
                                 )}
                             >
                                 {tab.label}
@@ -281,27 +281,27 @@ const WordList: React.FC = () => {
 
                     {/* Sort Controls */}
                     <div className="flex items-center gap-2 mt-3 relative" ref={sortMenuRef}>
-                        <span className="text-sm text-gray-500">按照排序:</span>
+                        <span className="text-sm text-white/40">按照排序:</span>
                         <button
                             onClick={() => setShowSortMenu(!showSortMenu)}
-                            className="flex items-center gap-1 text-sm text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                            className="flex items-center gap-1 text-sm text-blue-300 hover:bg-white/10 px-2 py-1 rounded transition-colors"
                         >
-                            <RefreshCw size={14} className="text-gray-400" />
+                            <RefreshCw size={14} className="text-white/40" />
                             <span>{sortOptions.find(o => o.value === sortBy)?.label}</span>
                             <ChevronDown size={14} />
                         </button>
                         <button
                             onClick={() => setSortAscending(!sortAscending)}
-                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            className="p-1 hover:bg-white/10 rounded transition-colors"
                             title={sortAscending ? '升序' : '降序'}
                         >
-                            {sortAscending ? <ArrowDown size={16} className="text-gray-500" /> : <ArrowUp size={16} className="text-gray-500" />}
+                            {sortAscending ? <ArrowDown size={16} className="text-white/40" /> : <ArrowUp size={16} className="text-white/40" />}
                         </button>
 
                         {/* Sort Dropdown Menu */}
                         {showSortMenu && (
-                            <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-30 min-w-[180px]">
-                                <div className="px-3 py-2 text-sm font-medium text-gray-400">按照排序</div>
+                            <div className="absolute top-full left-0 mt-1 glass-card border border-white/10 py-2 z-30 min-w-[180px] backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                                <div className="px-3 py-2 text-sm font-medium text-white/40">按照排序</div>
                                 {sortOptions.map(option => (
                                     <button
                                         key={option.value}
@@ -310,14 +310,14 @@ const WordList: React.FC = () => {
                                             setShowSortMenu(false);
                                         }}
                                         className={cn(
-                                            "w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-gray-50 transition-colors",
-                                            sortBy === option.value ? 'text-blue-600' : 'text-gray-700'
+                                            "w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-white/10 transition-colors",
+                                            sortBy === option.value ? 'text-blue-300' : 'text-white/70'
                                         )}
                                     >
                                         {option.icon ? (
-                                            <span className="w-5 text-center font-medium">{option.icon}</span>
+                                            <span className="w-5 text-center font-medium opacity-70">{option.icon}</span>
                                         ) : (
-                                            <RefreshCw size={16} className="text-gray-400" />
+                                            <RefreshCw size={16} className="text-white/40" />
                                         )}
                                         <span>{option.label}</span>
                                     </button>
@@ -326,133 +326,127 @@ const WordList: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Words Count */}
-                    <div className="text-xs text-gray-400 mt-2">
-                        {filteredWords.length} 个单词
-                    </div>
+                    {/* Multi-select controls */}
+                    {isMultiSelectMode && (
+                        <div className="glass-card mx-4 mt-2 px-4 py-2 flex items-center gap-3 border border-white/10 animate-fade-in-down">
+                            <button
+                                onClick={handleSelectAll}
+                                className="text-sm text-blue-300 hover:text-white transition-colors"
+                            >
+                                全选
+                            </button>
+                            <div className="w-px h-4 bg-white/10" />
+                            <button
+                                onClick={handleClearSelection}
+                                className="text-sm text-white/60 hover:text-white transition-colors"
+                            >
+                                清除选择
+                            </button>
+                        </div>
+                    )}
                 </div>
-
-                {/* Multi-select controls */}
-                {isMultiSelectMode && (
-                    <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center gap-3">
-                        <button
-                            onClick={handleSelectAll}
-                            className="text-sm text-blue-600 hover:underline"
-                        >
-                            全选
-                        </button>
-                        <div className="w-px h-4 bg-gray-300" />
-                        <button
-                            onClick={handleClearSelection}
-                            className="text-sm text-gray-600 hover:underline"
-                        >
-                            清除选择
-                        </button>
-                    </div>
-                )}
 
                 {/* Word List */}
                 <div className={cn(
-                    "p-4",
+                    "p-4 space-y-4",
                     isMultiSelectMode && selectedWordIds.size > 0 && "pb-80" // 为 BatchActionSheet 留出空间
                 )}>
                     {sortBy === 'date' ? (
                         // 按日期分组显示
                         groupedWords.map(([date, dateWords]) => (
                             <div key={date} className="mb-6">
-                                <div className="text-xs text-gray-400 font-medium mb-2 px-2">
+                                <div className="text-xs text-white/40 font-medium mb-2 px-2 uppercase tracking-widest">
                                     {date}
                                 </div>
-                                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                                    {dateWords.map((word, index) => (
-                                        <React.Fragment key={word.id}>
-                                            <div
-                                                className={`flex items-center gap-3 p-4 ${!isMultiSelectMode ? 'cursor-pointer hover:bg-gray-50' : ''
-                                                    } transition-colors`}
-                                                onClick={() => {
-                                                    if (isMultiSelectMode) {
-                                                        toggleWordSelection(word.id);
-                                                    } else {
-                                                        setSelectedWordId(word.id);
-                                                    }
-                                                }}
-                                            >
-                                                {isMultiSelectMode && (
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedWordIds.has(word.id)}
-                                                        onChange={() => toggleWordSelection(word.id)}
-                                                        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    />
-                                                )}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="font-medium text-gray-900">{word.text}</div>
-                                                    <div className="text-sm text-gray-500 mt-0.5 line-clamp-2 whitespace-pre-line">
-                                                        {word.translation.replace(/\\n/g, '\n')}
-                                                    </div>
-                                                </div>
-                                                {!isMultiSelectMode && (
-                                                    <button className="p-1 hover:bg-gray-100 rounded-lg">
-                                                        <MoreVertical size={18} className="text-gray-400" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            {index < dateWords.length - 1 && (
-                                                <div className="h-px bg-gray-100 mx-4" />
+                                <div className="space-y-3">
+                                    {dateWords.map((word) => (
+                                        <div
+                                            key={word.id}
+                                            className={cn(
+                                                "glass-card border border-white/5 p-4 flex items-center gap-3 transition-all duration-200 group active:scale-[0.98]",
+                                                !isMultiSelectMode && "hover:border-white/20 hover:bg-white/10 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] cursor-pointer"
                                             )}
-                                        </React.Fragment>
+                                            onClick={() => {
+                                                if (isMultiSelectMode) {
+                                                    toggleWordSelection(word.id);
+                                                } else {
+                                                    setSelectedWordId(word.id);
+                                                }
+                                            }}
+                                        >
+                                            {isMultiSelectMode && (
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedWordIds.has(word.id)}
+                                                    onChange={() => toggleWordSelection(word.id)}
+                                                    className="w-5 h-5 rounded border-white/30 text-blue-500 bg-white/5 focus:ring-blue-500/50"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                />
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-bold text-white text-lg group-hover:text-blue-300 transition-colors">{word.text}</div>
+                                                <div className="text-sm text-white/60 mt-0.5 line-clamp-2 whitespace-pre-line group-hover:text-white/80 transition-colors">
+                                                    {word.translation.replace(/\\n/g, '\n')}
+                                                </div>
+                                            </div>
+                                            {!isMultiSelectMode && (
+                                                <button className="p-2 hover:bg-white/10 rounded-lg text-white/20 group-hover:text-white/60 transition-colors">
+                                                    <MoreVertical size={18} />
+                                                </button>
+                                            )}
+                                        </div>
                                     ))}
                                 </div>
                             </div>
                         ))
                     ) : (
                         // 按字母排序显示（单列表）
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                            {filteredWords.map((word, index) => (
-                                <React.Fragment key={word.id}>
-                                    <div
-                                        className={`flex items-center gap-3 p-4 ${!isMultiSelectMode ? 'cursor-pointer hover:bg-gray-50' : ''
-                                            } transition-colors`}
-                                        onClick={() => {
-                                            if (isMultiSelectMode) {
-                                                toggleWordSelection(word.id);
-                                            } else {
-                                                setSelectedWordId(word.id);
-                                            }
-                                        }}
-                                    >
-                                        {isMultiSelectMode && (
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedWordIds.has(word.id)}
-                                                onChange={() => toggleWordSelection(word.id)}
-                                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                onClick={(e) => e.stopPropagation()}
-                                            />
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="font-medium text-gray-900">{word.text}</div>
-                                            <div className="text-sm text-gray-500 mt-0.5 line-clamp-2 whitespace-pre-line">
-                                                {word.translation.replace(/\\n/g, '\n')}
+                        <div className="space-y-3">
+                            {filteredWords.map((word) => (
+                                <div
+                                    key={word.id}
+                                    className={cn(
+                                        "glass-card border border-white/5 p-4 flex items-center gap-3 transition-all duration-200 group active:scale-[0.98]",
+                                        !isMultiSelectMode && "hover:border-white/20 hover:bg-white/10 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] cursor-pointer"
+                                    )}
+                                    onClick={() => {
+                                        if (isMultiSelectMode) {
+                                            toggleWordSelection(word.id);
+                                        } else {
+                                            setSelectedWordId(word.id);
+                                        }
+                                    }}
+                                >
+                                    {isMultiSelectMode && (
+                                        <div className="relative flex items-center justify-center">
+                                            <div className={cn(
+                                                "w-5 h-5 rounded-md border transition-all flex items-center justify-center",
+                                                selectedWordIds.has(word.id)
+                                                    ? "bg-blue-500 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                                                    : "border-white/30 bg-white/5"
+                                            )}>
+                                                {selectedWordIds.has(word.id) && <CheckSquare size={12} className="text-white" />}
                                             </div>
                                         </div>
-                                        {!isMultiSelectMode && (
-                                            <button className="p-1 hover:bg-gray-100 rounded-lg">
-                                                <MoreVertical size={18} className="text-gray-400" />
-                                            </button>
-                                        )}
-                                    </div>
-                                    {index < filteredWords.length - 1 && (
-                                        <div className="h-px bg-gray-100 mx-4" />
                                     )}
-                                </React.Fragment>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-bold text-white text-lg group-hover:text-blue-300 transition-colors">{word.text}</div>
+                                        <div className="text-sm text-white/60 mt-0.5 line-clamp-2 whitespace-pre-line group-hover:text-white/80 transition-colors">
+                                            {word.translation.replace(/\\n/g, '\n')}
+                                        </div>
+                                    </div>
+                                    {!isMultiSelectMode && (
+                                        <button className="p-2 hover:bg-white/10 rounded-lg text-white/20 group-hover:text-white/60 transition-colors">
+                                            <MoreVertical size={18} />
+                                        </button>
+                                    )}
+                                </div>
                             ))}
                         </div>
                     )}
 
                     {filteredWords.length === 0 && (
-                        <div className="text-center py-12 text-gray-500">
+                        <div className="text-center py-12 text-white/30">
                             暂无单词
                         </div>
                     )}
@@ -461,17 +455,17 @@ const WordList: React.FC = () => {
 
             {/* 多选模式底部固定按钮 */}
             {isMultiSelectMode && selectedWordIds.size > 0 && (
-                <div className="fixed bottom-24 right-6 z-10">
+                <div className="fixed bottom-24 right-6 z-10 animate-in slide-in-from-bottom-4">
                     <button
                         onClick={() => setShowBatchActions(!showBatchActions)}
-                        className="bg-gray-900 text-white px-5 py-3 rounded-full shadow-lg flex items-center justify-center gap-2 hover:bg-black transition-colors"
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-3 rounded-full shadow-[0_0_20px_rgba(79,70,229,0.4)] border border-white/20 flex items-center justify-center gap-2 hover:scale-105 transition-all"
                     >
                         <div className="flex items-center gap-1">
-                            <div className="w-1 h-1 bg-white rounded-full"></div>
-                            <div className="w-1 h-1 bg-white rounded-full"></div>
-                            <div className="w-1 h-1 bg-white rounded-full"></div>
+                            <div className="w-1 h-1 bg-white rounded-full animate-pulse"></div>
+                            <div className="w-1 h-1 bg-white rounded-full animate-pulse delay-75"></div>
+                            <div className="w-1 h-1 bg-white rounded-full animate-pulse delay-150"></div>
                         </div>
-                        <span className="text-sm font-medium whitespace-nowrap">已选择 {selectedWordIds.size} 个中的 {filteredWords.length} 个</span>
+                        <span className="text-sm font-bold whitespace-nowrap">已选择 {selectedWordIds.size} 个</span>
                     </button>
                 </div>
             )}
@@ -514,25 +508,25 @@ const WordList: React.FC = () => {
 
             {/* Export Menu */}
             {showExportMenu && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl p-4 max-w-xs w-full shadow-2xl">
-                        <h3 className="font-bold text-gray-900 mb-3">选择导出格式</h3>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="glass-card rounded-2xl p-4 max-w-xs w-full shadow-2xl border border-white/10 animate-fade-in-up">
+                        <h3 className="font-bold text-white mb-3">选择导出格式</h3>
                         <div className="space-y-2">
                             <button
                                 onClick={() => handleExport('json')}
-                                className="w-full p-3 bg-blue-50 text-blue-600 rounded-xl font-medium hover:bg-blue-100 transition-colors"
+                                className="w-full p-3 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-xl font-medium hover:bg-blue-500/30 transition-colors"
                             >
                                 JSON 格式
                             </button>
                             <button
                                 onClick={() => handleExport('csv')}
-                                className="w-full p-3 bg-green-50 text-green-600 rounded-xl font-medium hover:bg-green-100 transition-colors"
+                                className="w-full p-3 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-xl font-medium hover:bg-emerald-500/30 transition-colors"
                             >
                                 CSV 格式
                             </button>
                             <button
                                 onClick={() => setShowExportMenu(false)}
-                                className="w-full p-3 border border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                                className="w-full p-3 border border-white/10 rounded-xl text-white/60 font-medium hover:bg-white/10 hover:text-white transition-colors"
                             >
                                 取消
                             </button>

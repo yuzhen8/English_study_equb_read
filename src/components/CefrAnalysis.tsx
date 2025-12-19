@@ -248,16 +248,19 @@ export const CefrAnalysisPopup: React.FC<CefrAnalysisPopupProps> = ({
 interface CefrLevelBadgeProps {
     level: string;
     className?: string;
+    onClick?: (e: React.MouseEvent) => void;
 }
 
-export const CefrLevelBadge: React.FC<CefrLevelBadgeProps> = ({ level, className }) => (
+export const CefrLevelBadge: React.FC<CefrLevelBadgeProps> = ({ level, className, onClick }) => (
     <div
+        onClick={onClick}
         className={cn(
-            "px-1.5 py-0.5 rounded text-[9px] font-bold text-white shadow-sm",
+            "px-1.5 py-0.5 rounded text-[9px] font-bold text-white shadow-sm transition-transform",
+            onClick ? "cursor-pointer hover:scale-105 active:scale-95" : "",
             className
         )}
         style={{ backgroundColor: CEFR_COLORS[level] || CEFR_COLORS['Unknown'] }}
-        title={`难度等级: ${level}`}
+        title={`难度等级: ${level}${onClick ? ' (点击查看报告)' : ''}`}
     >
         {level}
     </div>

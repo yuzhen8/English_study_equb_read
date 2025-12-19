@@ -26,29 +26,29 @@ const GroupSelectionDialog: React.FC<GroupSelectionDialogProps> = ({ onClose, on
     );
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="glass-card max-w-md w-full shadow-2xl max-h-[80vh] flex flex-col border border-white/10 animate-fade-in-up">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                    <h2 className="text-lg font-bold text-gray-900">添加到群组</h2>
+                <div className="flex items-center justify-between p-4 border-b border-white/10">
+                    <h2 className="text-lg font-bold text-white">添加到群组</h2>
                     <button
                         onClick={onClose}
-                        className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-1 hover:bg-white/10 rounded-lg transition-colors"
                     >
-                        <X size={20} className="text-gray-500" />
+                        <X size={20} className="text-white/60" />
                     </button>
                 </div>
 
                 {/* Search */}
-                <div className="p-4 border-b border-gray-100">
+                <div className="p-4 border-b border-white/10">
                     <div className="relative">
-                        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="搜索群组..."
-                            className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full pl-10 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder-white/20"
                         />
                     </div>
                 </div>
@@ -56,7 +56,7 @@ const GroupSelectionDialog: React.FC<GroupSelectionDialogProps> = ({ onClose, on
                 {/* Group List */}
                 <div className="flex-1 overflow-y-auto p-2">
                     {filteredGroups.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
+                        <div className="text-center py-8 text-white/40">
                             {searchQuery ? '未找到匹配的群组' : '暂无群组，请先创建'}
                         </div>
                     ) : (
@@ -67,15 +67,15 @@ const GroupSelectionDialog: React.FC<GroupSelectionDialogProps> = ({ onClose, on
                                     onSelect(group.id);
                                     onClose();
                                 }}
-                                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors text-left group"
                             >
                                 <div>
-                                    <div className="font-medium text-gray-900">{group.name}</div>
+                                    <div className="font-medium text-white group-hover:text-blue-300 transition-colors">{group.name}</div>
                                     {group.description && (
-                                        <div className="text-sm text-gray-500 mt-0.5">{group.description}</div>
+                                        <div className="text-sm text-white/40 mt-0.5">{group.description}</div>
                                     )}
                                 </div>
-                                <div className="text-xs text-gray-400">
+                                <div className="text-xs text-white/30">
                                     {group.wordIds.length} 个单词
                                 </div>
                             </button>
@@ -84,10 +84,10 @@ const GroupSelectionDialog: React.FC<GroupSelectionDialogProps> = ({ onClose, on
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-gray-100">
+                <div className="p-4 border-t border-white/10">
                     <button
                         onClick={onClose}
-                        className="w-full py-2.5 border border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                        className="w-full py-2.5 border border-white/10 rounded-lg text-white/60 font-medium hover:bg-white/5 hover:text-white transition-colors"
                     >
                         取消
                     </button>

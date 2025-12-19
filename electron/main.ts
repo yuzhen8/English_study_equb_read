@@ -20,22 +20,37 @@ const createWindow = () => {
     const mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
+        frame: false, // Frameless window
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
-            webSecurity: app.isPackaged ? false : true, // Allow local resources in production
+            webSecurity: app.isPackaged ? false : true,
             allowRunningInsecureContent: true
         },
     });
 
     if (app.isPackaged) {
-        // Use loadFile which handles ASAR paths natively and correctly
         mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
     } else {
         mainWindow.loadURL('http://localhost:5173');
-        // mainWindow.webContents.openDevTools();
     }
+
+    // Window Controls IPC
+    ipcMain.handle('window:minimize', () => mainWindow.minimize());
+    ipcMain.handle('window:maximize', () => {
+        if (mainWindow.isMaximized()) {
+            mainWindow.unmaximize();
+        } else {
+            mainWindow.maximize();
+        }
+    });
+    ipcMain.handle('window:close', () => mainWindow.close());
+    ipcMain.handle('window:isMaximized', () => mainWindow.isMaximized());
+
+    mainWindow.on('maximize', () => mainWindow.webContents.send('window:maximized-change', true));
+    mainWindow.on('unmaximize', () => mainWindow.webContents.send('window:maximized-change', false));
+
 };
 
 app.on('ready', async () => {

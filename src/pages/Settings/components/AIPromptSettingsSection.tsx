@@ -170,15 +170,15 @@ const AIPromptSettingsSection: React.FC = () => {
         <div className="space-y-4">
             <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                    <label className="text-sm font-bold text-gray-700 flex items-center gap-1.5">
-                        <Info size={14} className="text-indigo-500" />
+                    <label className="text-sm font-bold text-white flex items-center gap-1.5">
+                        <Info size={14} className="text-indigo-400" />
                         解析提示词模板
                     </label>
                     <div className="flex items-center gap-2">
                         {!isCreating ? (
                             <button
                                 onClick={() => setIsCreating(true)}
-                                className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium"
+                                className="p-1.5 text-indigo-300 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium"
                             >
                                 <Plus size={14} /> 新建
                             </button>
@@ -190,16 +190,16 @@ const AIPromptSettingsSection: React.FC = () => {
                                     value={newName}
                                     onChange={(e) => setNewName(e.target.value)}
                                     placeholder="输入名称..."
-                                    className="px-2 py-1 border border-indigo-200 rounded text-xs outline-none focus:ring-1 focus:ring-indigo-500"
+                                    className="px-2 py-1 bg-white/5 border border-white/20 rounded text-xs text-white outline-none focus:ring-1 focus:ring-indigo-500 placeholder-white/20"
                                     onKeyDown={(e) => e.key === 'Enter' && handleConfirmNew()}
                                 />
-                                <button onClick={handleConfirmNew} className="text-xs text-indigo-600 font-bold px-1 underline">确定</button>
-                                <button onClick={() => setIsCreating(false)} className="text-xs text-gray-400 px-1">取消</button>
+                                <button onClick={handleConfirmNew} className="text-xs text-indigo-300 font-bold px-1 underline hover:text-indigo-200">确定</button>
+                                <button onClick={() => setIsCreating(false)} className="text-xs text-white/40 px-1 hover:text-white/60">取消</button>
                             </div>
                         )}
                         <button
                             onClick={handleDelete}
-                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium"
+                            className="p-1.5 text-red-400 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium"
                         >
                             <Trash2 size={14} /> 删除
                         </button>
@@ -210,13 +210,13 @@ const AIPromptSettingsSection: React.FC = () => {
                     <select
                         value={activeId}
                         onChange={handleSelectTemplate}
-                        className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer pr-10 shadow-sm"
+                        className="w-full p-2.5 bg-black/20 border border-white/10 rounded-xl text-sm font-medium text-white focus:ring-2 focus:ring-indigo-500/50 outline-none appearance-none cursor-pointer pr-10 shadow-inner hover:bg-black/30 transition-colors"
                     >
                         {templates.map(t => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
+                            <option key={t.id} value={t.id} className="bg-slate-800 text-white">{t.name}</option>
                         ))}
                     </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
                         <ChevronDown size={14} />
                     </div>
                 </div>
@@ -226,17 +226,17 @@ const AIPromptSettingsSection: React.FC = () => {
                         value={editingContent}
                         onChange={(e) => setEditingContent(e.target.value)}
                         rows={6}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-[11px] font-mono focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all resize-none leading-relaxed"
+                        className="w-full p-3 bg-black/20 border border-white/10 rounded-xl text-[11px] font-mono text-white/90 focus:ring-2 focus:ring-indigo-500/50 focus:bg-black/30 outline-none transition-all resize-none leading-relaxed placeholder-white/20"
                         placeholder="请输入自定义解析提示词..."
                     />
-                    <div className="absolute bottom-2 right-2 text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute bottom-2 right-2 text-[10px] text-white/30 opacity-0 group-hover:opacity-100 transition-opacity">
                         使用 {'{{text}}'} 作为占位符
                     </div>
                 </div>
 
                 <button
                     onClick={handleSave}
-                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all shadow-sm flex items-center justify-center gap-2"
+                    className="w-full py-2.5 bg-indigo-500/80 hover:bg-indigo-500 text-white rounded-xl font-medium transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 border border-indigo-400/20"
                 >
                     <Save size={16} /> 保存当前模板
                 </button>

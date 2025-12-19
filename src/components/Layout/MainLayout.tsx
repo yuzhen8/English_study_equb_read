@@ -3,10 +3,13 @@ import { Outlet } from 'react-router-dom';
 import BottomNav from './BottomNav';
 
 const MainLayout: React.FC = () => {
+    // Theme handled by App.tsx
+    // const { currentTheme } = useTheme();
+
     return (
-        <div className="flex flex-col h-screen bg-slate-50 text-slate-900 font-sans">
-            {/* 内容区域：高度=屏幕高度-导航栏高度(64px)，滚动条在此区域内 */}
-            <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col h-full font-sans overflow-hidden relative">
+            {/* Content Area */}
+            <div className="flex-1 overflow-hidden relative z-10 pb-24">
                 <Outlet />
             </div>
             <BottomNav />

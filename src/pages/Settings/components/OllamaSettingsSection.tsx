@@ -124,7 +124,7 @@ const OllamaSettingsSection: React.FC<OllamaSettingsSectionProps> = ({ isActive 
     return (
         <div className="space-y-4">
             <div className={isActive ? 'opacity-100' : 'opacity-50 pointer-events-none'}>
-                <label className="block text-sm font-medium mb-1 text-gray-700" htmlFor="ollamaUrl">Ollama 服务地址</label>
+                <label className="block text-sm font-medium mb-1 text-white/80" htmlFor="ollamaUrl">Ollama 服务地址</label>
                 <div className="relative">
                     <input
                         id="ollamaUrl"
@@ -132,9 +132,9 @@ const OllamaSettingsSection: React.FC<OllamaSettingsSectionProps> = ({ isActive 
                         value={config.ollamaUrl}
                         onChange={handleChange('ollamaUrl')}
                         placeholder="http://localhost:11434"
-                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all pl-10"
+                        className="w-full p-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all pl-10 placeholder-white/20"
                     />
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
                         <Link size={16} />
                     </div>
                 </div>
@@ -147,9 +147,9 @@ const OllamaSettingsSection: React.FC<OllamaSettingsSectionProps> = ({ isActive 
                         type="checkbox"
                         checked={config.ollamaContextEnabled}
                         onChange={(e) => setConfig({ ...config, ollamaContextEnabled: e.target.checked })}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                        className="w-4 h-4 text-blue-600 border-white/20 rounded focus:ring-blue-500 bg-white/5"
                     />
-                    <label className="ml-2 block text-xs font-medium text-gray-600 cursor-pointer" htmlFor="ollamaContextEnabled">
+                    <label className="ml-2 block text-xs font-medium text-white/70 cursor-pointer" htmlFor="ollamaContextEnabled">
                         启用上下文语境
                     </label>
                 </div>
@@ -159,9 +159,9 @@ const OllamaSettingsSection: React.FC<OllamaSettingsSectionProps> = ({ isActive 
                         type="checkbox"
                         checked={config.ollamaThinkEnabled}
                         onChange={(e) => setConfig({ ...config, ollamaThinkEnabled: e.target.checked })}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                        className="w-4 h-4 text-blue-600 border-white/20 rounded focus:ring-blue-500 bg-white/5"
                     />
-                    <label className="ml-2 block text-xs font-medium text-gray-600 cursor-pointer" htmlFor="ollamaThinkEnabled">
+                    <label className="ml-2 block text-xs font-medium text-white/70 cursor-pointer" htmlFor="ollamaThinkEnabled">
                         显示思考过程
                     </label>
                 </div>
@@ -169,7 +169,7 @@ const OllamaSettingsSection: React.FC<OllamaSettingsSectionProps> = ({ isActive 
 
             <div className={`grid grid-cols-2 gap-4 ${isActive ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
                 <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700" htmlFor="ollamaModel">模型名称</label>
+                    <label className="block text-sm font-medium mb-1 text-white/80" htmlFor="ollamaModel">模型名称</label>
                     <div className="relative">
                         <input
                             id="ollamaModel"
@@ -177,23 +177,23 @@ const OllamaSettingsSection: React.FC<OllamaSettingsSectionProps> = ({ isActive 
                             value={config.ollamaModel}
                             onChange={handleChange('ollamaModel')}
                             placeholder="llama3"
-                            className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all pl-10"
+                            className="w-full p-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all pl-10 placeholder-white/20"
                         />
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
                             <Bot size={16} />
                         </div>
                     </div>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700">外部访问</label>
+                    <label className="block text-sm font-medium mb-1 text-white/80">外部访问</label>
                     <a
                         href="https://github.com/ollama/ollama/blob/main/docs/faq.md#how-can-i-allow-additional-origins"
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center justify-between p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors group"
+                        className="flex items-center justify-between p-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white/70 hover:bg-white/10 transition-colors group"
                     >
                         <span>配置指南</span>
-                        <ExternalLink size={14} className="text-gray-400 group-hover:text-gray-600" />
+                        <ExternalLink size={14} className="text-white/40 group-hover:text-white/70" />
                     </a>
                 </div>
             </div>
@@ -202,21 +202,21 @@ const OllamaSettingsSection: React.FC<OllamaSettingsSectionProps> = ({ isActive 
                 <button
                     type="button"
                     onClick={handleSave}
-                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-sm"
+                    className="flex-1 py-2.5 bg-blue-600/80 hover:bg-blue-600 text-white rounded-xl font-medium transition-colors shadow-lg shadow-blue-500/20 border border-blue-400/20"
                 >
                     保存配置
                 </button>
                 <button
                     type="button"
                     onClick={testConnection}
-                    className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-medium transition-colors"
+                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white rounded-xl font-medium transition-colors border border-white/10"
                 >
                     测试连接
                 </button>
             </div>
 
             {status && (
-                <div className={`text-sm text-center p-2 rounded-lg ${status.includes('成功') ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'}`}>
+                <div className={`text-sm text-center p-2 rounded-lg backdrop-blur-sm border ${status.includes('成功') ? 'bg-green-500/10 text-green-300 border-green-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}`}>
                     {status}
                 </div>
             )}

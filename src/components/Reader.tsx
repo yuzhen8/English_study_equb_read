@@ -72,6 +72,7 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
     const inputStartRef = useRef<{ x: number, y: number, time: number } | null>(null);
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const isLongPressRef = useRef<boolean>(false);
+    const isSelectingRef = useRef<boolean>(false);
     // Prevent mouse events from firing after touch events
     const lastTouchTimeRef = useRef<number>(0);
 
@@ -172,6 +173,10 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                 box-decoration-break: clone;
                 -webkit-box-decoration-break: clone;
             `);
+
+            // Enable native selection
+            renditionRef.current.themes.override('user-select', 'auto');
+            renditionRef.current.themes.override('-webkit-user-select', 'auto');
         }
     };
 
@@ -280,19 +285,70 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
 
                 // --- Unified Input Handling (Touch & Mouse) ---
 
+                // Helper to expand range to word
+                const expandToWord = (range: Range, textNode: Node) => {
+                    const text = textNode.textContent || "";
+                    let start = range.startOffset;
+                    let end = range.endOffset;
+                    while (end < text.length && /[\w\d']/.test(text[end])) end++;
+                    while (start > 0 && /[\w\d']/.test(text[start - 1])) start--;
+                    try {
+                        range.setStart(textNode, start);
+                        range.setEnd(textNode, end);
+                    } catch (e) { }
+                    return range;
+                };
+
+                const handleLongPress = (x: number, y: number, doc: Document) => {
+                    isLongPressRef.current = true;
+                    isSelectingRef.current = true;
+                    // @ts-ignore
+                    if (doc.caretRangeFromPoint) {
+                        // @ts-ignore
+                        const range = doc.caretRangeFromPoint(x, y);
+                        if (range && range.startContainer.nodeType === Node.TEXT_NODE) {
+                            expandToWord(range, range.startContainer);
+                            const selection = doc.getSelection();
+                            if (selection) {
+                                selection.removeAllRanges();
+                                selection.addRange(range);
+                            }
+                        }
+                    }
+                };
+
                 const startInput = (x: number, y: number, _type: 'touch' | 'mouse') => {
                     inputStartRef.current = { x, y, time: Date.now() };
                     isLongPressRef.current = false;
+                    isSelectingRef.current = false;
 
                     // Start long press timer
                     longPressTimerRef.current = setTimeout(() => {
-                        isLongPressRef.current = true;
                         handleLongPress(x, y, doc);
                     }, 600);
                 };
 
                 const moveInput = (x: number, y: number) => {
                     if (!inputStartRef.current) return;
+
+                    if (isSelectingRef.current) {
+                        // Drag Selection Logic
+                        const sel = doc.getSelection();
+                        // @ts-ignore
+                        if (sel && sel.rangeCount > 0 && doc.caretRangeFromPoint) {
+                            // @ts-ignore
+                            const range = doc.caretRangeFromPoint(x, y);
+                            if (range) {
+                                try {
+                                    sel.extend(range.startContainer, range.startOffset);
+                                } catch (e) {
+                                    // Fallback for browsers that don't support extend across nodes easily or if range is invalid
+                                    // console.warn(e);
+                                }
+                            }
+                        }
+                        return;
+                    }
 
                     const diffX = Math.abs(x - inputStartRef.current.x);
                     const diffY = Math.abs(y - inputStartRef.current.y);
@@ -311,6 +367,24 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                     if (longPressTimerRef.current) {
                         clearTimeout(longPressTimerRef.current);
                         longPressTimerRef.current = null;
+                    }
+
+                    if (isSelectingRef.current) {
+                        isSelectingRef.current = false;
+                        isLongPressRef.current = false;
+                        inputStartRef.current = null;
+
+                        // Check if we selected something valuable to show popup
+                        const selection = doc.getSelection();
+                        if (selection && selection.toString().trim().length > 0) {
+                            // const text = selection.toString().trim(); // Unused
+                            // Simple popup trigger relies on mouseup usually, but we can synthesize or just leave it
+                            // as the selection exists, the user can click 'Copy' or we can auto-show logic inside mouseup?
+                            // Verify if we need to manually trigger popup here. 
+                            // The existing mouseup handler checks selection. Let's trigger it manually if needed.
+                            // But mouseup runs after this.
+                        }
+                        return;
                     }
 
                     if (inputStartRef.current && !isLongPressRef.current) {
@@ -359,6 +433,9 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                     startInput(t.clientX, t.clientY, 'touch');
                 };
                 const handleTouchMove = (e: TouchEvent) => {
+                    if (isSelectingRef.current && e.cancelable) {
+                        e.preventDefault(); // Prevent scroll while selecting
+                    }
                     const t = e.touches[0];
                     moveInput(t.clientX, t.clientY);
                 };
@@ -386,58 +463,9 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                     endInput(e.clientX, e.clientY);
                 };
 
-                // Helper to expand range to sentence
-                const expandToSentence = (range: Range, textNode: Node) => {
-                    const text = textNode.textContent || "";
-                    let start = range.startOffset;
-                    let end = range.endOffset;
 
-                    // Scan backwards for sentence start
-                    while (start > 0) {
-                        const char = text[start - 1];
-                        if (/[.?!]/.test(char) && !/\b(Mr|Mrs|Ms|Dr|Jr|Sr)\./i.test(text.substring(start - 4, start))) {
-                            break;
-                        }
-                        start--;
-                    }
-                    // Scan forwards for sentence end
-                    while (end < text.length) {
-                        const char = text[end];
-                        if (/[.?!]/.test(char) && !/\b(Mr|Mrs|Ms|Dr|Jr|Sr)\./i.test(text.substring(end - 3, end + 1))) {
-                            end++;
-                            break;
-                        }
-                        end++;
-                    }
 
-                    try {
-                        range.setStart(textNode, start);
-                        range.setEnd(textNode, end);
-                    } catch (e) { console.error("Range expansion error", e) }
-                    return range;
-                };
 
-                const handleLongPress = (x: number, y: number, doc: Document) => {
-                    // @ts-ignore - native API
-                    if (doc.caretRangeFromPoint) {
-                        // @ts-ignore
-                        const range = doc.caretRangeFromPoint(x, y);
-                        if (range && range.startContainer.nodeType === Node.TEXT_NODE) {
-                            const expandedRange = expandToSentence(range, range.startContainer);
-                            const selection = doc.getSelection();
-                            if (selection) {
-                                selection.removeAllRanges();
-                                selection.addRange(expandedRange);
-
-                                const text = selection.toString().trim();
-                                if (text) {
-                                    setGrammarData({ text, context: text }); // Context is the sentence itself
-                                    setShowGrammarPopup(true);
-                                }
-                            }
-                        }
-                    }
-                };
 
 
 
@@ -498,7 +526,7 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                 });
 
                 doc.addEventListener('touchstart', handleTouchStart, { passive: true });
-                doc.addEventListener('touchmove', handleTouchMove, { passive: true });
+                doc.addEventListener('touchmove', handleTouchMove, { passive: false });
                 doc.addEventListener('touchend', handleTouchEnd, { passive: true });
 
                 doc.addEventListener('mousedown', handleMouseDown);
@@ -1023,7 +1051,7 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
 
     return (
         <div
-            className={`reader-container relative w-full h-screen overflow-hidden ${bgColors[settings.theme]}`}
+            className={`reader-container relative w-full h-full overflow-hidden ${bgColors[settings.theme]}`}
             onTouchStart={onContainerInputStart}
             onTouchEnd={onContainerInputEnd}
             onMouseDown={onContainerInputStart}
@@ -1048,7 +1076,10 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
             )}>
                 <button
                     onClick={() => onClose?.()}
-                    className="flex items-center justify-center w-10 h-10 bg-white/40 backdrop-blur-md border border-white/20 text-gray-600 rounded-full shadow-lg hover:bg-white/60 hover:text-gray-900 hover:scale-105 active:scale-95 transition-all group"
+                    className={cn(
+                        "flex items-center justify-center w-10 h-10 backdrop-blur-md rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all group",
+                        settings.theme === 'dark' ? "bg-black/40 border border-white/20 text-gray-200 hover:bg-black/60 hover:text-white" : "bg-white/40 border border-white/20 text-gray-600 hover:bg-white/60 hover:text-gray-900"
+                    )}
                     title="退出阅读"
                 >
                     <ChevronLeft size={24} className="group-hover:-translate-x-0.5 transition-transform" />
@@ -1060,7 +1091,10 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                 "absolute bottom-4 left-0 right-0 z-30 px-4 flex items-center justify-center transition-all duration-500 ease-out transform",
                 showControls ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0 pointer-events-none"
             )}>
-                <div className="flex items-center gap-3 text-gray-400 text-[10px] bg-white/50 backdrop-blur-sm px-3 py-1 rounded-full pointer-events-auto border border-white/20">
+                <div className={cn(
+                    "flex items-center gap-3 text-[10px] backdrop-blur-sm px-3 py-1 rounded-full pointer-events-auto border",
+                    settings.theme === 'dark' ? "bg-black/40 text-gray-400 border-white/20" : "bg-white/50 text-gray-600 border-white/20"
+                )}>
                     <span className="max-w-[100px] truncate">{chapterTitle || '正在阅读...'}</span>
                     <span className="text-gray-300">|</span>
                     <span className="font-medium">{pageInfo.globalCurrent}/{pageInfo.globalTotal}</span>

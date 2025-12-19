@@ -79,32 +79,32 @@ const ExerciseHub: React.FC = () => {
     const newWordsCount = stats.newCount;
 
     return (
-        <div className="bg-gray-50 flex flex-col h-screen overflow-hidden">
+        <div className="bg-transparent flex flex-col h-screen overflow-hidden text-white">
             {/* Header */}
-            <div className="bg-white px-4 pt-12 pb-4 flex items-center justify-between flex-shrink-0">
-                <h1 className="text-2xl font-bold text-gray-900">锻炼</h1>
+            <div className="bg-transparent px-4 pt-8 pb-4 flex items-center justify-between flex-shrink-0">
+                <h1 className="text-3xl font-bold text-white drop-shadow-md">锻炼</h1>
                 <button
                     onClick={() => setShowSettings(true)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-2 hover:bg-white/10 rounded-full transition-colors glass-button"
                 >
-                    <Settings2 size={22} className="text-gray-500" />
+                    <Settings2 size={22} className="text-white/80" />
                 </button>
             </div>
 
             <div className="flex-1 overflow-y-auto overflow-x-hidden">
                 <div className="p-4 space-y-6">
                     {/* 每日学习统计 */}
-                    <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+                    <div className="glass-card p-5">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-gray-900">训练统计</h3>
+                            <h3 className="font-bold text-white">训练统计</h3>
                             <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-1.5">
-                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                                    <span className="text-[10px] text-gray-500 font-medium">学习</span>
+                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 box-shadow-glow"></div>
+                                    <span className="text-[10px] text-white/60 font-medium">学习</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
-                                    <span className="text-[10px] text-gray-500 font-medium">复习</span>
+                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-400 box-shadow-glow"></div>
+                                    <span className="text-[10px] text-white/60 font-medium">复习</span>
                                 </div>
                             </div>
                         </div>
@@ -117,32 +117,41 @@ const ExerciseHub: React.FC = () => {
                                             dataKey="name"
                                             axisLine={false}
                                             tickLine={false}
-                                            tick={{ fontSize: 10, fill: '#9CA3AF' }}
+                                            tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)' }}
                                             dy={10}
                                         />
                                         <Tooltip
-                                            cursor={{ fill: '#F3F4F6' }}
-                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '11px' }}
+                                            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                            contentStyle={{
+                                                backgroundColor: 'rgba(23, 23, 23, 0.8)',
+                                                backdropFilter: 'blur(8px)',
+                                                border: 'none',
+                                                borderRadius: '12px',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                                fontSize: '11px',
+                                                color: '#fff'
+                                            }}
+                                            itemStyle={{ color: '#fff' }}
                                         />
-                                        <Bar dataKey="learned" stackId="a" fill="#10B981" radius={[2, 2, 0, 0]} barSize={16} />
-                                        <Bar dataKey="reviewed" stackId="a" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={16} />
+                                        <Bar dataKey="learned" stackId="a" fill="#34d399" radius={[2, 2, 0, 0]} barSize={16} />
+                                        <Bar dataKey="reviewed" stackId="a" fill="#60a5fa" radius={[4, 4, 0, 0]} barSize={16} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                                <div className="w-full h-full flex items-center justify-center text-white/20 text-xs">
                                     暂无数据
                                 </div>
                             )}
                         </div>
 
                         <div className="mt-6 grid grid-cols-2 gap-4">
-                            <div className="bg-emerald-50 rounded-2xl p-3">
-                                <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">今日学习</p>
-                                <p className="text-xl font-black text-emerald-700">{weekData[weekData.length - 1]?.learned || 0}</p>
+                            <div className="bg-emerald-500/10 rounded-2xl p-3 border border-emerald-500/20">
+                                <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">今日学习</p>
+                                <p className="text-xl font-black text-emerald-300">{weekData[weekData.length - 1]?.learned || 0}</p>
                             </div>
-                            <div className="bg-blue-50 rounded-2xl p-3">
-                                <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">今日复习</p>
-                                <p className="text-xl font-black text-blue-700">{weekData[weekData.length - 1]?.reviewed || 0}</p>
+                            <div className="bg-blue-500/10 rounded-2xl p-3 border border-blue-500/20">
+                                <p className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">今日复习</p>
+                                <p className="text-xl font-black text-blue-300">{weekData[weekData.length - 1]?.reviewed || 0}</p>
                             </div>
                         </div>
                     </div>
@@ -150,8 +159,8 @@ const ExerciseHub: React.FC = () => {
                     {/* 间隔学习 */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between px-1">
-                            <h3 className="font-bold text-gray-900">间隔学习</h3>
-                            <button className="text-gray-400 hover:text-gray-600">
+                            <h3 className="font-bold text-white">间隔学习</h3>
+                            <button className="text-white/40 hover:text-white transition-colors">
                                 <HelpCircle size={18} />
                             </button>
                         </div>
@@ -195,7 +204,7 @@ const ExerciseHub: React.FC = () => {
 
                     {/* 训练模式 */}
                     <div className="space-y-3">
-                        <h3 className="font-bold text-gray-900 px-1">训练模式</h3>
+                        <h3 className="font-bold text-white px-1">训练模式</h3>
 
                         <ExerciseItem
                             icon={Zap}
@@ -271,17 +280,17 @@ const ExerciseItem: React.FC<ExerciseItemProps> = ({ icon: Icon, color, title, s
     return (
         <button
             onClick={onClick}
-            className="w-full bg-white p-4 rounded-2xl flex items-center gap-4 shadow-sm border border-gray-100 hover:border-blue-200 transition-all hover:shadow-md active:scale-[0.98]"
+            className="w-full glass-card hover:bg-white/10 p-4 rounded-2xl flex items-center gap-4 hover:border-white/20 transition-all hover:translate-x-1 active:scale-[0.98]"
         >
-            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm", color)}>
+            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg", color)}>
                 <Icon size={24} />
             </div>
             <div className="flex-1 text-left">
-                <h4 className="font-bold text-gray-900">{title}</h4>
-                <p className="text-xs text-gray-500">{subtitle}</p>
+                <h4 className="font-bold text-white">{title}</h4>
+                <p className="text-xs text-white/50">{subtitle}</p>
             </div>
             {count !== undefined && (
-                <div className="bg-gray-100 px-2.5 py-1 rounded-full text-xs font-medium text-gray-600">
+                <div className="bg-white/20 px-2.5 py-1 rounded-full text-xs font-medium text-white/80">
                     {count}
                 </div>
             )}

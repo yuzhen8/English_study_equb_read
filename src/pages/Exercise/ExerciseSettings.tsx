@@ -76,16 +76,16 @@ interface SettingsSectionProps {
 
 const SettingsSection: React.FC<SettingsSectionProps> = ({ title, expanded, onToggle, children }) => {
     return (
-        <div className="border-b border-gray-100">
+        <div className="border-b border-white/10">
             <button
                 onClick={onToggle}
-                className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                className="w-full px-4 py-4 flex items-center justify-between hover:bg-white/5 transition-colors"
             >
-                <span className="font-medium text-gray-900">{title}</span>
+                <span className="font-medium text-white">{title}</span>
                 {expanded ? (
-                    <ChevronUp size={20} className="text-gray-400" />
+                    <ChevronUp size={20} className="text-white/40" />
                 ) : (
-                    <ChevronDown size={20} className="text-gray-400" />
+                    <ChevronDown size={20} className="text-white/40" />
                 )}
             </button>
             {expanded && (
@@ -109,16 +109,16 @@ const ToggleSetting: React.FC<ToggleSettingProps> = ({ label, checked, onChange,
     return (
         <div className="flex items-center justify-between py-1">
             <div className="flex-1 pr-4">
-                <span className="text-gray-800">{label}</span>
+                <span className="text-white/90">{label}</span>
                 {description && (
-                    <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+                    <p className="text-xs text-white/40 mt-0.5">{description}</p>
                 )}
             </div>
             <button
                 onClick={() => onChange(!checked)}
                 className={cn(
-                    "w-12 h-7 rounded-full transition-colors relative flex-shrink-0",
-                    checked ? "bg-emerald-500" : "bg-gray-300"
+                    "w-12 h-7 rounded-full transition-colors relative flex-shrink-0 shadow-inner",
+                    checked ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]" : "bg-white/10"
                 )}
             >
                 <div
@@ -151,12 +151,12 @@ const SliderSetting: React.FC<SliderSettingProps> = ({
         <div className="py-1">
             <div className="flex items-center justify-between mb-1">
                 <div>
-                    <span className="text-gray-800">{label}</span>
+                    <span className="text-white/90">{label}</span>
                     {description && (
-                        <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+                        <p className="text-xs text-white/40 mt-0.5">{description}</p>
                     )}
                 </div>
-                <span className="text-sm text-gray-600 font-medium bg-gray-100 px-2 py-0.5 rounded">
+                <span className="text-sm text-white font-medium bg-white/10 px-2 py-0.5 rounded border border-white/5">
                     {formatValue ? formatValue(value) : value}
                 </span>
             </div>
@@ -167,7 +167,7 @@ const SliderSetting: React.FC<SliderSettingProps> = ({
                 step={step}
                 value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400"
             />
         </div>
     );
@@ -199,139 +199,142 @@ const ExerciseSettings: React.FC<ExerciseSettingsProps> = ({ onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col">
-            {/* Header */}
-            <header className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
-                <button
-                    onClick={onClose}
-                    className="text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                    取消
-                </button>
-                <h1 className="text-lg font-bold text-gray-900">训练设置</h1>
-                <button
-                    onClick={handleSave}
-                    className="text-blue-600 font-medium hover:text-blue-700 transition-colors"
-                >
-                    保存
-                </button>
-            </header>
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="absolute inset-0" onClick={onClose} />
+            <div className="relative z-10 w-full max-w-lg mx-auto my-auto glass-card flex flex-col max-h-[90vh] shadow-2xl border border-white/20 rounded-3xl overflow-hidden">
+                {/* Header */}
+                <header className="flex items-center justify-between px-4 py-4 border-b border-white/10 bg-white/5">
+                    <button
+                        onClick={onClose}
+                        className="text-white/60 hover:text-white transition-colors"
+                    >
+                        取消
+                    </button>
+                    <h1 className="text-lg font-bold text-white tracking-wide">训练设置</h1>
+                    <button
+                        onClick={handleSave}
+                        className="text-emerald-400 font-medium hover:text-emerald-300 transition-colors"
+                    >
+                        保存
+                    </button>
+                </header>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto">
-                {/* 通用设置 */}
-                <SettingsSection
-                    title="通用设置"
-                    expanded={expandedSections.general}
-                    onToggle={() => toggleSection('general')}
-                >
-                    <ToggleSetting
-                        label="显示训练设置"
-                        checked={settings.showSettingsOnStart}
-                        onChange={(v) => updateSetting('showSettingsOnStart', v)}
-                        description="每次训练前显示训练设置"
-                    />
-                    <SliderSetting
-                        label="选择训练的单词数量"
-                        value={settings.wordCount}
-                        min={1}
-                        max={50}
-                        step={1}
-                        onChange={(v) => updateSetting('wordCount', v)}
-                        formatValue={(v) => String(v)}
-                    />
-                    <ToggleSetting
-                        label="复杂「拼写单词」训练"
-                        checked={settings.useKeyboardSpelling}
-                        onChange={(v) => updateSetting('useKeyboardSpelling', v)}
-                        description="你需要用系统键盘拼写单词，而不是选择字母"
-                    />
-                </SettingsSection>
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto">
+                    {/* 通用设置 */}
+                    <SettingsSection
+                        title="通用设置"
+                        expanded={expandedSections.general}
+                        onToggle={() => toggleSection('general')}
+                    >
+                        <ToggleSetting
+                            label="显示训练设置"
+                            checked={settings.showSettingsOnStart}
+                            onChange={(v) => updateSetting('showSettingsOnStart', v)}
+                            description="每次训练前显示训练设置"
+                        />
+                        <SliderSetting
+                            label="选择训练的单词数量"
+                            value={settings.wordCount}
+                            min={1}
+                            max={50}
+                            step={1}
+                            onChange={(v) => updateSetting('wordCount', v)}
+                            formatValue={(v) => String(v)}
+                        />
+                        <ToggleSetting
+                            label="复杂「拼写单词」训练"
+                            checked={settings.useKeyboardSpelling}
+                            onChange={(v) => updateSetting('useKeyboardSpelling', v)}
+                            description="你需要用系统键盘拼写单词，而不是选择字母"
+                        />
+                    </SettingsSection>
 
-                {/* 发音设置 */}
-                <SettingsSection
-                    title="发音设置"
-                    expanded={expandedSections.audio}
-                    onToggle={() => toggleSection('audio')}
-                >
-                    <ToggleSetting
-                        label="自动播放发音"
-                        checked={settings.autoPlayAudio}
-                        onChange={(v) => updateSetting('autoPlayAudio', v)}
-                        description="进入新单词时自动播放发音"
-                    />
-                    <SliderSetting
-                        label="播放速度"
-                        value={settings.playbackSpeed}
-                        min={0.5}
-                        max={1.5}
-                        step={0.1}
-                        onChange={(v) => updateSetting('playbackSpeed', v)}
-                        formatValue={(v) => `${v.toFixed(1)}x`}
-                    />
-                </SettingsSection>
+                    {/* 发音设置 */}
+                    <SettingsSection
+                        title="发音设置"
+                        expanded={expandedSections.audio}
+                        onToggle={() => toggleSection('audio')}
+                    >
+                        <ToggleSetting
+                            label="自动播放发音"
+                            checked={settings.autoPlayAudio}
+                            onChange={(v) => updateSetting('autoPlayAudio', v)}
+                            description="进入新单词时自动播放发音"
+                        />
+                        <SliderSetting
+                            label="播放速度"
+                            value={settings.playbackSpeed}
+                            min={0.5}
+                            max={1.5}
+                            step={0.1}
+                            onChange={(v) => updateSetting('playbackSpeed', v)}
+                            formatValue={(v) => `${v.toFixed(1)}x`}
+                        />
+                    </SettingsSection>
 
-                {/* 混合训练组成 */}
-                <SettingsSection
-                    title="混合训练的组成"
-                    expanded={expandedSections.mixed}
-                    onToggle={() => toggleSection('mixed')}
-                >
-                    <ToggleSetting
-                        label="单词闪卡"
-                        checked={settings.includeFlashcard}
-                        onChange={(v) => updateSetting('includeFlashcard', v)}
-                    />
-                    <ToggleSetting
-                        label="多项选择"
-                        checked={settings.includeChoice}
-                        onChange={(v) => updateSetting('includeChoice', v)}
-                    />
-                    <ToggleSetting
-                        label="拼写构建"
-                        checked={settings.includeSpelling}
-                        onChange={(v) => updateSetting('includeSpelling', v)}
-                    />
-                    <ToggleSetting
-                        label="听力选择"
-                        checked={settings.includeListeningChoice}
-                        onChange={(v) => updateSetting('includeListeningChoice', v)}
-                    />
-                    <ToggleSetting
-                        label="听力拼写"
-                        checked={settings.includeListeningSpelling}
-                        onChange={(v) => updateSetting('includeListeningSpelling', v)}
-                    />
-                    <ToggleSetting
-                        label="选词填空"
-                        checked={settings.includeFillBlank}
-                        onChange={(v) => updateSetting('includeFillBlank', v)}
-                    />
-                </SettingsSection>
+                    {/* 混合训练组成 */}
+                    <SettingsSection
+                        title="混合训练的组成"
+                        expanded={expandedSections.mixed}
+                        onToggle={() => toggleSection('mixed')}
+                    >
+                        <ToggleSetting
+                            label="单词闪卡"
+                            checked={settings.includeFlashcard}
+                            onChange={(v) => updateSetting('includeFlashcard', v)}
+                        />
+                        <ToggleSetting
+                            label="多项选择"
+                            checked={settings.includeChoice}
+                            onChange={(v) => updateSetting('includeChoice', v)}
+                        />
+                        <ToggleSetting
+                            label="拼写构建"
+                            checked={settings.includeSpelling}
+                            onChange={(v) => updateSetting('includeSpelling', v)}
+                        />
+                        <ToggleSetting
+                            label="听力选择"
+                            checked={settings.includeListeningChoice}
+                            onChange={(v) => updateSetting('includeListeningChoice', v)}
+                        />
+                        <ToggleSetting
+                            label="听力拼写"
+                            checked={settings.includeListeningSpelling}
+                            onChange={(v) => updateSetting('includeListeningSpelling', v)}
+                        />
+                        <ToggleSetting
+                            label="选词填空"
+                            checked={settings.includeFillBlank}
+                            onChange={(v) => updateSetting('includeFillBlank', v)}
+                        />
+                    </SettingsSection>
 
-                {/* 开发者设置 */}
-                <SettingsSection
-                    title="开发者选项"
-                    expanded={expandedSections.developer}
-                    onToggle={() => toggleSection('developer')}
-                >
-                    <ToggleSetting
-                        label="SRS 调试日志"
-                        checked={settings.enableSRSDebugLog}
-                        onChange={(v) => updateSetting('enableSRSDebugLog', v)}
-                        description="完成练习后将 SRS 算法变更记录保存到桌面"
-                    />
-                </SettingsSection>
-            </div>
+                    {/* 开发者设置 */}
+                    <SettingsSection
+                        title="开发者选项"
+                        expanded={expandedSections.developer}
+                        onToggle={() => toggleSection('developer')}
+                    >
+                        <ToggleSetting
+                            label="SRS 调试日志"
+                            checked={settings.enableSRSDebugLog}
+                            onChange={(v) => updateSetting('enableSRSDebugLog', v)}
+                            description="完成练习后将 SRS 算法变更记录保存到桌面"
+                        />
+                    </SettingsSection>
+                </div>
 
-            {/* Footer - Save Button */}
-            <div className="p-4 border-t border-gray-100">
-                <button
-                    onClick={handleSave}
-                    className="w-full py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
-                >
-                    保存
-                </button>
+                {/* Footer - Save Button */}
+                <div className="p-4 border-t border-white/10 bg-white/5">
+                    <button
+                        onClick={handleSave}
+                        className="w-full py-3 bg-white text-black rounded-xl font-bold hover:bg-white/90 transition-colors shadow-lg shadow-white/10"
+                    >
+                        保存设置
+                    </button>
+                </div>
             </div>
         </div>
     );

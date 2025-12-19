@@ -21,6 +21,13 @@ interface ElectronAPI {
     saveBackupData: (data: string) => Promise<{ success: boolean; path?: string; error?: string }>;
     loadBackupData: () => Promise<{ success: boolean; data?: string; error?: string }>;
     exportBooks: () => Promise<{ success: boolean; count?: number; error?: string }>;
+    aiFetch: (options: { url: string, method?: string, headers?: any, body?: any }) => Promise<{ ok: boolean; status: number; statusText: string; data?: any; error?: string }>;
+
+    // Window Controls
+    minimize: () => Promise<void>;
+    maximize: () => Promise<void>;
+    close: () => Promise<void>;
+    onMaximizedChange: (callback: (isMaximized: boolean) => void) => () => void;
 }
 
 // CEFR 分析结果接口

@@ -54,7 +54,7 @@ const ListeningChoiceMode: React.FC<ListeningChoiceModeProps> = ({ word, onResul
 
         setTimeout(() => {
             onResult(quality);
-        }, 1500);
+        }, 600);
     };
 
     if (options.length === 0) {
@@ -66,7 +66,7 @@ const ListeningChoiceMode: React.FC<ListeningChoiceModeProps> = ({ word, onResul
             <div className="max-w-md w-full mx-auto space-y-4">
                 {/* 听力提示区域 */}
                 <div className="text-center py-4">
-                    <span className="inline-block px-3 py-1 bg-pink-50 text-pink-600 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
+                    <span className="inline-block px-3 py-1 bg-white/10 text-pink-300 border border-pink-500/30 rounded-full text-xs font-bold uppercase tracking-wider mb-4 backdrop-blur-md shadow-[0_0_10px_rgba(236,72,153,0.2)]">
                         Listening Choice
                     </span>
 
@@ -74,11 +74,11 @@ const ListeningChoiceMode: React.FC<ListeningChoiceModeProps> = ({ word, onResul
                     <div className="flex flex-col items-center gap-3 mb-3">
                         <button
                             onClick={playAudio}
-                            className="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+                            className="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50 transition-all hover:scale-105 active:scale-95 border border-white/20"
                         >
                             <Volume2 size={28} />
                         </button>
-                        <p className="text-gray-400 text-sm">
+                        <p className="text-white/40 text-sm">
                             {hasPlayed ? '点击重新播放' : '正在播放...'}
                         </p>
                     </div>
@@ -86,21 +86,21 @@ const ListeningChoiceMode: React.FC<ListeningChoiceModeProps> = ({ word, onResul
                     {/* 详情按钮 - 始终显示 */}
                     <button
                         onClick={() => setShowWordDetail(true)}
-                        className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-700 transition-colors px-3 py-1.5 rounded-full hover:bg-purple-50 text-sm mb-2"
+                        className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors px-4 py-2 rounded-full hover:bg-white/10 border border-white/5 hover:border-white/20 glass-button mb-4"
                     >
                         <BookOpen size={16} />
-                        <span>查看详情</span>
+                        <span className="text-sm font-medium">查看详情</span>
                     </button>
 
                     {/* 显示答案后显示单词 */}
                     {selectedId && (
                         <div className="animate-fade-in">
-                            <h2 className="text-2xl font-bold text-gray-900">{word.lemma || word.text}</h2>
+                            <h2 className="text-2xl font-bold text-white drop-shadow-md">{word.lemma || word.text}</h2>
                         </div>
                     )}
 
                     {!selectedId && (
-                        <p className="text-gray-500 text-sm">根据发音选择正确的中文释义</p>
+                        <p className="text-white/40 text-sm">根据发音选择正确的中文释义</p>
                     )}
                 </div>
 
@@ -112,17 +112,17 @@ const ListeningChoiceMode: React.FC<ListeningChoiceModeProps> = ({ word, onResul
                         const showCorrect = selectedId !== null && isCorrect;
                         const showWrong = isSelected && !isCorrect;
 
-                        let buttonClass = "bg-white border-gray-100 hover:border-pink-200 hover:bg-pink-50 text-gray-700";
+                        let buttonClass = "glass-card bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white shadow-sm hover:shadow-md hover:-translate-y-0.5";
                         let icon = null;
 
                         if (showCorrect) {
-                            buttonClass = "bg-green-100 border-green-300 text-green-800 ring-1 ring-green-300";
-                            icon = <Check size={20} className="text-green-600 flex-shrink-0" />;
+                            buttonClass = "bg-emerald-500/20 border-emerald-500/50 text-emerald-300 ring-1 ring-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]";
+                            icon = <Check size={20} className="text-emerald-400 flex-shrink-0" />;
                         } else if (showWrong) {
-                            buttonClass = "bg-red-100 border-red-300 text-red-800 ring-1 ring-red-300";
-                            icon = <X size={20} className="text-red-600 flex-shrink-0" />;
+                            buttonClass = "bg-red-500/20 border-red-500/50 text-red-300 ring-1 ring-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]";
+                            icon = <X size={20} className="text-red-400 flex-shrink-0" />;
                         } else if (selectedId && !isCorrect && !isSelected) {
-                            buttonClass = "bg-gray-50 border-transparent text-gray-300";
+                            buttonClass = "bg-white/5 border-transparent text-white/20 opacity-50 cursor-not-allowed";
                         }
 
                         return (

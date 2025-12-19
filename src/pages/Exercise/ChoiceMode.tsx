@@ -38,9 +38,10 @@ const ChoiceMode: React.FC<ChoiceModeProps> = ({ word, onResult }) => {
         const quality = isCorrect ? 5 : 1; // 5 for perfect, 1 for fail
 
         // Delay to show result feedback
+        // Delay to show result feedback
         setTimeout(() => {
             onResult(quality);
-        }, 1500); // 1.5s delay to read feedback
+        }, 600); // 0.6s delay for snappier feedback
     };
 
     // 播放音频
@@ -59,26 +60,26 @@ const ChoiceMode: React.FC<ChoiceModeProps> = ({ word, onResult }) => {
         <>
             <div className="max-w-md w-full mx-auto space-y-8">
                 <div className="text-center py-8">
-                    <span className="inline-block px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
+                    <span className="inline-block px-3 py-1 bg-white/10 text-purple-300 border border-purple-500/30 rounded-full text-xs font-bold uppercase tracking-wider mb-4 backdrop-blur-md shadow-[0_0_10px_rgba(168,85,247,0.2)]">
                         Multiple Choice
                     </span>
-                    <h2 className="text-4xl font-bold text-gray-900 mb-2">{word.lemma || word.text}</h2>
-                    <p className="text-gray-400 text-sm mb-3">Select the correct meaning</p>
+                    <h2 className="text-4xl font-bold text-white mb-2 drop-shadow-lg tracking-tight">{word.lemma || word.text}</h2>
+                    <p className="text-white/40 text-sm mb-6 font-medium tracking-wide">Select the correct meaning</p>
                     {/* 音频和详情按钮 */}
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-3">
                         <button
                             onClick={playAudio}
-                            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 transition-colors px-3 py-1.5 rounded-full hover:bg-blue-50 text-sm"
+                            className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors px-4 py-2 rounded-full hover:bg-white/10 border border-white/5 hover:border-white/20 shadow-sm glass-button"
                         >
-                            <Volume2 size={16} />
-                            <span>播放</span>
+                            <Volume2 size={18} />
+                            <span className="text-sm font-medium">播放</span>
                         </button>
                         <button
                             onClick={() => setShowWordDetail(true)}
-                            className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-700 transition-colors px-3 py-1.5 rounded-full hover:bg-purple-50 text-sm"
+                            className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors px-4 py-2 rounded-full hover:bg-white/10 border border-white/5 hover:border-white/20 shadow-sm glass-button"
                         >
-                            <BookOpen size={16} />
-                            <span>详情</span>
+                            <BookOpen size={18} />
+                            <span className="text-sm font-medium">详情</span>
                         </button>
                     </div>
                 </div>
@@ -91,18 +92,18 @@ const ChoiceMode: React.FC<ChoiceModeProps> = ({ word, onResult }) => {
                         const showCorrect = selectedId !== null && isCorrect;
                         const showWrong = isSelected && !isCorrect;
 
-                        let buttonClass = "bg-white border-gray-100 hover:border-purple-200 hover:bg-purple-50 text-gray-700";
+                        let buttonClass = "glass-card bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 text-white shadow-sm hover:shadow-md hover:-translate-y-0.5";
                         let icon = null;
 
                         if (showCorrect) {
-                            buttonClass = "bg-green-100 border-green-300 text-green-800 ring-1 ring-green-300";
-                            icon = <Check size={20} className="text-green-600 flex-shrink-0" />;
+                            buttonClass = "bg-emerald-500/20 border-emerald-500/50 text-emerald-300 ring-1 ring-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]";
+                            icon = <Check size={20} className="text-emerald-400 flex-shrink-0" />;
                         } else if (showWrong) {
-                            buttonClass = "bg-red-100 border-red-300 text-red-800 ring-1 ring-red-300";
-                            icon = <X size={20} className="text-red-600 flex-shrink-0" />;
+                            buttonClass = "bg-red-500/20 border-red-500/50 text-red-300 ring-1 ring-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]";
+                            icon = <X size={20} className="text-red-400 flex-shrink-0" />;
                         } else if (selectedId && !isCorrect && !isSelected) {
                             // Dim other options when selection made
-                            buttonClass = "bg-gray-50 border-transparent text-gray-300";
+                            buttonClass = "bg-white/5 border-transparent text-white/20 opacity-50 cursor-not-allowed";
                         }
 
                         return (

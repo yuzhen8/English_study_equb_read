@@ -92,50 +92,50 @@ const DeepSeekSettingsSection: React.FC<DeepSeekSettingsSectionProps> = ({ isAct
     return (
         <div className="space-y-4">
             <div className={isActive ? 'opacity-100' : 'opacity-50 pointer-events-none'}>
-                <label className="block text-sm font-medium mb-1 text-gray-700" htmlFor="deepseekApiKey">API Key</label>
+                <label className="block text-sm font-medium mb-1 text-white/80" htmlFor="deepseekApiKey">API Key</label>
                 <input
                     id="deepseekApiKey"
                     type="password"
                     value={config.deepseekApiKey}
                     onChange={handleChange('deepseekApiKey')}
                     placeholder="sk-..."
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full p-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all placeholder-white/20"
                 />
             </div>
 
             <div className={isActive ? 'opacity-100' : 'opacity-50 pointer-events-none'}>
-                <label className="block text-sm font-medium mb-1 text-gray-700" htmlFor="deepseekModel">模型选择</label>
+                <label className="block text-sm font-medium mb-1 text-white/80" htmlFor="deepseekModel">模型选择</label>
                 <select
                     id="deepseekModel"
                     value={config.deepseekModel}
                     onChange={(e) => setConfig({ ...config, deepseekModel: e.target.value })}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none"
+                    className="w-full p-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all appearance-none cursor-pointer"
                 >
-                    <option value="deepseek-chat">deepseek-chat (V3)</option>
-                    <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
+                    <option value="deepseek-chat" className="bg-slate-800">deepseek-chat (V3)</option>
+                    <option value="deepseek-reasoner" className="bg-slate-800">deepseek-reasoner (R1)</option>
                 </select>
-                <p className="text-xs text-gray-400 mt-1.5">R1 模型提供更强的推理与语法分析能力</p>
+                <p className="text-xs text-white/40 mt-1.5">R1 模型提供更强的推理与语法分析能力</p>
             </div>
 
             <div className="flex items-center gap-3 pt-2">
                 <button
                     type="button"
                     onClick={() => handleSave()}
-                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-sm"
+                    className="flex-1 py-2.5 bg-blue-600/80 hover:bg-blue-600 text-white rounded-xl font-medium transition-colors shadow-lg shadow-blue-500/20 border border-blue-400/20"
                 >
                     保存 API 设置
                 </button>
                 <button
                     type="button"
                     onClick={testConnection}
-                    className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-medium transition-colors"
+                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white rounded-xl font-medium transition-colors border border-white/10"
                 >
                     测试连接
                 </button>
             </div>
 
             {status && (
-                <div className={`text-sm text-center p-2 rounded-lg ${status.includes('成功') ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'}`}>
+                <div className={`text-sm text-center p-2 rounded-lg backdrop-blur-sm border ${status.includes('成功') ? 'bg-green-500/10 text-green-300 border-green-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}`}>
                     {status}
                 </div>
             )}
