@@ -1,0 +1,13 @@
+F:\equb_English_learning\windows\cefr-core\target\debug\deps\libquote-9aeaee40bc6a6a6b.rmeta: C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\lib.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\ext.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\format.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\ident_fragment.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\to_tokens.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\runtime.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\spanned.rs
+
+F:\equb_English_learning\windows\cefr-core\target\debug\deps\libquote-9aeaee40bc6a6a6b.rlib: C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\lib.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\ext.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\format.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\ident_fragment.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\to_tokens.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\runtime.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\spanned.rs
+
+F:\equb_English_learning\windows\cefr-core\target\debug\deps\quote-9aeaee40bc6a6a6b.d: C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\lib.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\ext.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\format.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\ident_fragment.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\to_tokens.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\runtime.rs C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\spanned.rs
+
+C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\lib.rs:
+C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\ext.rs:
+C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\format.rs:
+C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\ident_fragment.rs:
+C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\to_tokens.rs:
+C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\runtime.rs:
+C:\Users\yz\.cargo\registry\src\rsproxy.cn-e3de039b2554c837\quote-1.0.42\src\spanned.rs:

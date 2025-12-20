@@ -24,6 +24,7 @@ dependencies = [
  "aho-corasick",
  "lazy_static",
  "regex",
+ "rust-stemmers",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
@@ -117,6 +118,16 @@ name = "regex-syntax"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
+
+[[package]]
+name = "rust-stemmers"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e46a2036019fdb888131db7a4c847a1063a7493f971ed94ea82c67eada63ca54"
+dependencies = [
+ "serde",
+ "serde_derive",
+]
 
 [[package]]
 name = "rustversion"

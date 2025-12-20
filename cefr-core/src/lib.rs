@@ -6,10 +6,15 @@ mod discourse;
 use std::collections::HashSet;
 use wasm_bindgen::prelude::*;
 use serde::Serialize;
+use rust_stemmers::{Algorithm, Stemmer};
 use dictionary::{DICT, CEFRLevel};
 use pos::tag_sentence;
 use syntax::{SyntacticAnalyzer, SyntaxMetrics};
 use discourse::{DiscourseAnalyzer, DiscourseMetrics};
+
+// Weights for adjusted score
+const WEIGHT_CLAUSE_DENSITY: f64 = 0.5;
+const WEIGHT_CONNECTIVE_SOPHISTICATION: f64 = 0.5;
 
 #[derive(Serialize)]
 struct AnalysisResult {
@@ -55,6 +60,8 @@ pub fn analyze(text: &str) -> JsValue {
     let mut scored_items = 0.0;
     let mut word_count = 0;
 
+    let en_stemmer = Stemmer::create(Algorithm::English);
+    
     for sent_text in &sentences_text {
         // Smart Tokenization with contraction handling
         let tokens = tokenize_sentence(sent_text);
@@ -89,14 +96,35 @@ pub fn analyze(text: &str) -> JsValue {
             let is_phrase = false; 
             
             // Lookup
+            let mut found_in_dict = false;
             if let Some(entry) = DICT.lookup(&token.word, Some(&token.tag)) {
                 level_str = format!("{:?}", entry.level);
                 lemma = entry.lemma.clone(); // Use dictionary lemma
+                found_in_dict = true;
                 
                 let score = level_to_score(&entry.level);
                 if score > 0.0 {
                     total_level_score += score;
                     scored_items += 1.0;
+                }
+            }
+            
+            // If not found in dictionary, try stemming
+            if !found_in_dict {
+                let stemmed = en_stemmer.stem(&token.word);
+                // Try looking up the stemmed version
+                if let Some(entry) = DICT.lookup(&stemmed, Some(&token.tag)) {
+                     level_str = format!("{:?}", entry.level);
+                     lemma = entry.lemma.clone();
+                     
+                     let score = level_to_score(&entry.level);
+                     if score > 0.0 {
+                        total_level_score += score;
+                        scored_items += 1.0;
+                     }
+                } else {
+                    // Just use the stem as the lemma if still nothing
+                    lemma = stemmed.to_string();
                 }
             }
 
@@ -123,7 +151,9 @@ pub fn analyze(text: &str) -> JsValue {
     // Final CEFR Calculation (Heuristic)
     let avg_score = if scored_items > 0.0 { total_level_score / scored_items } else { 0.0 };
     // Adjust based on syntax (e.g., complicate syntax -> higher level)
-    let adjusted_score = avg_score + (syntax_metrics.clause_density * 0.5) + (discourse_metrics.connective_sophistication * 0.5);
+    let adjusted_score = avg_score 
+        + (syntax_metrics.clause_density * WEIGHT_CLAUSE_DENSITY) 
+        + (discourse_metrics.connective_sophistication * WEIGHT_CONNECTIVE_SOPHISTICATION);
     
     let final_level = score_to_level(adjusted_score);
 

@@ -29,8 +29,13 @@ pub fn tag_sentence(tokens: &[String]) -> Vec<TaggedToken> {
         });
         
         // Pass the simplified POS (not PTB) to next step for easier rules
+        // Pass the simplified POS (not PTB) to next step for easier rules
         last_tag = best_pos.to_string();
     }
+    
+    // Apply Brill Tagger transformation rules (Second Pass)
+    apply_context_rules(&mut results);
+    
     results
 }
 
@@ -104,3 +109,75 @@ fn transform_tag(t: &str) -> String {
     }
 }
 
+
+fn apply_context_rules(tokens: &mut [TaggedToken]) {
+    // Brill-style rules. We operate on PTB tags directly or mapped ones.
+    // transform_tag maps to: NN, VB, JJ, RB, IN, CC, DT, PRP, MD, TO
+    
+    let len = tokens.len();
+    if len < 2 { return; }
+
+    // We can't mutate while looking at neighbors easily with standard iter.
+    // Use indexing.
+    for i in 1..len {
+        let prev = tokens[i-1].tag.clone();
+        // let next = if i + 1 < len { Some(&tokens[i+1].tag) } else { None };
+        
+        let curr_word = tokens[i].word.to_lowercase();
+        // let curr_tag = tokens[i].tag.clone(); 
+        
+        // Rule 1: TO -> VB
+        // If previous is TO, current is likely VB (infinitive), unless it's a known noun?
+        // Our 'disambiguate' does this for ambig words, but what if it was guessed as NN?
+        if prev == "TO" {
+             // Force VB if it can be a verb ideally, but here we force statistically
+             tokens[i].tag = "VB".to_string();
+        }
+        
+        // Rule 2: MD -> VB
+        // Modal (can/will) -> Force VB (base form)
+        if prev == "MD" {
+            tokens[i].tag = "VB".to_string();
+        }
+
+        // Rule 3: DT -> NN/JJ
+        // If prev is DT, current should probably not be VB.
+        if prev == "DT" {
+            if tokens[i].tag == "VB" || tokens[i].tag == "VBP" { // If wrongly tagged as verb
+                 // Simple heuristic: change to NN. 
+                 // (Could be JJ, but NN is safer default after DT if V was wrong)
+                 tokens[i].tag = "NN".to_string();
+            }
+        }
+        
+        // Rule 4: "help" special case? "to help" -> help is VB. "a help" -> help is NN.
+        // Handled by above rules.
+        
+        // Rule 5: IN (Preposition) -> NN (Object) or VBG (Gerund)
+        // e.g. "by running" -> running is VBG (which we map to VB or keep VBG if we had it, but we map V->VB)
+        // If we have "by walk", "walk" is likely NN here? "by the walk".
+        // If "by walk" (grammatically poor but possible) -> NN.
+        if prev == "IN" {
+             if tokens[i].tag == "VB" {
+                  // "after run" -> run is NN.
+                  // "after eating" (eating is VB in our set) -> leave as VB (VBG)
+                  if !curr_word.ends_with("ing") {
+                      tokens[i].tag = "NN".to_string();
+                  }
+             }
+        }
+    }
+    
+    // Look ahead rules (Reverse loop or just index access)
+    for i in 0..len-1 {
+        // let curr = &tokens[i].tag;
+        let next_word = tokens[i+1].word.to_lowercase();
+        
+        // If current is NN but next is "the" -> likely VB?
+        // e.g. "book the flight" -> book is VB. 
+        if tokens[i].tag == "NN" && (next_word == "the" || next_word == "a" || next_word == "an") {
+             // Highly likely a verb
+             tokens[i].tag = "VB".to_string();
+        }
+    }
+}

@@ -1,0 +1,61 @@
+﻿cargo :     Checking 
+cefr-core v0.1.0 (F:\
+equb_English_learning
+\windows\cefr-core)
+At line:1 char:1
++ cargo check 2>&1 | 
+Out-File -Encoding ut
+f8 output.txt
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (    Che   
+ cking ce...dows\    
+cefr-core):Strin    g
+) [], RemoteExc    ep
+tion
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+warning: unexpected `
+cfg` condition value:
+ `console_error_panic
+_hook`
+   --> src\lib.rs:200
+:11
+    |
+200 |     #[cfg(featu
+re = "console_error_p
+anic_hook")]
+    |           ^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^ help: remo
+ve the condition
+    |
+    = note: no expect
+ed values for `featur
+e`
+    = help: consider 
+adding `console_error
+_panic_hook` as a fea
+ture in `Cargo.toml`
+    = note: see <http
+s://doc.rust-lang.org
+/nightly/rustc/check-
+cfg/cargo-specifics.h
+tml> for more informa
+tion about checking c
+onditional configurat
+ion
+    = note: `#[warn(u
+nexpected_cfgs)]` on 
+by default
+
+warning: `cefr-core` 
+(lib) generated 1 war
+ning
+    Finished `dev` pr
+ofile [unoptimized + 
+debuginfo] target(s) 
+in 0.24s

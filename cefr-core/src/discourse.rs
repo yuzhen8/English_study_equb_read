@@ -22,6 +22,25 @@ lazy_static! {
         }
         s
     };
+    
+    // Mini-Bloom Filter (simulated) for Common First Names & Places to force Entity recognition
+    // Even if they exist in dictionary (e.g. "Rose", "Mark", "Bill", "May", "Hope")
+    static ref COMMON_ENTITIES: HashSet<&'static str> = {
+         let mut s = HashSet::new();
+         let names = vec![
+             "james", "john", "robert", "michael", "william", "david", "richard", "joseph", "thomas", "charles",
+             "christopher", "daniel", "matthew", "anthony", "donald", "mark", "paul", "steven", "andrew", "kenneth",
+             "george", "joshua", "kevin", "brian", "edward", "ronald", "timothy", "jason", "jeffrey", "ryan",
+             "mary", "patricia", "jennifer", "linda", "elizabeth", "barbara", "susan", "jessica", "sarah", "karen",
+             "nancy", "lisa", "margaret", "betty", "sandra", "ashley", "dorothy", "kimberly", "emily", "donna",
+             "rose", "lily", "hope", "may", "april", "june", "bill", "will", "harry", "jack",
+             "london", "california", "paris", "europe", "america", "china", "july", "august"
+         ];
+         for n in names {
+             s.insert(n);
+         }
+         s
+    };
 }
 
 impl DiscourseAnalyzer {
@@ -75,6 +94,11 @@ impl DiscourseAnalyzer {
                             // If in dict, could still be name if ambiguous (e.g. "Mark went..."). "mark" is in dict.
                             // Very hard to tell without probability.
                             // Conservative: Assume not entity if in dict at start.
+                            
+                            // EXCEPTION: Forced Entities
+                             if COMMON_ENTITIES.contains(lower_word.as_str()) {
+                                 entity_count += 1.0;
+                             }
                         }
                     } else {
                         // Mid-Sentence
@@ -86,8 +110,13 @@ impl DiscourseAnalyzer {
                             // Check Context triggers
                             let mut is_entity = false;
                             
-                            // 1. Title trigger: "Mr. Brown"
-                            if word_idx > 0 {
+                            // 1. Force Entity Check (Bloom Filter / List)
+                            if COMMON_ENTITIES.contains(lower_word.as_str()) {
+                                is_entity = true;
+                            }
+                            
+                            // 2. Title trigger: "Mr. Brown"
+                            if !is_entity && word_idx > 0 {
                                 let prev = &sent[word_idx - 1].word;
                                 // Simple check on previous word
                                 if TITLES.contains(prev.as_str()) {

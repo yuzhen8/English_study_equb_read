@@ -14,7 +14,10 @@ pub struct SyntaxMetrics {
 pub struct SyntacticAnalyzer;
 
 lazy_static! {
-    static ref CLAUSE_MARKERS: Regex = Regex::new(r"(?i)\b(because|although|if|after|before|since|unless|until|who|which|that|whom|whose)\b").unwrap();
+    // Subordinating conjunctions (high complexity impact)
+    static ref SUBORDINATING_CONJUNCTIONS: Regex = Regex::new(r"(?i)\b(because|although|if|after|before|since|unless|until|who|which|that|whom|whose)\b").unwrap();
+    // Coordinating conjunctions (low complexity impact)
+    static ref COORDINATING_CONJUNCTIONS: Regex = Regex::new(r"(?i)\b(and|but|or|so)\b").unwrap();
     static ref IRREGULAR_PAST_PARTICIPLES: HashSet<&'static str> = {
         let mut s = HashSet::new();
         let words = vec![
@@ -37,7 +40,14 @@ impl SyntacticAnalyzer {
         let num_sentences = sentences.len() as f64;
         if num_sentences == 0.0 { return SyntaxMetrics::default(); }
 
-        let clauses_count = CLAUSE_MARKERS.find_iter(text).count() as f64;
+        // Calculate clause density using both types but mostly subordinating ones matter for complex clauses
+        let sub_count = SUBORDINATING_CONJUNCTIONS.find_iter(text).count() as f64;
+        let coord_count = COORDINATING_CONJUNCTIONS.find_iter(text).count() as f64;
+        
+        // We can just sum them for density or weight them? 
+        // Standard "Clause Density" usually means total clauses / sentences.
+        // A coordinate clause is still a clause.
+        let clauses_count = sub_count + coord_count;
         let clause_density = clauses_count / num_sentences;
 
         let passive_count = Self::count_passives(sentences);
@@ -115,16 +125,12 @@ impl SyntacticAnalyzer {
         for sent in sentences {
             let mut depth = 1.0; // Root
             for token in sent {
-                // SBAR (Subordinating Conjunction) or Relative Pronoun
-                // markers: that, which, who...
-                // Using Regex is okay-ish, or tag 'IN'/'WDT'/'WP'
-                
-                if CLAUSE_MARKERS.is_match(&token.word) {
+                // Subordinating Conjunctions: High weight (nesting)
+                if SUBORDINATING_CONJUNCTIONS.is_match(&token.word) {
                    depth += 1.0; 
                 }
-                // Coordinate conjunction 'and' usually branches but doesn't deepen much. 
-                // Maybe 0.2?
-                else if token.word == "and" || token.word == "or" {
+                // Coordinating conjunctions: Low weight (branching)
+                else if COORDINATING_CONJUNCTIONS.is_match(&token.word) {
                     depth += 0.2;
                 }
                 
