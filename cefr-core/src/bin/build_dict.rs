@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 use fst::{MapBuilder, Map};
 use byteorder::{WriteBytesExt, LittleEndian};
-use flate2::write::DeflateEncoder;
+use flate2::write::GzEncoder;
 use flate2::Compression;
 use serde_json::{Value, json};
 
@@ -81,19 +81,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut count = 0;
     
     for entry in entries {
-        // 压缩 JSON (使用 Deflate Raw)
-        let mut encoder = DeflateEncoder::new(Vec::new(), Compression::best());
-        encoder.write_all(entry.json.as_bytes())?;
-        let compressed_bytes = encoder.finish()?;
-        let len = compressed_bytes.len() as u32;
+        // 不压缩条目，仅写入原始 Array JSON
+        let bytes = entry.json.as_bytes();
+        let len = bytes.len() as u32;
         
         // 写入数据文件
         data_writer.write_u32::<LittleEndian>(len)?;
-        data_writer.write_all(&compressed_bytes)?;
+        data_writer.write_all(bytes)?;
         
         // 插入 FST (映射 单词 -> 偏移量)
         build.insert(&entry.key, current_offset)?;
         
+        // FST 存储的是解压后(原始)数据的偏移量
         current_offset += 4 + (len as u64);
         
         count += 1;
@@ -106,7 +105,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n正在完成构建...");
     build.finish()?;
     data_writer.flush()?;
+    drop(data_writer); // 关闭文件句柄以便读取
+
+    // 整体压缩
+    println!("正在压缩 dict.data -> dict.data.gz ...");
+    let output_gz_path = resources_dir.join("dict.data.gz");
+    let mut input = File::open(&output_data_path)?;
+    let mut output = GzEncoder::new(File::create(&output_gz_path)?, Compression::best());
+    std::io::copy(&mut input, &mut output)?;
     
-    println!("完成! 已创建 dict.fst 和 dict.data");
+    // 删除未压缩文件
+    std::fs::remove_file(&output_data_path)?;
+    
+    println!("完成! 已创建 dict.fst 和 dict.data.gz");
     Ok(())
 }

@@ -137,3 +137,9 @@ release/
 resources/*.exe
 
 resources/dict.data
+cefr-core/target
+
+# 忽略字典源数据和中间文件
+resources/dict_dump.jsonl
+resources/*.gz
+resources/*.data

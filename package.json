@@ -9,7 +9,7 @@
         "postinstall": "electron-builder install-app-deps",
         "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && npm run build:electron && electron .\"",
         "build": "tsc && vite build && npm run build:electron && electron-builder",
-        "build:electron": "tsc -p electron/tsconfig.json",
+        "build:electron": "tsc -p electron/tsconfig.json --skipLibCheck",
         "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
         "test": "vitest",
         "preview": "vite preview"
@@ -41,7 +41,7 @@
                 "to": ".",
                 "filter": [
                     "dict.fst",
-                    "dict.data"
+                    "dict.data.gz"
                 ]
             },
             {
@@ -54,21 +54,21 @@
         ]
     },
     "dependencies": {
-        "@supabase/supabase-js": "^2.89.0",
-        "@tailwindcss/postcss": "^4.1.18",
-        "axios": "^1.13.2",
-        "clsx": "^2.1.1",
         "electron-squirrel-startup": "^1.0.1",
-        "epubjs": "^0.3.93",
         "fs-extra": "^11.3.2",
+        "@supabase/supabase-js": "^2.89.0",
+        "axios": "^1.13.2"
+    },
+    "devDependencies": {
+        "@tailwindcss/postcss": "^4.1.18",
+        "clsx": "^2.1.1",
+        "epubjs": "^0.3.93",
         "lucide-react": "^0.561.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "react-router-dom": "^7.10.1",
         "recharts": "^3.5.1",
-        "tailwind-merge": "^3.4.0"
-    },
-    "devDependencies": {
+        "tailwind-merge": "^3.4.0",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.0",
         "@testing-library/user-event": "^14.6.1",

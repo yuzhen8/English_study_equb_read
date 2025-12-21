@@ -16,6 +16,9 @@ try {
     console.error('创建音频缓存目录失败:', e);
 }
 
+// 全局缓存解压后的词典数据 (内存中)
+let dictBuffer: Buffer | null = null;
+
 export function setupDictionaryHandlers() {
     ipcMain.handle('dict:get-audio', async (event, { url, word }) => {
         try {
@@ -67,66 +70,64 @@ export function setupDictionaryHandlers() {
             const { lookupFstOffset } = require('./cefrAnalyzer');
 
             // 1. 通过 WASM FST 查找偏移量
-            // 返回 BigInt (u64) 或 undefined
             const offsetBigInt = await lookupFstOffset(word);
 
             if (offsetBigInt === undefined) {
                 return { success: true, found: false };
             }
 
-            // 2. 从 dict.data 读取数据
-            const isDev = !app.isPackaged;
-            let resourcesPath: string;
-            if (isDev) {
-                resourcesPath = path.join(process.cwd(), 'resources');
-            } else {
-                resourcesPath = process.resourcesPath || path.join(__dirname, '..', 'resources');
+            // 2. 确保 dictBuffer 已加载
+            if (!dictBuffer) {
+                console.log('正在加载并解压词典数据...');
+                const isDev = !app.isPackaged;
+                let resourcesPath: string;
+                if (isDev) {
+                    resourcesPath = path.join(process.cwd(), 'resources');
+                } else {
+                    resourcesPath = process.resourcesPath || path.join(__dirname, '..', 'resources');
+                }
+                const gzPath = path.join(resourcesPath, 'dict.data.gz');
+
+                if (!await fs.pathExists(gzPath)) {
+                    console.error('dict.data.gz not found');
+                    return { success: false, found: false };
+                }
+
+                const compressedBuf = await fs.readFile(gzPath);
+                dictBuffer = zlib.gunzipSync(compressedBuf); // 内存解压
+                console.log('词典解压完成，大小:', (dictBuffer.length / 1024 / 1024).toFixed(2), 'MB');
             }
-            const dataPath = path.join(resourcesPath, 'dict.data');
 
-            // 检查是否存在
-            if (!await fs.pathExists(dataPath)) {
-                console.error('dict.data not found');
-                return { success: false, found: false };
-            }
+            const offset = Number(offsetBigInt);
 
-            const offset = Number(offsetBigInt); // 安全转换为 number (文件大小 < 9PB)
+            // 从内存 Buffer 读取
+            // [Length: u32][Data...]
+            if (offset + 4 > dictBuffer.length) throw new Error('Offset out of bounds');
 
-            // Read Length (4 bytes u32 LE)
-            const fd = await fs.open(dataPath, 'r');
-            try {
-                const lenBuf = Buffer.alloc(4);
-                const { bytesRead } = await fs.read(fd, lenBuf, 0, 4, offset);
-                if (bytesRead < 4) throw new Error('Failed to read entry length');
+            const dataLen = dictBuffer.readUInt32LE(offset);
 
-                const dataLen = lenBuf.readUInt32LE(0);
+            if (offset + 4 + dataLen > dictBuffer.length) throw new Error('Entry out of bounds');
 
-                // 读取并解压数据
-                const compressedBuf = Buffer.alloc(dataLen);
-                await fs.read(fd, compressedBuf, 0, dataLen, offset + 4);
+            // 提取 Array JSON 字符串
+            const jsonStr = dictBuffer.subarray(offset + 4, offset + 4 + dataLen).toString('utf-8');
+            const arr = JSON.parse(jsonStr);
 
-                const decompressedBuf = zlib.inflateRawSync(compressedBuf);
-                const jsonStr = decompressedBuf.toString('utf-8');
-                const arr = JSON.parse(jsonStr); // Expect array
+            // 重构对象
+            // [phonetic, definition, translation, tag, exchange]
+            const entry = {
+                word: word,
+                phonetic: arr[0],
+                definition: arr[1],
+                translation: arr[2],
+                tag: arr[3],
+                exchange: arr[4]
+            };
 
-                // Reconstruct object from [phonetic, definition, translation, tag, exchange]
-                const entry = {
-                    word: word,
-                    phonetic: arr[0],
-                    definition: arr[1],
-                    translation: arr[2],
-                    tag: arr[3],
-                    exchange: arr[4]
-                };
-
-                return {
-                    success: true,
-                    found: true,
-                    data: entry
-                };
-            } finally {
-                await fs.close(fd);
-            }
+            return {
+                success: true,
+                found: true,
+                data: entry
+            };
 
         } catch (e: any) {
             console.error('Local dict search error:', e);
