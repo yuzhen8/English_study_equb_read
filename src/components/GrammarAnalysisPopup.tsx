@@ -13,38 +13,51 @@ const GrammarAnalysisPopup: React.FC<GrammarAnalysisPopupProps> = ({ text, conte
     const [loading, setLoading] = useState(true);
     const [result, setResult] = useState<TranslationResult | null>(null);
     const [copied, setCopied] = useState(false);
+    const [analysisTime, setAnalysisTime] = useState<number | null>(null);
 
     useEffect(() => {
         let isMounted = true;
         const analyze = async () => {
             setLoading(true);
             setResult(null); // Reset result
+            setAnalysisTime(null);
+
 
             try {
                 // If we are using a slow AI provider, let's get a fast translation first
                 // @ts-ignore
                 const settings = await window.electronAPI.getSettings();
                 const activeProvider = settings?.translationProvider || 'google';
+                const fastProviderName = settings?.fastTranslationProvider || 'google'; // Reading new setting
 
                 if (activeProvider === 'deepseek' || activeProvider === 'ollama') {
                     // Start slow AI analysis as main task
+                    const startTime = Date.now();
                     const aiPromise = translationService.translate(text, 'zh-CN', context);
 
-                    // But also get a fast one from google to show SOMETHING immediately
+                    // fast translation fallback
                     try {
-                        const googleProvider = translationService.getProvider('google');
-                        if (googleProvider) {
-                            const fastRes = await googleProvider.translate(text, 'zh-CN', context);
-                            if (isMounted) {
-                                // Set initial fast result
-                                setResult({
-                                    ...fastRes,
-                                    grammarAnalysis: undefined // Explicitly no analysis yet
-                                });
+                        // 如果快速翻译选择了 'ollama'，则表示禁用快速翻译 (由主 AI 负责)
+                        if (fastProviderName !== 'ollama') {
+                            const provider = translationService.getProvider(fastProviderName) || translationService.getProvider('google');
+                            if (provider) {
+                                const fastRes = await provider.translate(text, 'zh-CN', context);
+                                if (isMounted) {
+                                    // Set initial fast result
+                                    setResult({
+                                        ...fastRes,
+                                        grammarAnalysis: undefined // Explicitly no analysis yet
+                                    });
+                                }
                             }
                         }
                     } catch (e) {
-                        console.warn('Fast translation fallback failed', e);
+                        const errMsg = String(e);
+                        if (errMsg.includes('54003') || errMsg.includes('Access Limit')) {
+                            console.warn('Fast translation skipped due to rate limit (Baidu 54003). Please slow down selections.');
+                        } else {
+                            console.warn('Fast translation fallback failed', e);
+                        }
                     }
 
                     // Then wait for the heavy lifting to finish
@@ -52,13 +65,16 @@ const GrammarAnalysisPopup: React.FC<GrammarAnalysisPopupProps> = ({ text, conte
                     if (isMounted) {
                         setResult(fullRes);
                         setLoading(false);
+                        setAnalysisTime(Date.now() - startTime);
                     }
                 } else {
                     // Standard fast provider
+                    const startTime = Date.now();
                     const res = await translationService.translate(text, 'zh-CN', context);
                     if (isMounted) {
                         setResult(res);
                         setLoading(false);
+                        setAnalysisTime(Date.now() - startTime);
                     }
                 }
             } catch (error) {
@@ -67,8 +83,14 @@ const GrammarAnalysisPopup: React.FC<GrammarAnalysisPopupProps> = ({ text, conte
             }
         };
 
-        analyze();
-        return () => { isMounted = false; };
+        const debounceTimer = setTimeout(() => {
+            analyze();
+        }, 500); // Debounce to avoid rapid API calls (Baidu rate limit)
+
+        return () => {
+            isMounted = false;
+            clearTimeout(debounceTimer);
+        };
     }, [text, context]);
 
     const handleCopy = () => {
@@ -119,7 +141,7 @@ const GrammarAnalysisPopup: React.FC<GrammarAnalysisPopupProps> = ({ text, conte
                     {(result || !loading) ? (
                         <div className="content-section animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <div className="section-label flex items-center gap-1.5">
-                                <Globe size={12} /> 中文翻译 (Translation)
+                                <Globe size={12} /> 中文翻译 {result?.source ? <span className="text-xs font-normal opacity-70">({formatSource(result.source)})</span> : ''}
                             </div>
                             {result ? (
                                 <div className="text-translation">{result.translation}</div>
@@ -145,6 +167,11 @@ const GrammarAnalysisPopup: React.FC<GrammarAnalysisPopupProps> = ({ text, conte
                         <div className="content-section animate-in fade-in slide-in-from-bottom-2 duration-500">
                             <div className="section-label flex items-center gap-1.5">
                                 <Sparkles size={12} /> 语法分析 (Grammar Analysis)
+                                {analysisTime && (
+                                    <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded ml-2 font-mono">
+                                        {(analysisTime / 1000).toFixed(1)}s
+                                    </span>
+                                )}
                             </div>
                             <div className="grammar-analysis-container">
                                 <RenderAnalysis analysis={result.grammarAnalysis} />
@@ -213,6 +240,18 @@ const translateTerm = (term: string) => {
     if (!term) return term;
     const trimmed = term.trim();
     return GRAMMAR_TERMS_MAP[trimmed] || term;
+};
+
+const formatSource = (source: string) => {
+    const map: Record<string, string> = {
+        'google': 'Google 翻译',
+        'microsoft': 'Bing 翻译',
+        'bing': 'Bing 翻译',
+        'baidu': '百度翻译',
+        'deepseek': 'DeepSeek AI',
+        'ollama': 'Ollama'
+    };
+    return map[source.toLowerCase()] || source;
 };
 
 const RenderAnalysis: React.FC<{ analysis: any }> = ({ analysis }) => {

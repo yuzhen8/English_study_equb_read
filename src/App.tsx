@@ -19,6 +19,8 @@ import DataManagement from './pages/Profile/DataManagement';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { cn } from './lib/utils';
 import TitleBar from './components/Layout/TitleBar';
+import { Auth } from './components/Auth';
+import { AuthProvider } from './contexts/AuthContext';
 
 const AppContent = () => {
     const { currentTheme } = useTheme();
@@ -54,6 +56,7 @@ const AppContent = () => {
                         <Route path="profile" element={<Profile />} />
                         <Route path="profile/data" element={<DataManagement />} />
                         <Route path="settings" element={<Settings />} />
+                        <Route path="auth" element={<Auth />} />
                         <Route path="stats" element={<div className="p-8 text-center text-gray-500">Statistics (Coming Soon)</div>} />
                     </Route>
 
@@ -75,7 +78,9 @@ function App() {
 
     return (
         <ThemeProvider>
-            <AppContent />
+            <AuthProvider>
+                <AppContent />
+            </AuthProvider>
         </ThemeProvider>
     );
 }

@@ -4,8 +4,10 @@ import ePub from 'epubjs';
 import {
     Plus, Clock, FolderOpen, Pencil, Trash2,
     BookOpen, Menu, X, BarChart3, Info,
-    ChevronDown, Upload, Library
+    Upload, Library, Check
 } from 'lucide-react';
+
+
 import { Category, CategoryStore, SYSTEM_CATEGORY_ALL, SYSTEM_CATEGORY_READING, SYSTEM_CATEGORY_UNCATEGORIZED } from '../../services/CategoryStore';
 import { Book, LibraryStore, CefrAnalysisSummary } from '../../services/LibraryStore';
 import { cn } from '../../lib/utils';
@@ -44,8 +46,11 @@ const CategoryLibrary: React.FC = () => {
     const [cefrText, setCefrText] = useState<string>('');
     const [extractingText, setExtractingText] = useState(false);
 
-    // 悬停状态
+    // UI Interaction States
     const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+    const [editModeBookId, setEditModeBookId] = useState<string | null>(null); // Lifted state for edit mode
+    const [isDraggingBook, setIsDraggingBook] = useState(false); // New state for drag feedback
+
 
     useEffect(() => {
         loadCategories();
@@ -191,27 +196,49 @@ const CategoryLibrary: React.FC = () => {
         }
     };
 
+    const [importState, setImportState] = useState<'idle' | 'loading' | 'success'>('idle');
+
     const handleLocalImport = async () => {
         try {
             const filePath = await window.electronAPI.selectFile();
             if (filePath) {
+                setImportState('loading');
                 const fileResult = await window.electronAPI.readFile(filePath);
                 if (fileResult.success && fileResult.data) {
                     await LibraryStore.addBook(filePath, fileResult.data, selectedCategory);
                     await loadBooks();
-                    setImportMenuOpen(false);
+                    setImportState('success');
+                    setTimeout(() => setImportState('idle'), 2000);
                 } else {
                     console.error("Failed to read file", fileResult.error);
+                    setImportState('idle');
                 }
             }
         } catch (error) {
             console.error("Failed to import book", error);
+            setImportState('idle');
         }
     };
 
+    const handleDropOnCategory = async (e: React.DragEvent, targetCategoryId: string) => {
+        e.preventDefault();
+        const bookId = e.dataTransfer.getData('text/plain');
+        if (bookId && targetCategoryId !== selectedCategory && targetCategoryId !== SYSTEM_CATEGORY_READING && targetCategoryId !== SYSTEM_CATEGORY_ALL) {
+            await CategoryStore.moveBooksToCategory([bookId], targetCategoryId);
+            await loadBooks();
+        }
+    };
+
+
     return (
-        <div className="flex h-full bg-transparent overflow-hidden">
+        <div
+            className="flex h-full bg-transparent overflow-hidden"
+            onClick={() => {
+                if (editModeBookId) setEditModeBookId(null);
+            }}
+        >
             {/* Mobile Sidebar Toggle */}
+
             <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="lg:hidden fixed top-4 left-4 z-50 p-2 glass-button"
@@ -244,6 +271,12 @@ const CategoryLibrary: React.FC = () => {
                         label="全部书籍"
                         selected={selectedCategory === SYSTEM_CATEGORY_ALL}
                         onClick={() => setSelectedCategory(SYSTEM_CATEGORY_ALL)}
+                    // System categories don't typically accept drops in this simple implementation except basic ones if needed
+                    // But dragging to 'All' or 'Reading' might not change category in the same way. 
+                    // Let's allow drop on 'All' (maybe no-op or remove from category?) -> stick to 'Custom' for now as per req.
+                    // Wait, user might want to move back to 'Uncategorized'? Let's enable for specific logic if needed.
+                    // For now only custom categories were requested but let's pass isDragging to all for consistency if we want.
+                    // Actually, let's only highlight valid drop targets.
                     />
                     <SidebarItem
                         icon={<Clock size={18} />}
@@ -256,6 +289,9 @@ const CategoryLibrary: React.FC = () => {
                         label="未分类"
                         selected={selectedCategory === SYSTEM_CATEGORY_UNCATEGORIZED}
                         onClick={() => setSelectedCategory(SYSTEM_CATEGORY_UNCATEGORIZED)}
+                        isDragging={isDraggingBook && selectedCategory !== SYSTEM_CATEGORY_UNCATEGORIZED}
+                        onDrop={(e) => handleDropOnCategory(e, SYSTEM_CATEGORY_UNCATEGORIZED)}
+                        onDragOver={(e) => e.preventDefault()}
                     />
                 </div>
 
@@ -276,7 +312,10 @@ const CategoryLibrary: React.FC = () => {
                                 icon={<FolderOpen size={18} />}
                                 label={cat.name}
                                 selected={selectedCategory === cat.id}
+                                isDragging={isDraggingBook && selectedCategory !== cat.id}
                                 onClick={() => setSelectedCategory(cat.id)}
+                                onDrop={(e) => handleDropOnCategory(e, cat.id)}
+                                onDragOver={(e) => e.preventDefault()}
                             />
                             {hoveredCategory === cat.id && !cat.isSystem && (
                                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
@@ -329,17 +368,8 @@ const CategoryLibrary: React.FC = () => {
                         </div>
                         {selectedCategory !== SYSTEM_CATEGORY_ALL && selectedCategory !== SYSTEM_CATEGORY_READING && (
                             <div className="relative">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setImportMenuOpen(!importMenuOpen);
-                                    }}
-                                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                                >
-                                    <Plus size={16} />
-                                    导入书籍
-                                    <ChevronDown size={16} className={cn("transition-transform", importMenuOpen ? "rotate-180" : "")} />
-                                </button>
+                                {/* Import Button Removed in favor of Add Card */}
+
 
                                 {importMenuOpen && (
                                     <>
@@ -390,14 +420,23 @@ const CategoryLibrary: React.FC = () => {
                 <div className="flex-1 overflow-y-auto p-6">
                     {books.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20">
-                            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center max-w-sm">
-                                <BookOpen size={48} className="mx-auto text-gray-300 mb-4" />
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">暂无书籍</h3>
-                                <p className="text-gray-500 text-sm">
+                            <div className="glass-card p-8 rounded-2xl border border-white/10 text-center max-w-sm backdrop-blur-md">
+                                <BookOpen size={48} className="mx-auto text-white/20 mb-4" />
+                                <h3 className="text-lg font-bold text-white mb-2 tracking-wide">暂无书籍</h3>
+                                <p className="text-white/50 text-sm">
                                     {selectedCategory === SYSTEM_CATEGORY_READING
                                         ? '开始阅读一本书后会显示在这里'
-                                        : '点击导入书籍按钮添加书籍到此分类'}
+                                        : '点击下方按钮添加书籍到此分类'}
                                 </p>
+                                {selectedCategory !== SYSTEM_CATEGORY_READING && (
+                                    <button
+                                        onClick={handleLocalImport}
+                                        className="mt-6 px-8 py-3 bg-indigo-500/20 hover:bg-indigo-500/30 text-white border border-indigo-500/30 backdrop-blur-md rounded-xl transition-all flex items-center justify-center gap-2 mx-auto font-bold shadow-[0_0_15px_rgba(99,102,241,0.2)] hover:shadow-[0_0_25px_rgba(99,102,241,0.4)] active:scale-95"
+                                    >
+                                        <Plus size={20} />
+                                        添加书籍
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ) : (
@@ -408,6 +447,8 @@ const CategoryLibrary: React.FC = () => {
                                     book={book}
                                     onClick={() => openBook(book)}
                                     showReadingBadge={selectedCategory === SYSTEM_CATEGORY_ALL}
+                                    isEditMode={editModeBookId === book.id}
+                                    onLongPress={() => setEditModeBookId(book.id)}
                                     onAnalyze={(e) => {
                                         if (book.cefrAnalysis) {
                                             showCachedCefrResult(book, e);
@@ -419,9 +460,41 @@ const CategoryLibrary: React.FC = () => {
                                         e.stopPropagation();
                                         setEditingBook(book);
                                         setShowDeleteBookModal(true);
+                                        setEditModeBookId(null);
                                     }}
+                                    onDragStart={() => setIsDraggingBook(true)}
+                                    onDragEnd={() => setIsDraggingBook(false)}
                                 />
+
                             ))}
+                            {/* Add Book Card */}
+                            <div
+                                onClick={handleLocalImport}
+                                className="glass-card flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition-colors border-dashed border-2 border-white/20 aspect-[3/4] rounded-2xl group"
+                            >
+                                {importState === 'loading' ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                                        <span className="text-xs text-white/60">导入中...</span>
+                                    </div>
+                                ) : importState === 'success' ? (
+                                    <div className="flex flex-col items-center gap-2 animate-in zoom-in duration-300">
+                                        <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center mb-2">
+                                            <Check size={24} className="text-emerald-500" />
+                                        </div>
+                                        <span className="text-sm font-medium text-emerald-500">添加成功</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                            <Plus size={24} className="text-white/60" />
+                                        </div>
+                                        <span className="text-sm font-medium text-white/60">添加书籍</span>
+                                    </>
+                                )}
+                            </div>
+
+
                         </div>
                     )}
                 </div>
@@ -574,17 +647,24 @@ interface SidebarItemProps {
     icon: React.ReactNode;
     label: string;
     selected: boolean;
+    isDragging?: boolean;
     onClick: () => void;
+    onDrop?: (e: React.DragEvent) => void;
+    onDragOver?: (e: React.DragEvent) => void;
 }
 
-const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, selected, onClick }) => (
+const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, selected, isDragging, onClick, onDrop, onDragOver }) => (
     <button
         onClick={onClick}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
         className={cn(
-            "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all text-left mb-1 relative overflow-hidden group",
+            "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all text-left mb-1 relative overflow-hidden group border",
             selected
-                ? "bg-white/20 text-white shadow-[0_0_20px_rgba(255,255,255,0.1)] border border-white/10"
-                : "text-white/60 hover:bg-white/10 hover:text-white"
+                ? "bg-white/20 text-white shadow-[0_0_20px_rgba(255,255,255,0.1)] border-white/10"
+                : "text-white/60 hover:bg-white/10 hover:text-white border-transparent",
+            // Drag target visual cue
+            isDragging && !selected && "border-dashed border-indigo-400/50 bg-indigo-500/10 text-indigo-200 animate-wiggle"
         )}
     >
         {selected && (
@@ -600,11 +680,15 @@ interface BookCardProps {
     book: Book;
     onClick: () => void;
     showReadingBadge?: boolean;
+    isEditMode: boolean;
+    onLongPress: () => void;
     onAnalyze?: (e: React.MouseEvent) => void;
     onDelete?: (e: React.MouseEvent) => void;
+    onDragStart?: () => void;
+    onDragEnd?: () => void;
 }
 
-const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, onAnalyze, onDelete }) => {
+const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, isEditMode, onLongPress, onAnalyze, onDelete, onDragStart, onDragEnd }) => {
     const hasCefrResult = !!book.cefrAnalysis;
     const timerRef = React.useRef<any>(null);
     const isLongPressRef = React.useRef(false);
@@ -613,17 +697,9 @@ const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, on
         isLongPressRef.current = false;
         timerRef.current = setTimeout(() => {
             isLongPressRef.current = true;
-            if (onDelete) {
-                // Pass a fake event or null since we trigger manually
-                // We create a synthetic-like object if strictly needed, but onDelete accepts (e) => void.
-                // We can construct a minimal object or just pass nothing if type allows, but type is (e: React.MouseEvent).
-                // Let's cast or adjust. Actually we can just call the handler logic inside CategoryLibrary if we change the signature,
-                // but simpler is to mock the stopPropagation part or just pass {} as any.
-                // Better: The onDelete in CategoryLibrary calls e.stopPropagation().
-                // We should pass a mock event with stopPropagation.
-                onDelete({ stopPropagation: () => { } } as React.MouseEvent);
-            }
-        }, 800);
+            if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback
+            onLongPress();
+        }, 500); // 500ms for long press
     };
 
     const endPress = () => {
@@ -637,7 +713,30 @@ const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, on
             e.stopPropagation();
             return;
         }
+        if (isEditMode) {
+            // In edit mode, clicking the card body shouldn't necessarily do anything or maybe cancel?
+            // Since we have global cancel, we let propagation happen or stop it?
+            // If we stop propagation, global click won't fire.
+            // If we want clicking the *same* card to cancel, we should let it propagate to the global handler.
+            // So actually, just don't stop propagation here if we want global handler to catch it.
+            // But 'onClick' prop handles navigation, we must prevent navigation.
+            e.stopPropagation();
+            // Maybe explicitly call cancel? Or just do nothing and let user click elsewhere?
+            // User requirement: "Clicking blank space should cancel".
+            // If I click the card itself while in edit mode, should it open? Probably not.
+            return;
+        }
         onClick();
+    };
+
+    const handleDragStart = (e: React.DragEvent) => {
+        e.dataTransfer.setData('text/plain', book.id);
+        e.dataTransfer.effectAllowed = 'move';
+        if (onDragStart) onDragStart();
+    };
+
+    const handleDragEnd = () => {
+        if (onDragEnd) onDragEnd();
     };
 
     return (
@@ -648,7 +747,13 @@ const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, on
             onTouchStart={startPress}
             onTouchEnd={endPress}
             onClick={handleClick}
-            className="glass-card hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] relative group p-3 border border-white/5"
+            draggable
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            className={cn(
+                "glass-card hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] relative group p-3 border border-white/5 transition-all",
+                isEditMode && "ring-2 ring-red-500/50 scale-95 animate-wiggle"
+            )}
         >
             <div className="aspect-[2/3] bg-black/20 rounded-lg mb-3 overflow-hidden relative shadow-inner">
                 {book.cover ? (
@@ -704,7 +809,23 @@ const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, on
                 )}
 
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+
+                {/* Confirm Delete Button (Trash Can) - Top Right */}
+                {isEditMode && onDelete && (
+                    <div className="absolute top-2 right-2 z-30 animate-in zoom-in duration-200">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(e);
+                            }}
+                            className="w-8 h-8 rounded-full bg-red-500 text-white shadow-lg flex items-center justify-center hover:bg-red-600 hover:scale-110 transition-all border border-white/20"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    </div>
+                )}
             </div >
+
             <h3 className="font-medium text-gray-900 text-xs truncate">{book.title}</h3>
             <p className="text-gray-400 text-[10px] truncate mt-0.5">{book.author}</p>
             {/* 进度条和百分比放在同一行 */}

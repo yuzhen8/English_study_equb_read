@@ -52,7 +52,7 @@ const TitleBar: React.FC = () => {
                                 currentTheme.colors.accent === 'orange' ? 'bg-orange-400' :
                                     currentTheme.colors.accent === 'fuchsia' ? 'bg-fuchsia-400' : 'bg-white'
                 )} />
-                <span className="text-xs font-semibold text-white/50 tracking-wider font-mono">LINGA</span>
+                <span className="text-xs font-semibold text-white/50 tracking-wider font-mono">ESReader</span>
             </div>
 
             {/* Window Controls - No Drag Region */}

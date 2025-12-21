@@ -28,6 +28,7 @@ export interface CefrAnalysisResult {
     difficultyScore: number;
     primaryLevel: string;
     sampleUnknownWords: string[];
+    allUnknownWords?: string[]; // All unknown words
     cefrDictionarySize: number;
     // New fields from WASM engine
     metrics?: {
@@ -62,35 +63,71 @@ interface WasmAnalysisResult {
     }>;
 }
 
-
+// Cache for the initialized WASM module
+let wasmModuleCache: any = null;
 
 /**
- * Load the WASM module dynamically.
+ * Load and initialize the WASM module.
+ * For wasm-pack --target web, we need to call init() first.
  */
 async function loadWasmModule(): Promise<any> {
+    // Return cached module if already initialized
+    if (wasmModuleCache) {
+        return wasmModuleCache;
+    }
+
     const isDev = !app.isPackaged;
 
     // Path resolution logic
-    // Dev: ../cefr-core/pkg/cefr_core.js (relative to electron/)
-    // Prod: resources/cefr-core/pkg/cefr_core.js (Assuming copy)
+    // Dev: cefr-core/pkg/ (relative to project root)
+    // Prod: resources/cefr-core/pkg/
 
-    let wasmPath;
+    let pkgPath: string;
     if (isDev) {
-        // Use process.cwd() which points to the project root in standard dev environments
-        wasmPath = path.join(process.cwd(), 'cefr-core', 'pkg', 'cefr_core.js');
+        pkgPath = path.join(process.cwd(), 'cefr-core', 'pkg');
     } else {
         const resourcesPath = process.resourcesPath || path.join(__dirname, '..', 'resources');
-        wasmPath = path.join(resourcesPath, 'cefr-core', 'pkg', 'cefr_core.js');
+        pkgPath = path.join(resourcesPath, 'cefr-core', 'pkg');
     }
 
+    const jsPath = path.join(pkgPath, 'cefr_core.js');
+    const wasmPath = path.join(pkgPath, 'cefr_core_bg.wasm');
+
     try {
-        console.log(`[CEFR] Loading WASM from: ${wasmPath}`);
-        // In Node environment, we can require it
-        // Note: In a real webpack/vite build, this might need external handling or copy-webpack-plugin
-        return require(wasmPath);
+        console.log(`[CEFR] Loading WASM JS from: ${jsPath}`);
+        console.log(`[CEFR] Loading WASM binary from: ${wasmPath}`);
+
+        // Check if files exist
+        await fs.access(jsPath);
+        await fs.access(wasmPath);
+
+        // Dynamic import the JS module
+        const wasmModule = require(jsPath);
+
+        // For wasm-pack --target web, we need to manually initialize with the WASM binary
+        // The module exports an `initSync` function for synchronous initialization
+        // or `default` (init) for async initialization
+        if (typeof wasmModule.initSync === 'function') {
+            // Read WASM binary and initialize synchronously
+            const wasmBinary = await fs.readFile(wasmPath);
+            wasmModule.initSync(wasmBinary);
+            console.log(`[CEFR] WASM module initialized synchronously`);
+        } else if (typeof wasmModule.default === 'function') {
+            // Async init with WASM path
+            const wasmBinary = await fs.readFile(wasmPath);
+            await wasmModule.default(wasmBinary);
+            console.log(`[CEFR] WASM module initialized asynchronously`);
+        } else {
+            // Already initialized or bundler-style target
+            console.log(`[CEFR] WASM module loaded (no explicit init needed)`);
+        }
+
+        // Cache the module
+        wasmModuleCache = wasmModule;
+        return wasmModule;
     } catch (e) {
         console.error(`[CEFR] Failed to load WASM module:`, e);
-        throw new Error(`Failed to load CEFR Engine. Please ensure wasm-pack build is run. Path: ${wasmPath}`);
+        throw new Error(`Failed to load CEFR Engine. Please ensure wasm-pack build is run. Error: ${e instanceof Error ? e.message : String(e)}`);
     }
 }
 
@@ -151,7 +188,14 @@ function mapWasmToResult(wasmResult: WasmAnalysisResult): CefrAnalysisResult {
         distribution,
         difficultyScore: score, // Returns 1-6 to match the UI's "/6" denominator
         primaryLevel: wasmResult.cefr_level,
-        sampleUnknownWords: details.filter(d => d.level === 'Unknown').slice(0, 10).map(d => d.text),
+        sampleUnknownWords: details
+            .filter(d => {
+                const l = String(d.level).replace(/"/g, '');
+                return l === 'Unknown' || l === '?' || l === 'None';
+            })
+            .slice(0, 10)
+            .map(d => d.text),
+        allUnknownWords: Array.from(uniqueSets['Unknown']), // Return all unique unknown lemmas
         cefrDictionarySize: 5000,
         metrics: {
             // Include raw scores for frontend "Assesment Logic" display
@@ -189,6 +233,20 @@ export function setupCefrAnalyzerHandlers(): void {
 
             // Note: If using serde_json::to_value, the result is already a JS object/JSON
             console.log(`[CEFR] Raw WASM result received. Level: ${rawResult.cefr_level}`);
+
+            // DEBUG: Log unknown words
+            if (rawResult.details) {
+                const unknownWords = rawResult.details
+                    .filter((d: any) => d.level === 'Unknown' || d.level === '?')
+                    .map((d: any) => `${d.text} (${d.lemma})`);
+
+                if (unknownWords.length > 0) {
+                    console.log(`[CEFR Debug] Found ${unknownWords.length} unknown words:`);
+                    // Print first 50 to avoid spamming if too many
+                    console.log(unknownWords.slice(0, 50).join(', '));
+                    if (unknownWords.length > 50) console.log(`...and ${unknownWords.length - 50} more.`);
+                }
+            }
 
             const finalResult = mapWasmToResult(rawResult);
 

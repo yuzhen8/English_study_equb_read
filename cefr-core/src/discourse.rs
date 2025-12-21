@@ -1,6 +1,7 @@
 use serde::Serialize;
 use std::collections::HashSet;
 use lazy_static::lazy_static;
+use phf::phf_set;
 use crate::dictionary::{DICT, CEFRLevel};
 use crate::pos::TaggedToken;
 
@@ -13,6 +14,15 @@ pub struct DiscourseMetrics {
 
 pub struct DiscourseAnalyzer;
 
+// Include the high-performance PHF name database (generated from names_code.rs)
+include!("names_code.rs");
+
+/// Public function to check if a word is a common name (case-sensitive)
+/// Used by lib.rs to filter names from "Unknown" words
+pub fn is_common_name(word: &str) -> bool {
+    COMMON_NAMES.contains(word)
+}
+
 lazy_static! {
     static ref TITLES: HashSet<&'static str> = {
         let mut s = HashSet::new();
@@ -21,25 +31,6 @@ lazy_static! {
             s.insert(*t);
         }
         s
-    };
-    
-    // Mini-Bloom Filter (simulated) for Common First Names & Places to force Entity recognition
-    // Even if they exist in dictionary (e.g. "Rose", "Mark", "Bill", "May", "Hope")
-    static ref COMMON_ENTITIES: HashSet<&'static str> = {
-         let mut s = HashSet::new();
-         let names = vec![
-             "james", "john", "robert", "michael", "william", "david", "richard", "joseph", "thomas", "charles",
-             "christopher", "daniel", "matthew", "anthony", "donald", "mark", "paul", "steven", "andrew", "kenneth",
-             "george", "joshua", "kevin", "brian", "edward", "ronald", "timothy", "jason", "jeffrey", "ryan",
-             "mary", "patricia", "jennifer", "linda", "elizabeth", "barbara", "susan", "jessica", "sarah", "karen",
-             "nancy", "lisa", "margaret", "betty", "sandra", "ashley", "dorothy", "kimberly", "emily", "donna",
-             "rose", "lily", "hope", "may", "april", "june", "bill", "will", "harry", "jack",
-             "london", "california", "paris", "europe", "america", "china", "july", "august"
-         ];
-         for n in names {
-             s.insert(n);
-         }
-         s
     };
 }
 
@@ -74,32 +65,30 @@ impl DiscourseAnalyzer {
                      }
                 }
 
-                // 2. NER Heuristic
+                // 2. NER Heuristic (Upgraded with PHF name database)
                 // Capitalized?
                 let is_capitalized = word.chars().next().map_or(false, |c| c.is_uppercase());
                 
                 if is_capitalized {
+                    // PRIORITY 1: Check PHF name database first (case-sensitive, original word)
+                    // The database contains names like "James", "London", etc.
+                    if COMMON_NAMES.contains(word) {
+                        entity_count += 1.0;
+                        continue; // Skip further checks, this is definitely a name
+                    }
+                    
+                    // PRIORITY 2: Fallback to dictionary-based heuristics
                     // Check if word exists in dictionary (case-insensitive)
-                    // If "London" is not in dict, then `lookup_all` for "london" is None.
                     let in_dict = DICT.lookup_all(&lower_word).is_some();
                     
                     if word_idx == 0 {
                         // Sentence Start
                         // If NOT in dictionary -> Likely Entity (e.g. "Zanzibar is...")
-                        // If IN dictionary -> Likely functional word (e.g. "The...", "After...")
-                        // Exception: If in dictionary but preceded by title... (not applicable at start usually, implies title is start)
                         if !in_dict {
                             entity_count += 1.0;
-                        } else {
-                            // If in dict, could still be name if ambiguous (e.g. "Mark went..."). "mark" is in dict.
-                            // Very hard to tell without probability.
-                            // Conservative: Assume not entity if in dict at start.
-                            
-                            // EXCEPTION: Forced Entities
-                             if COMMON_ENTITIES.contains(lower_word.as_str()) {
-                                 entity_count += 1.0;
-                             }
                         }
+                        // If in dict at sentence start, could be functional word or name
+                        // Conservative: Assume not entity if in dict at start (unless in COMMON_NAMES, handled above)
                     } else {
                         // Mid-Sentence
                         // If NOT in dict -> Entity (e.g. "... in Zanzibar")
@@ -108,24 +97,14 @@ impl DiscourseAnalyzer {
                         } else {
                             // In dictionary (e.g. "Brown", "Bush", "Park")
                             // Check Context triggers
-                            let mut is_entity = false;
                             
-                            // 1. Force Entity Check (Bloom Filter / List)
-                            if COMMON_ENTITIES.contains(lower_word.as_str()) {
-                                is_entity = true;
-                            }
-                            
-                            // 2. Title trigger: "Mr. Brown"
-                            if !is_entity && word_idx > 0 {
+                            // Title trigger: "Mr. Brown"
+                            if word_idx > 0 {
                                 let prev = &sent[word_idx - 1].word;
                                 // Simple check on previous word
                                 if TITLES.contains(prev.as_str()) {
-                                    is_entity = true;
+                                    entity_count += 1.0;
                                 }
-                            }
-                            
-                            if is_entity {
-                                entity_count += 1.0;
                             }
                         }
                     }

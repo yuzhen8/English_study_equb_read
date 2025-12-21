@@ -6,7 +6,7 @@ export interface TranslationResult {
     definitions?: string[];
     examples?: string[];
     grammarAnalysis?: string;
-    source: 'google' | 'deepseek' | 'ollama' | 'microsoft';
+    source: 'google' | 'deepseek' | 'ollama' | 'microsoft' | 'baidu' | 'bing';
 }
 
 export interface TranslationProvider {

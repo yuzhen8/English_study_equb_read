@@ -12,17 +12,54 @@ interface FlashcardModeProps {
 const FlashcardMode: React.FC<FlashcardModeProps> = ({ word, onResult }) => {
     const [isFlipped, setIsFlipped] = useState(false);
     const [showWordDetail, setShowWordDetail] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
 
-    // Reset state when word changes
+    // Reset state and play audio when word changes
     React.useEffect(() => {
         setIsFlipped(false);
+        playAudioSequence(3);
+
+        return () => {
+            window.speechSynthesis.cancel();
+            setIsPlaying(false);
+        };
     }, [word.id]);
+
+    const playAudioSequence = (times: number) => {
+        window.speechSynthesis.cancel();
+        setIsPlaying(true);
+
+        const speak = (count: number) => {
+            if (count <= 0) {
+                setIsPlaying(false);
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(word.lemma || word.text);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.8; // Slightly slower for clarity
+
+            utterance.onend = () => {
+                if (count > 1) {
+                    setTimeout(() => speak(count - 1), 300); // 300ms pause between repeats
+                } else {
+                    setIsPlaying(false);
+                }
+            };
+
+            utterance.onerror = () => {
+                setIsPlaying(false);
+            };
+
+            window.speechSynthesis.speak(utterance);
+        };
+
+        speak(times);
+    };
 
     const playAudio = (e: React.MouseEvent) => {
         e.stopPropagation();
-        const utterance = new SpeechSynthesisUtterance(word.text);
-        utterance.lang = 'en-US';
-        speechSynthesis.speak(utterance);
+        playAudioSequence(1);
     };
 
     const handleShowDetail = (e: React.MouseEvent) => {
@@ -64,9 +101,12 @@ const FlashcardMode: React.FC<FlashcardModeProps> = ({ word, onResult }) => {
                                 <div className="flex items-center justify-center gap-3">
                                     <button
                                         onClick={playAudio}
-                                        className="inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors p-3 rounded-full hover:bg-white/10 glass-button"
+                                        className={cn(
+                                            "inline-flex items-center gap-2 transition-all p-3 rounded-full glass-button",
+                                            isPlaying ? "text-indigo-300 bg-white/20 scale-110 shadow-[0_0_15px_rgba(165,180,252,0.5)]" : "text-white/60 hover:text-white hover:bg-white/10"
+                                        )}
                                     >
-                                        <Volume2 size={28} />
+                                        <Volume2 size={28} className={isPlaying ? "animate-pulse" : ""} />
                                     </button>
                                     <button
                                         onClick={handleShowDetail}
@@ -92,8 +132,19 @@ const FlashcardMode: React.FC<FlashcardModeProps> = ({ word, onResult }) => {
                         }}
                     >
                         <div className="flex-1 flex flex-col justify-center p-8 space-y-6">
-                            <div className="text-center">
-                                <h3 className="text-2xl font-bold text-white mb-2 tracking-wide">{word.lemma || word.text}</h3>
+                            <div className="text-center relative">
+                                <h3 className="text-2xl font-bold text-white mb-2 tracking-wide flex items-center justify-center gap-2">
+                                    {word.lemma || word.text}
+                                    <button
+                                        onClick={playAudio}
+                                        className={cn(
+                                            "p-1.5 rounded-full transition-all",
+                                            isPlaying ? "text-indigo-400 bg-white/10" : "text-white/30 hover:text-white hover:bg-white/5"
+                                        )}
+                                    >
+                                        <Volume2 size={18} className={isPlaying ? "animate-pulse" : ""} />
+                                    </button>
+                                </h3>
                                 <div className="w-12 h-1 bg-indigo-500 rounded-full mx-auto box-shadow-glow" />
                             </div>
 

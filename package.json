@@ -1,7 +1,7 @@
 {
     "name": "linga-windows",
     "private": true,
-    "version": "0.0.0",
+    "version": "1.0.0",
     "description": "An elegant English learning reader based on Electron.",
     "author": "User",
     "main": "dist-electron/main.js",
@@ -15,8 +15,8 @@
         "preview": "vite preview"
     },
     "build": {
-        "appId": "com.linga.reader",
-        "productName": "Linga Reader",
+        "appId": "com.esreader.app",
+        "productName": "ESReader",
         "directories": {
             "output": "release"
         },
@@ -56,6 +56,7 @@
         ]
     },
     "dependencies": {
+        "@supabase/supabase-js": "^2.89.0",
         "@tailwindcss/postcss": "^4.1.18",
         "@types/better-sqlite3": "^7.6.13",
         "axios": "^1.13.2",

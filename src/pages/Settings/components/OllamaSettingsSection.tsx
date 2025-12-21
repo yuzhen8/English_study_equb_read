@@ -124,14 +124,14 @@ const OllamaSettingsSection: React.FC<OllamaSettingsSectionProps> = ({ isActive 
     return (
         <div className="space-y-4">
             <div className={isActive ? 'opacity-100' : 'opacity-50 pointer-events-none'}>
-                <label className="block text-sm font-medium mb-1 text-white/80" htmlFor="ollamaUrl">Ollama 服务地址</label>
+                <label className="block text-sm font-medium mb-1 text-white/80" htmlFor="ollamaUrl">Ollama 服务地址 (URL / IP)</label>
                 <div className="relative">
                     <input
                         id="ollamaUrl"
                         type="text"
                         value={config.ollamaUrl}
                         onChange={handleChange('ollamaUrl')}
-                        placeholder="http://localhost:11434"
+                        placeholder="http://127.0.0.1:11434"
                         className="w-full p-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all pl-10 placeholder-white/20"
                     />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
@@ -167,34 +167,20 @@ const OllamaSettingsSection: React.FC<OllamaSettingsSectionProps> = ({ isActive 
                 </div>
             </div>
 
-            <div className={`grid grid-cols-2 gap-4 ${isActive ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
-                <div>
-                    <label className="block text-sm font-medium mb-1 text-white/80" htmlFor="ollamaModel">模型名称</label>
-                    <div className="relative">
-                        <input
-                            id="ollamaModel"
-                            type="text"
-                            value={config.ollamaModel}
-                            onChange={handleChange('ollamaModel')}
-                            placeholder="llama3"
-                            className="w-full p-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all pl-10 placeholder-white/20"
-                        />
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
-                            <Bot size={16} />
-                        </div>
+            <div className={isActive ? 'opacity-100' : 'opacity-50 pointer-events-none'}>
+                <label className="block text-sm font-medium mb-1 text-white/80" htmlFor="ollamaModel">模型名称</label>
+                <div className="relative">
+                    <input
+                        id="ollamaModel"
+                        type="text"
+                        value={config.ollamaModel}
+                        onChange={handleChange('ollamaModel')}
+                        placeholder="llama3"
+                        className="w-full p-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all pl-10 placeholder-white/20"
+                    />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
+                        <Bot size={16} />
                     </div>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1 text-white/80">外部访问</label>
-                    <a
-                        href="https://github.com/ollama/ollama/blob/main/docs/faq.md#how-can-i-allow-additional-origins"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center justify-between p-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white/70 hover:bg-white/10 transition-colors group"
-                    >
-                        <span>配置指南</span>
-                        <ExternalLink size={14} className="text-white/40 group-hover:text-white/70" />
-                    </a>
                 </div>
             </div>
 

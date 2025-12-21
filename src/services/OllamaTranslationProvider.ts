@@ -75,7 +75,7 @@ export class OllamaTranslationProvider implements TranslationProvider {
             }
         }
 
-        console.log('[Ollama Provider] Generated Prompt:', prompt);
+        // const startTime = Date.now();
 
         try {
             const response = await fetch(`${this.baseUrl}/api/generate`, {
@@ -92,6 +92,7 @@ export class OllamaTranslationProvider implements TranslationProvider {
             });
 
             const data = await response.json();
+
             let rawResponse = data.response.trim();
 
             // Handle <think> tags based on settings

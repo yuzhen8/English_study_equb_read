@@ -1,0 +1,82 @@
+﻿node.exe : [INFO]: Checking 
+for the Wasm target...
+At C:\Users\yz\AppData\Roami
+ng\npm\wasm-pack.ps1:24 char
+:5
++     & "node$exe"  "$basedi
+r/node_modules/wasm-pack/run
+.js" $args
++     ~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: ([INFO  
+  ]: Checking for the Was   
+ m target...:String) [],    
+ RemoteException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+[INFO]: Compiling to Wasm...
+   Compiling rand_core v0.6.
+4
+   Compiling siphasher v1.0.
+1
+   Compiling rand v0.8.5
+   Compiling phf_shared v0.1
+1.3
+   Compiling phf_generator v
+0.11.3
+   Compiling phf_macros v0.1
+1.3
+   Compiling phf v0.11.3
+   Compiling cefr-core v0.1.
+0 (F:\equb_English_learning\
+windows\cefr-core)
+warning: unexpected `cfg` co
+ndition value: `console_erro
+r_panic_hook`
+   --> src\lib.rs:200:11
+    |
+200 |     #[cfg(feature = "c
+onsole_error_panic_hook")]
+    |           ^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^ hel
+p: remove the condition
+    |
+    = note: no expected valu
+es for `feature`
+    = help: consider adding 
+`console_error_panic_hook` a
+s a feature in `Cargo.toml`
+    = note: see <https://doc
+.rust-lang.org/nightly/rustc
+/check-cfg/cargo-specifics.h
+tml> for more information ab
+out checking conditional con
+figuration
+    = note: `#[warn(unexpect
+ed_cfgs)]` on by default
+
+warning: `cefr-core` (lib) g
+enerated 1 warning
+    Finished `release` profi
+le [optimized] target(s) in 
+2.04s
+[INFO]: Installing wasm-bind
+gen...
+[INFO]: found wasm-opt at "C
+:\\Users\\yz\\.cargo\\bin\\w
+asm-opt.exe"
+[INFO]: Optimizing wasm bina
+ries with `wasm-opt`...
+[INFO]: Optional fields miss
+ing from Cargo.toml: 'descri
+ption', 'repository', and 'l
+icense'. These are not neces
+sary, but recommended
+[INFO]: :-) Done in 9.50s
+[INFO]: :-) Your wasm pkg is
+ ready to publish at F:\equb
+_English_learning\windows\ce
+fr-core\pkg.

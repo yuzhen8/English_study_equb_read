@@ -50,6 +50,7 @@ export const CefrAnalysisPopup: React.FC<CefrAnalysisPopupProps> = ({
     const [loading, setLoading] = useState(!cachedResult);
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<CefrAnalysisSummary | null>(cachedResult || null);
+    const [showAllUnknown, setShowAllUnknown] = useState(false);
 
     useEffect(() => {
         // 如果有缓存结果则直接显示，否则执行分析
@@ -81,6 +82,7 @@ export const CefrAnalysisPopup: React.FC<CefrAnalysisPopupProps> = ({
                     distribution: response.data.distribution,
                     unknownWordsRatio: response.data.unknownWordsRatio,
                     sampleUnknownWords: response.data.sampleUnknownWords,
+                    allUnknownWords: response.data.allUnknownWords, // Map new field
                     metrics: response.data.metrics
                 };
                 setResult(summary);
@@ -205,7 +207,10 @@ export const CefrAnalysisPopup: React.FC<CefrAnalysisPopupProps> = ({
                                                         />
                                                     </div>
                                                 </div>
-                                                <div className="text-xs text-gray-600 w-24 text-right shrink-0">
+                                                <div
+                                                    className="text-xs text-gray-600 w-24 text-right shrink-0 cursor-help"
+                                                    title="文本覆盖占比 (去重后单词数)"
+                                                >
                                                     {data.percentage.toFixed(1)}% ({data.uniqueWords}词)
                                                 </div>
                                             </div>
@@ -217,9 +222,19 @@ export const CefrAnalysisPopup: React.FC<CefrAnalysisPopupProps> = ({
                             {/* 未知词示例 */}
                             {result.sampleUnknownWords && result.sampleUnknownWords.length > 0 && (
                                 <div className="bg-gray-50 rounded-xl p-4">
-                                    <h4 className="text-sm font-bold text-gray-700 mb-2">
-                                        未收录词汇示例 ({result.unknownWordsRatio.toFixed(1)}%)
-                                    </h4>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h4 className="text-sm font-bold text-gray-700">
+                                            未收录词汇示例 ({(result.unknownWordsRatio * 100).toFixed(1)}%)
+                                        </h4>
+                                        {result.allUnknownWords && result.allUnknownWords.length > 0 && (
+                                            <button
+                                                onClick={() => setShowAllUnknown(true)}
+                                                className="text-xs text-indigo-600 font-bold hover:text-indigo-800 transition-colors bg-indigo-50 px-2 py-1 rounded"
+                                            >
+                                                查看全部 ({result.allUnknownWords.length})
+                                            </button>
+                                        )}
+                                    </div>
                                     <div className="flex flex-wrap gap-1">
                                         {result.sampleUnknownWords.slice(0, 20).map((word, i) => (
                                             <span
@@ -234,6 +249,33 @@ export const CefrAnalysisPopup: React.FC<CefrAnalysisPopupProps> = ({
                                                 +{result.sampleUnknownWords.length - 20} 更多
                                             </span>
                                         )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 全部未知词弹窗 */}
+                            {showAllUnknown && result.allUnknownWords && (
+                                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAllUnknown(false)} />
+                                    <div className="relative bg-white rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
+                                        <div className="p-4 border-b flex items-center justify-between">
+                                            <h3 className="font-bold text-lg">所有未收录词汇 ({result.allUnknownWords.length})</h3>
+                                            <button
+                                                onClick={() => setShowAllUnknown(false)}
+                                                className="p-1 hover:bg-gray-100 rounded-lg"
+                                            >
+                                                <X size={20} className="text-gray-500" />
+                                            </button>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                                            <div className="flex flex-wrap gap-2">
+                                                {result.allUnknownWords.sort().map((word, i) => (
+                                                    <span key={i} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm select-text cursor-text border border-gray-200">
+                                                        {word}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}

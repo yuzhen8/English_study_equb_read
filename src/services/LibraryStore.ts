@@ -36,6 +36,7 @@ export interface CefrAnalysisSummary {
     };
     unknownWordsRatio: number;
     sampleUnknownWords: string[];
+    allUnknownWords?: string[]; // 所有的未知单词列表
     metrics?: {
         lexical_score?: number;
         adjusted_score?: number;

@@ -130,7 +130,7 @@ export class HybridDictionaryService {
             word: partial.word || word,
             phonetics: partial.phonetics || [],
             meanings: partial.meanings || [],
-            source: { local: null, online: 'Free Dictionary', ai: null },
+            source: { local: null, online: 'Free Dictionary API', ai: null },
             translations: []
         };
 
@@ -179,8 +179,8 @@ export class HybridDictionaryService {
             const result: DictionaryResult = {
                 word: aiData.text || word,
                 phonetics: aiData.pronunciation ? [{ text: aiData.pronunciation }] : [],
-                meanings: [], // AI usually returns flat translation, structure if needed
-                source: { local: null, online: null, ai: 'AI' }, // Or use aiData.source
+                meanings: [],
+                source: { local: null, online: null, ai: aiData.source },
                 translations: aiData.translation ? [aiData.translation] : [],
                 grammarAnalysis: aiData.grammarAnalysis
             };

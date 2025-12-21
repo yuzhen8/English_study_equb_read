@@ -1,0 +1,43 @@
+﻿cargo : warning: unexpected 
+`cfg` condition value: `cons
+ole_error_panic_hook`
+At line:1 char:1
++ cargo check 2>&1 | Out-Fil
+e -Encoding UTF8 check_log.t
+xt; Get-Content ...
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: (warni  
+  ng: unexpe...ror_panic_   
+ hook`:String) [], Remot    
+eException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+   --> src\lib.rs:218:11
+    |
+218 |     #[cfg(feature = "c
+onsole_error_panic_hook")]
+    |           ^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^ hel
+p: remove the condition
+    |
+    = note: no expected valu
+es for `feature`
+    = help: consider adding 
+`console_error_panic_hook` a
+s a feature in `Cargo.toml`
+    = note: see <https://doc
+.rust-lang.org/nightly/rustc
+/check-cfg/cargo-specifics.h
+tml> for more information ab
+out checking conditional con
+figuration
+    = note: `#[warn(unexpect
+ed_cfgs)]` on by default
+
+warning: `cefr-core` (lib) g
+enerated 1 warning
+    Finished `dev` profile [
+unoptimized + debuginfo] tar
+get(s) in 0.05s

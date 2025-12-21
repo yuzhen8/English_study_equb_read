@@ -193,7 +193,14 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
 
         try {
             // 确定单词文本和上下文
-            const wordText = dictionaryResult?.word || initialData?.text || '';
+            // 优先使用原型 (Lemma) 作为单词本的主词条
+            let wordText = dictionaryResult?.word || initialData?.text || '';
+            const lemma = dictionaryResult?.lemma;
+            if (lemma && lemma.toLowerCase() !== wordText.toLowerCase()) {
+                console.log(`[WordDetailPopup] Using lemma '${lemma}' instead of '${wordText}'`);
+                wordText = lemma;
+            }
+
             const context = initialData?.context || savedWord?.context || '';
 
             console.log('[WordDetailPopup] wordText:', wordText);
@@ -206,7 +213,30 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
 
             // 获取翻译
             let translation = '';
-            if (dictionaryResult) {
+
+            // 如果切换到了原型，需要重新查询原型的释义
+            if (lemma && lemma.toLowerCase() !== (dictionaryResult?.word || '').toLowerCase()) {
+                console.log(`[WordDetailPopup] Fetching definition for lemma: ${lemma}`);
+                try {
+                    const lemmaResult = await hybridDictionary.queryLocal(lemma);
+                    if (lemmaResult) {
+                        translation = lemmaResult.translations?.[0] ||
+                            lemmaResult.meanings[0]?.definitions[0]?.definition || '';
+                    } else {
+                        // 如果本地查不到，尝试在线查询（虽然 queryLocal 通常包含大部分基础词）
+                        const onlineResult = await hybridDictionary.queryOnline(lemma);
+                        if (onlineResult) {
+                            translation = onlineResult.translations?.[0] || ''; // Online result usually doesn't have translations array populated like local, need verifying structure if using online
+                            // Hack: For online results, we might not get Chinese immediately if not utilizing a translation service
+                        }
+                    }
+                } catch (err) {
+                    console.warn('[WordDetailPopup] Failed to fetch lemma definition', err);
+                }
+            }
+
+            // 如果上面没获取到（或者没切换原型），还是用原来的逻辑兜底
+            if (!translation && dictionaryResult) {
                 // 优先使用简明释义，没有则使用第一条详细释义
                 translation = dictionaryResult.translations?.[0] ||
                     dictionaryResult.meanings[0]?.definitions[0]?.definition || '';
@@ -356,6 +386,46 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
         );
     }
 
+    const handleJumpToWord = async (targetWord: string) => {
+        if (!targetWord) return;
+        setLoading(true);
+        setSavedWord(null);
+        setAudioUrl('');
+        setDictionaryResult(null);
+
+        try {
+            // Check if word exists in store
+            const allWords = await WordStore.getWords();
+            const existing = allWords.find(w => w.text.toLowerCase() === targetWord.toLowerCase());
+            if (existing) setSavedWord(existing);
+
+            // Query dictionary
+            const localResult = await hybridDictionary.queryLocal(targetWord);
+            if (localResult) {
+                setDictionaryResult(localResult);
+                setLoading(false);
+                hybridDictionary.queryOnline(targetWord).then(onlineResult => {
+                    if (onlineResult) {
+                        setDictionaryResult(prev => prev ? hybridDictionary.mergeResults(prev, onlineResult) : onlineResult);
+                        const audio = onlineResult.phonetics.find(p => p.audio)?.audio;
+                        if (audio) hybridDictionary.getAudioUrl(targetWord, audio).then(setAudioUrl);
+                    }
+                });
+            } else {
+                const onlineResult = await hybridDictionary.queryOnline(targetWord);
+                if (onlineResult) {
+                    setDictionaryResult(onlineResult);
+                    const audio = onlineResult.phonetics.find(p => p.audio)?.audio;
+                    if (audio) hybridDictionary.getAudioUrl(targetWord, audio).then(setAudioUrl);
+                }
+                setLoading(false);
+            }
+        } catch (e) {
+            console.error("Failed to jump to word", e);
+            setLoading(false);
+        }
+    };
+
     const primaryPhonetic = dictionaryResult.phonetics.find(p => p.text)?.text || '';
 
     return (
@@ -373,9 +443,13 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                                 {dictionaryResult.word}
                             </h2>
                             {dictionaryResult.lemma && dictionaryResult.lemma.toLowerCase() !== dictionaryResult.word.toLowerCase() && (
-                                <span className="text-xs text-gray-400 font-medium mt-1">
-                                    原型: {dictionaryResult.lemma}
-                                </span>
+                                <button
+                                    onClick={() => handleJumpToWord(dictionaryResult.lemma!)}
+                                    className="text-xs text-blue-500 hover:text-blue-700 font-medium mt-1 text-left bg-blue-50/50 hover:bg-blue-100 px-2 py-0.5 rounded transition-colors w-fit flex items-center gap-1"
+                                    title="跳转到原型详情"
+                                >
+                                    原型: {dictionaryResult.lemma} <span className="text-[10px] opacity-60">↗</span>
+                                </button>
                             )}
                         </div>
 
@@ -449,7 +523,7 @@ const WordDetailPopup: React.FC<WordDetailPopupProps> = ({ wordId, initialData, 
                             colorClass="bg-purple-500"
                             collapsible={true}
                             defaultOpen={false}
-                            source={dictionaryResult.source.online ? "Online" : undefined}
+                            source={dictionaryResult.source.online || undefined}
                             showSource={showSources}
                         >
                             <div className="space-y-3">

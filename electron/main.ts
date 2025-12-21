@@ -242,6 +242,56 @@ app.on('ready', async () => {
         });
     });
 
+    // Baidu Translation Handler
+    ipcMain.handle('translate-baidu', async (event, { text, targetLang }) => {
+        const config = configManager.getAll();
+        const appId = config.apiKeys?.baiduAppId;
+        const secret = config.apiKeys?.baiduSecret;
+
+        if (!appId || !secret) {
+            return { success: false, error: 'Missing Baidu App ID or Secret' };
+        }
+
+        const crypto = require('crypto');
+        const salt = Date.now().toString();
+        const str = `${appId}${text}${salt}${secret}`;
+        const sign = crypto.createHash('md5').update(str).digest('hex');
+        const from = 'auto';
+        const to = targetLang === 'zh-CN' ? 'zh' : targetLang;
+
+        const url = `https://api.fanyi.baidu.com/api/trans/vip/translate?q=${encodeURIComponent(text)}&from=${from}&to=${to}&appid=${appId}&salt=${salt}&sign=${sign}`;
+
+        return new Promise((resolve) => {
+            const request = net.request(url);
+            request.on('response', (response) => {
+                let data = '';
+                response.on('data', (chunk) => { data += chunk.toString(); });
+                response.on('end', () => {
+                    if (response.statusCode && response.statusCode !== 200) {
+                        resolve({ success: false, error: `Baidu API error status: ${response.statusCode}` });
+                        return;
+                    }
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.error_code) {
+                            resolve({ success: false, error: `Baidu Error: ${parsed.error_msg} (${parsed.error_code})` });
+                        } else if (parsed.trans_result && parsed.trans_result.length > 0) {
+                            const translation = parsed.trans_result[0].dst;
+                            resolve({ success: true, translation, definitions: [] });
+                        } else {
+                            resolve({ success: false, error: 'Invalid response format' });
+                        }
+                    } catch (e) {
+                        resolve({ success: false, error: String(e) });
+                    }
+                });
+                response.on('error', (err: any) => resolve({ success: false, error: String(err) }));
+            });
+            request.on('error', (err) => resolve({ success: false, error: String(err) }));
+            request.end();
+        });
+    });
+
     ipcMain.handle('read-file', async (event, filePath) => {
         try {
             const data = await fs.readFile(filePath);
@@ -309,7 +359,7 @@ app.on('ready', async () => {
     ipcMain.handle('debug:log-srs', async (event, data: any) => {
         try {
             const desktopPath = app.getPath('desktop');
-            const logFilePath = path.join(desktopPath, 'linga_srs_debug.json');
+            const logFilePath = path.join(desktopPath, 'esreader_srs_debug.json');
 
             // 读取现有日志（如果存在）
             let existingLogs: any[] = [];
@@ -398,7 +448,7 @@ app.on('ready', async () => {
     ipcMain.handle('backup:saveData', async (event, dataString: string) => {
         const { canceled, filePath } = await dialog.showSaveDialog({
             title: '保存备份数据',
-            defaultPath: `linga-data-backup-${new Date().toISOString().split('T')[0]}.json`,
+            defaultPath: `esreader-data-backup-${new Date().toISOString().split('T')[0]}.json`,
             filters: [{ name: 'JSON', extensions: ['json'] }]
         });
 

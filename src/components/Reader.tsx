@@ -34,6 +34,8 @@ interface ReaderSettings {
     highlightUseGradient: boolean;
     highlightHeight: number; // 0.2 to 1.2
     highlightRounding: 'none' | 'small' | 'medium' | 'large' | 'full';
+    flow: 'paginated' | 'scrolled'; // 'paginated' (Simulation/Slide) | 'scrolled' (Vertical Scroll)
+    enableTapTurn: boolean;
 }
 
 const defaultSettings: ReaderSettings = {
@@ -45,7 +47,9 @@ const defaultSettings: ReaderSettings = {
     highlightOpacity: 1.0,
     highlightUseGradient: false,
     highlightHeight: 1.0,
-    highlightRounding: 'medium'
+    highlightRounding: 'medium',
+    flow: 'paginated',
+    enableTapTurn: true
 };
 
 type MenuViewState = 'main' | 'style' | 'highlight';
@@ -78,6 +82,16 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
 
     // Book metadata from EPUB (fallback)
     const [epubMetadata, setEpubMetadata] = useState<{ title?: string; author?: string; cover?: string }>({});
+
+    // Double Tap & Pinch State
+    const lastTapEndTimeRef = useRef<number>(0);
+    const isDoubleTapHoldRef = useRef<boolean>(false);
+    const pinchStartDistRef = useRef<number | null>(null);
+    const isPinchClosingRef = useRef<boolean>(false);
+
+    // Animation State
+    const [isClosing, setIsClosing] = useState(false);
+    const isClosingRef = useRef(false); // To prevent multiple triggers
 
     // Popup state
     const [showPopup, setShowPopup] = useState(false);
@@ -161,7 +175,7 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
             // 注入高亮样式 (SVG 方案)
             const svgUrl = getHighlightSvg(newSettings);
 
-            renditionRef.current.themes.override('.linga-highlight', `
+            renditionRef.current.themes.override('.esreader-highlight', `
                 background-image: url('${svgUrl}') !important;
                 background-size: 100% 100% !important;
                 background-repeat: no-repeat !important;
@@ -177,6 +191,13 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
             // Enable native selection
             renditionRef.current.themes.override('user-select', 'auto');
             renditionRef.current.themes.override('-webkit-user-select', 'auto');
+
+            // Handle Flow Update (Requires re-init mostly, but let's see if we can just update flow? No, flow is init-only usually in epub.js)
+            // Ideally we should reload the book or re-render if flow changes.
+            // As a simple approach for now, we rely on the parent useEffect to re-run if we put settings.flow in dependency,
+            // or we manually handle it here.
+            // Actually, changing flow requires destroying and re-creating rendition.
+            // We will handle this by adding `key` or dependency to the useEffect.
         }
     };
 
@@ -194,10 +215,17 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
         const book: any = new ePub(data);
         bookRef.current = book;
 
+        // Determine flow and manager based on settings
+        const flowMode = settings.flow === 'scrolled' ? 'scrolled-doc' : 'paginated';
+        const managerMode = settings.flow === 'scrolled' ? 'continuous' : 'default';
+
         const rendition = book.renderTo(viewerRef.current, {
             width: '100%',
             height: '100%',
-            flow: 'paginated',
+            flow: flowMode,
+            manager: managerMode,
+            snap: true,
+            allowScriptedContent: true,
         });
         renditionRef.current = rendition;
 
@@ -231,11 +259,13 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                     setEpubMetadata(prev => ({ ...prev, cover: url }));
                 }
             }).catch(() => { });
-        });
+        }).catch(() => { });
+
 
         rendition.on('rendered', async (_section: any, view: any) => {
             const doc = view.document;
             if (doc) {
+
                 if (settings.highlightWords) {
                     try {
                         const words = await WordStore.getWords();
@@ -270,7 +300,7 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                                     `.trim().replace(/\n\s*/g, ' ');
 
                                     span.innerHTML = text.replace(regex, (match: string) =>
-                                        `<span class="linga-highlight" style="${hlStyle}">${match}</span>`
+                                        `<span class="esreader-highlight" style="${hlStyle}">${match}</span>`
                                     );
                                     textNode.parentNode?.replaceChild(span, textNode);
                                 }
@@ -299,21 +329,86 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                     return range;
                 };
 
+                const selectWordAt = (x: number, y: number, doc: Document) => {
+                    // @ts-ignore
+                    if (doc.caretRangeFromPoint) {
+                        const sel = doc.getSelection();
+                        // @ts-ignore
+                        const range = doc.caretRangeFromPoint(x, y);
+                        if (range && range.startContainer.nodeType === Node.TEXT_NODE && sel) {
+                            sel.removeAllRanges();
+                            expandToWord(range, range.startContainer);
+                            sel.addRange(range);
+                            return sel.toString();
+                        }
+                    }
+                    return null;
+                };
+
+                const selectSentenceAt = (x: number, y: number, doc: Document) => {
+                    // @ts-ignore
+                    if (doc.caretRangeFromPoint) {
+                        const sel = doc.getSelection();
+                        // @ts-ignore
+                        const range = doc.caretRangeFromPoint(x, y);
+
+                        if (range && range.startContainer.nodeType === Node.TEXT_NODE && sel) {
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+
+                            // Use selection.modify to snap to sentence
+                            // Check for browser support
+                            // @ts-ignore
+                            if (sel.modify) {
+                                try {
+                                    // Collapse to point
+                                    sel.collapse(range.startContainer, range.startOffset);
+                                    // Move back to start of sentence
+                                    // @ts-ignore
+                                    sel.modify('move', 'backward', 'sentence');
+                                    // Extend to end of sentence
+                                    // @ts-ignore
+                                    sel.modify('extend', 'forward', 'sentence');
+                                } catch (e) {
+                                    // Fallback to word
+                                    expandToWord(range, range.startContainer);
+                                    sel.removeAllRanges();
+                                    sel.addRange(range);
+                                }
+                            } else {
+                                // Fallback
+                                expandToWord(range, range.startContainer);
+                                sel.removeAllRanges();
+                                sel.addRange(range);
+                            }
+
+                            // Get context
+                            const text = sel.toString().trim();
+                            if (text) {
+                                let context = text;
+                                try {
+                                    const container = range.commonAncestorContainer;
+                                    const block = (container.nodeType === Node.TEXT_NODE ? container.parentNode : container) as HTMLElement;
+                                    if (block && block.textContent) {
+                                        context = block.textContent.substring(Math.max(0, range.startOffset - 50), Math.min(block.textContent.length, range.endOffset + 50));
+                                    }
+                                } catch (e) { }
+                                return { text, context };
+                            }
+                        }
+                    }
+                    return null;
+                };
+
                 const handleLongPress = (x: number, y: number, doc: Document) => {
                     isLongPressRef.current = true;
                     isSelectingRef.current = true;
-                    // @ts-ignore
-                    if (doc.caretRangeFromPoint) {
-                        // @ts-ignore
-                        const range = doc.caretRangeFromPoint(x, y);
-                        if (range && range.startContainer.nodeType === Node.TEXT_NODE) {
-                            expandToWord(range, range.startContainer);
-                            const selection = doc.getSelection();
-                            if (selection) {
-                                selection.removeAllRanges();
-                                selection.addRange(range);
-                            }
-                        }
+                    // Single Long Press -> Select Sentence & Show Popup
+                    const result = selectSentenceAt(x, y, doc);
+                    if (result) {
+                        setGrammarData({ text: result.text, context: result.context });
+                        setShowGrammarPopup(true);
+                        setTimeout(() => doc.defaultView?.getSelection()?.removeAllRanges(), 100);
                     }
                 };
 
@@ -321,11 +416,21 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                     inputStartRef.current = { x, y, time: Date.now() };
                     isLongPressRef.current = false;
                     isSelectingRef.current = false;
+                    isDoubleTapHoldRef.current = false;
 
-                    // Start long press timer
+                    // Check for Double Tap (Hold)
+                    if (Date.now() - lastTapEndTimeRef.current < 400) {
+                        isDoubleTapHoldRef.current = true;
+                        isSelectingRef.current = true;
+                        // Double Tap Hold -> Select Word (to start range selection dragging)
+                        selectWordAt(x, y, doc);
+                        return; // Skip long press timer
+                    }
+
+                    // Start long press timer (Reduced to 400ms for better responsiveness)
                     longPressTimerRef.current = setTimeout(() => {
                         handleLongPress(x, y, doc);
-                    }, 600);
+                    }, 400);
                 };
 
                 const moveInput = (x: number, y: number) => {
@@ -340,11 +445,23 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                             const range = doc.caretRangeFromPoint(x, y);
                             if (range) {
                                 try {
+                                    // Standard extension to point
                                     sel.extend(range.startContainer, range.startOffset);
-                                } catch (e) {
-                                    // Fallback for browsers that don't support extend across nodes easily or if range is invalid
-                                    // console.warn(e);
-                                }
+
+                                    // Optional: Snap to sentence end while dragging?
+                                    // It might be jerky. Let's stick to raw extension after initial sentence selection.
+                                    // But user asked for "drag to select sentence".
+                                    // If we want sentence granularity:
+                                    /*
+                                    // @ts-ignore
+                                    if (sel.modify) {
+                                        // Determine direction?
+                                        // It's hard to know direction easily without comparing ranges.
+                                        // Simple heuristic: just extend to 'sentence' forward if we are moving forward?
+                                        // Too complex for now. Native expansion usually works well enough if started correctly.
+                                    }
+                                    */
+                                } catch (e) { }
                             }
                         }
                         return;
@@ -377,12 +494,29 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                         // Check if we selected something valuable to show popup
                         const selection = doc.getSelection();
                         if (selection && selection.toString().trim().length > 0) {
-                            // const text = selection.toString().trim(); // Unused
-                            // Simple popup trigger relies on mouseup usually, but we can synthesize or just leave it
-                            // as the selection exists, the user can click 'Copy' or we can auto-show logic inside mouseup?
-                            // Verify if we need to manually trigger popup here. 
-                            // The existing mouseup handler checks selection. Let's trigger it manually if needed.
-                            // But mouseup runs after this.
+                            const text = selection.toString().trim();
+                            // If user was dragging (likely range selection), show popup
+                            // This covers Double-Tap-Hold-Drag end
+                            let context = text;
+                            try {
+                                const range = selection.getRangeAt(0);
+                                const container = range.commonAncestorContainer;
+                                const block = (container.nodeType === Node.TEXT_NODE ? container.parentNode : container) as HTMLElement;
+                                if (block && block.textContent) {
+                                    context = block.textContent.substring(Math.max(0, range.startOffset - 50), Math.min(block.textContent.length, range.endOffset + 50));
+                                }
+                            } catch (e) { }
+
+                            const isSentence = text.trim().split(/\s+/).length > 2;
+                            if (isSentence) {
+                                setGrammarData({ text, context });
+                                setShowGrammarPopup(true);
+                                setTimeout(() => doc.defaultView?.getSelection()?.removeAllRanges(), 100);
+                            } else {
+                                setPopupData({ text, translation: '', context });
+                                setShowPopup(true);
+                                setTimeout(() => doc.defaultView?.getSelection()?.removeAllRanges(), 100);
+                            }
                         }
                         return;
                     }
@@ -404,8 +538,9 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                                 if (diffX > 0) handlePrevPage();
                                 else handleNextPage();
                             }
-                        } else if (timeDiff < 500 && Math.abs(diffX) < 10 && Math.abs(diffY) < 10) {
+                        } else if (timeDiff < 500 && Math.abs(diffX) < 20 && Math.abs(diffY) < 20) {
                             // Tap Logic
+                            lastTapEndTimeRef.current = Date.now();
                             let isWordTap = false;
                             // @ts-ignore
                             if (doc.caretRangeFromPoint) {
@@ -417,6 +552,9 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                                     const char = text[offset] || text[offset - 1] || "";
                                     if (/[\w\d']/.test(char)) isWordTap = true;
                                 }
+                            } else {
+                                // Fallback: Assume NOT a word tap to avoid accidental selections
+                                isWordTap = false;
                             }
 
                             if (!isWordTap) setShowControls(prev => !prev);
@@ -427,22 +565,61 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
 
                 // Touch Handlers
                 const handleTouchStart = (e: TouchEvent) => {
+                    if (e.touches.length === 2) {
+                        // Start Pinch Detection
+                        const t1 = e.touches[0];
+                        const t2 = e.touches[1];
+                        const dist = Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+                        pinchStartDistRef.current = dist;
+                        isPinchClosingRef.current = false;
+                        return;
+                    }
+
                     if (e.touches.length !== 1) return;
                     lastTouchTimeRef.current = Date.now();
                     const t = e.touches[0];
                     startInput(t.clientX, t.clientY, 'touch');
                 };
+
                 const handleTouchMove = (e: TouchEvent) => {
+                    if (e.touches.length === 2 && pinchStartDistRef.current !== null) {
+                        e.preventDefault(); // Prevent default zoom/scroll
+                        const t1 = e.touches[0];
+                        const t2 = e.touches[1];
+                        const dist = Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+
+                        // Check for Pinch In (Distance decreasing)
+                        // Trigger if distance reduced by > 100px
+                        if (pinchStartDistRef.current - dist > 100 && !isPinchClosingRef.current && !isClosingRef.current) {
+                            isPinchClosingRef.current = true;
+                            isClosingRef.current = true;
+                            setIsClosing(true);
+                        }
+                        return;
+                    }
+
                     if (isSelectingRef.current && e.cancelable) {
                         e.preventDefault(); // Prevent scroll while selecting
                     }
                     const t = e.touches[0];
-                    moveInput(t.clientX, t.clientY);
+                    if (t) moveInput(t.clientX, t.clientY);
                 };
+
                 const handleTouchEnd = (e: TouchEvent) => {
-                    lastTouchTimeRef.current = Date.now();
-                    const t = e.changedTouches[0];
-                    endInput(t.clientX, t.clientY);
+                    if (e.touches.length < 2) {
+                        pinchStartDistRef.current = null;
+                        // Don't process tap/swipe if we were just pinching
+                        if (isPinchClosingRef.current) {
+                            isPinchClosingRef.current = false;
+                            return;
+                        }
+                    }
+
+                    if (e.changedTouches.length > 0) {
+                        lastTouchTimeRef.current = Date.now();
+                        const t = e.changedTouches[0];
+                        endInput(t.clientX, t.clientY);
+                    }
                 };
 
                 // Mouse Handlers
@@ -470,60 +647,9 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
 
 
                 // Handle Tap specifically if needed, causing word selection
-                doc.addEventListener('click', () => {
-                    // Check if it was a touch-generated click (optional, but good for differentiation)
-                    // Here we just enhance the default selection logic
-                    setTimeout(() => {
-                        const selection = doc.getSelection();
-                        if (selection && selection.isCollapsed) {
-                            // User clicked (caret), but didn't select. Let's select the word.
-                            // Logic moved from mouseup to here or we augment mouseup?
-                            // Existing mouseup logic handles "mouseup -> getSelection -> if text selected -> popup".
-                            // If click results in caret only, we want to expand to word.
-
-                            // However, wait... the request says "Tap to identify word".
-                            // Existing code relies on `mouseup` and checks `selection.toString()`.
-                            // If I tap, the browser usually sets a cursor (collapsed selection).
-                            // So `selection.toString()` is empty.
-
-                            // Let's manually select word on click if selection is empty.
-                            /*
-                            const sel = doc.getSelection();
-                            if (sel && sel.rangeCount > 0 && sel.isCollapsed) {
-                                const range = sel.getRangeAt(0);
-                                if (range.startContainer.nodeType === Node.TEXT_NODE) {
-                                    expandToWord(range, range.startContainer);
-                                    sel.removeAllRanges();
-                                    sel.addRange(range);
-                                    // Now the existing mouseup handler (or a new trigger) needs to run?
-                                    // The existing mouseup handler runs on mouseup. 
-                                    // On touch, we get touchstart -> touchend -> mousedown -> mouseup -> click.
-                                    // So mouseup might have already run and found nothing.
-                                    // We should probably trigger the popup logic here explicitly.
-                                    const text = sel.toString().trim();
-                                    if (text) {
-                                         // Recalculate context
-                                         let context = text;
-                                          try {
-                                               const container = range.commonAncestorContainer;
-                                               const block = (container.nodeType === Node.TEXT_NODE ? container.parentNode : container) as HTMLElement;
-                                               if (block && block.textContent) {
-                                                   context = block.textContent.substring(0, 200);
-                                               }
-                                           } catch (e) { }
-                                         setPopupData({ text, translation: '', context });
-                                         setShowPopup(true);
-                                    }
-                                }
-                            }
-                            */
-                            // NOTE: Investigating `expandToWord` logic above:
-                            // The user wants "Click to identify word".
-                            // The existing mouseup handler (lines 272-299) handles selection logic.
-                            // But for a simple click (tap), the selection is often collapsed.
-                        }
-                    }, 10);
-                });
+                // Handle Tap specifically if needed, causing word selection
+                // Removed duplicate listener logic which was causing interference.
+                // Merging all click handling into the primary listener below.
 
                 doc.addEventListener('touchstart', handleTouchStart, { passive: true });
                 doc.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -545,17 +671,51 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                             // @ts-ignore
                             const hitRange = doc.caretRangeFromPoint(e.clientX, e.clientY);
                             if (hitRange && hitRange.startContainer.nodeType === Node.TEXT_NODE) {
+                                // 1. Check text content
                                 const hText = hitRange.startContainer.textContent || "";
                                 const offset = hitRange.startOffset;
-                                // Check characters around the hit point
                                 const char = hText[offset] || "";
                                 const charPrev = hText[offset - 1] || "";
-                                if (/[\w\d']/.test(char) || /[\w\d']/.test(charPrev)) {
-                                    isPrecisionHit = true;
+
+                                // 2. GEOMETRIC CHECK (Crucial for preventing whitespace hits)
+                                // Create a range for the specific character position
+                                try {
+                                    const charRange = doc.createRange();
+                                    // Try to select the character to the right
+                                    if (offset < hText.length) {
+                                        charRange.setStart(hitRange.startContainer, offset);
+                                        charRange.setEnd(hitRange.startContainer, offset + 1);
+                                    } else if (offset > 0) {
+                                        // Or left if at end
+                                        charRange.setStart(hitRange.startContainer, offset - 1);
+                                        charRange.setEnd(hitRange.startContainer, offset);
+                                    }
+
+                                    const rects = charRange.getClientRects();
+                                    if (rects.length > 0) {
+                                        const rect = rects[0];
+                                        // Allow 5px margin of error
+                                        const margin = 5;
+                                        if (
+                                            e.clientX >= rect.left - margin &&
+                                            e.clientX <= rect.right + margin &&
+                                            e.clientY >= rect.top - margin &&
+                                            e.clientY <= rect.bottom + margin
+                                        ) {
+                                            if (/[\w\d']/.test(char) || /[\w\d']/.test(charPrev)) {
+                                                isPrecisionHit = true;
+                                            }
+                                        }
+                                    }
+                                } catch (err) {
+                                    // Fallback to loose check
+                                    if (/[\w\d']/.test(char) || /[\w\d']/.test(charPrev)) {
+                                        isPrecisionHit = true;
+                                    }
                                 }
                             }
                         } else {
-                            // Fallback if API missing (unlikely in Electron/Chrome)
+                            // Fallback if API missing (not precise)
                             isPrecisionHit = true;
                         }
 
@@ -612,6 +772,7 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
 
                                         setPopupData({ text: word, translation: '', context });
                                         setShowPopup(true);
+                                        setTimeout(() => doc.defaultView?.getSelection()?.removeAllRanges(), 100);
                                     } catch (err) {
                                         console.error("Selection error", err);
                                     }
@@ -641,13 +802,20 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                                 if (isSentence) {
                                     setGrammarData({ text, context });
                                     setShowGrammarPopup(true);
+                                    setTimeout(() => doc.defaultView?.getSelection()?.removeAllRanges(), 100);
                                 } else {
                                     setPopupData({ text, translation: '', context });
                                     setShowPopup(true);
+                                    setTimeout(() => doc.defaultView?.getSelection()?.removeAllRanges(), 100);
                                 }
                             }
                         }
                     }, 50);
+                });
+
+                // Prevent native context menu (especially on touch long press)
+                doc.addEventListener('contextmenu', (e: Event) => {
+                    e.preventDefault();
                 });
             }
         });
@@ -700,7 +868,7 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
             locationsReadyRef.current = false;
             if (book) book.destroy();
         };
-    }, [data, bookId]);
+    }, [data, bookId, settings.flow]);
 
     const handlePrevPage = () => renditionRef.current?.prev();
     const handleNextPage = () => renditionRef.current?.next();
@@ -752,6 +920,30 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                                 </div>
                             </div>
                             <ChevronRight size={18} className="text-gray-300" />
+                        </button>
+
+                        <div className="h-px bg-gray-50" />
+
+                        {/* 常规配置入口 */}
+                        <button
+                            onClick={() => { /* No specific menu view for this, it's a toggle */ }}
+                            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                                    <Settings size={20} />
+                                </div>
+                                <div className="text-left font-bold text-gray-700">点击翻页</div>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer scale-90">
+                                <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={settings.enableTapTurn}
+                                    onChange={(e) => updateSetting('enableTapTurn', e.target.checked)}
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
                         </button>
 
                         <div className="h-px bg-gray-50" />
@@ -1051,27 +1243,36 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
 
     return (
         <div
-            className={`reader-container relative w-full h-full overflow-hidden ${bgColors[settings.theme]}`}
+            className={cn(
+                `reader-container relative w-full h-full overflow-hidden transition-all duration-300 ease-in-out ${bgColors[settings.theme]}`,
+                isClosing ? "scale-90 opacity-0 rounded-[40px]" : "scale-100 opacity-100"
+            )}
+            style={{ transformOrigin: 'center center' }}
             onTouchStart={onContainerInputStart}
             onTouchEnd={onContainerInputEnd}
             onMouseDown={onContainerInputStart}
             onMouseUp={onContainerInputEnd}
+            onTransitionEnd={() => {
+                if (isClosing) {
+                    onClose?.();
+                }
+            }}
         >
             <div ref={viewerRef} className="reader-content absolute top-0 left-0 right-0 bottom-16" />
 
             {/* 点击层 - 分区域交互 */}
-            {/* 1. 左侧翻页 (极窄 3%) */}
-            <div className="absolute inset-y-0 left-0 w-[3%] z-20 cursor-pointer hover:bg-black/5 transition-colors" onClick={handlePrevPage} title="上一页" />
+            {/* 1. 左侧翻页 (极窄 4%) */}
+            <div className="absolute inset-y-0 left-0 w-[4%] z-20 cursor-pointer hover:bg-black/5 transition-colors" onClick={handlePrevPage} title="上一页" />
 
-            {/* 2. 右侧翻页 (极窄 3%) */}
-            <div className="absolute inset-y-0 right-0 w-[3%] z-20 cursor-pointer hover:bg-black/5 transition-colors" onClick={handleNextPage} title="下一页" />
+            {/* 2. 右侧翻页 (极窄 4%) */}
+            <div className="absolute inset-y-0 right-0 w-[4%] z-20 cursor-pointer hover:bg-black/5 transition-colors" onClick={handleNextPage} title="下一页" />
 
             {/* 3. 中间切换 UI (已移除，改为由 iframe 内部点击事件触发，以支持文字交互) */}
             {/* <div className="absolute inset-y-0 left-[3%] right-[3%] z-10 cursor-default" onClick={() => setShowControls(!showControls)} /> */}
 
             {/* 悬浮型退出按钮 (仅在 showControls 为 true 时显示) */}
             <div className={cn(
-                "absolute top-6 left-6 z-30 transition-all duration-500 ease-out transform",
+                "absolute top-6 left-6 z-50 transition-all duration-500 ease-out transform",
                 showControls ? "translate-y-0 opacity-100 scale-100" : "-translate-y-4 opacity-0 scale-90 pointer-events-none"
             )}>
                 <button
@@ -1133,6 +1334,39 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                     onClose={() => setShowGrammarPopup(false)}
                 />
             )}
+
+
+            {/* Page Turn Click Zones (Left/Right 5%) - Always render to control behavior */}
+            <>
+                <div
+                    className={cn(
+                        "fixed top-0 left-0 w-[3%] h-full z-40 transition-colors",
+                        settings.enableTapTurn ? "cursor-pointer hover:bg-white/5" : "cursor-default"
+                    )}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (settings.enableTapTurn) handlePrevPage();
+                    }}
+                    onMouseDown={(e) => { e.stopPropagation(); if (!settings.enableTapTurn) e.preventDefault(); }}
+                    onTouchStart={(e) => { e.stopPropagation(); if (!settings.enableTapTurn) e.preventDefault(); }}
+                    onMouseUp={(e) => { e.stopPropagation(); if (!settings.enableTapTurn) e.preventDefault(); }}
+                />
+                <div
+                    className={cn(
+                        "fixed top-0 right-0 w-[3%] h-full z-40 transition-colors",
+                        settings.enableTapTurn ? "cursor-pointer hover:bg-white/5" : "cursor-default"
+                    )}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (settings.enableTapTurn) handleNextPage();
+                    }}
+                    onMouseDown={(e) => { e.stopPropagation(); if (!settings.enableTapTurn) e.preventDefault(); }}
+                    onTouchStart={(e) => { e.stopPropagation(); if (!settings.enableTapTurn) e.preventDefault(); }}
+                    onMouseUp={(e) => { e.stopPropagation(); if (!settings.enableTapTurn) e.preventDefault(); }}
+                />
+            </>
         </div>
     );
 };

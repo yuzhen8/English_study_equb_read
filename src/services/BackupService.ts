@@ -20,7 +20,7 @@ export const BackupService = {
                 meta: {
                     version: DB_VERSION,
                     timestamp: new Date().toISOString(),
-                    appName: 'Linga Reader'
+                    appName: 'ESReader'
                 },
                 data: {
                     words,

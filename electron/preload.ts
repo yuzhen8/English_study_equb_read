@@ -15,6 +15,7 @@ window.addEventListener('DOMContentLoaded', () => {
 contextBridge.exposeInMainWorld('electronAPI', {
     translate: (text: string, targetLang: string) => ipcRenderer.invoke('translate-text', { text, targetLang }),
     translateMicrosoft: (text: string, targetLang: string) => ipcRenderer.invoke('translate-microsoft', { text, targetLang }),
+    translateBaidu: (text: string, targetLang: string) => ipcRenderer.invoke('translate-baidu', { text, targetLang }),
     setProxy: (proxyRules: string) => ipcRenderer.invoke('set-proxy', proxyRules),
     getSettings: () => ipcRenderer.invoke('get-settings'),
     saveSettings: (settings: any) => ipcRenderer.invoke('save-settings', settings),

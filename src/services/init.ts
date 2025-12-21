@@ -3,6 +3,7 @@ import { GoogleTranslationProvider } from './GoogleTranslationProvider';
 import { DeepSeekTranslationProvider } from './DeepSeekTranslationProvider';
 import { OllamaTranslationProvider } from './OllamaTranslationProvider';
 import { MicrosoftTranslationProvider } from './MicrosoftTranslationProvider';
+import { BaiduTranslationProvider } from './BaiduTranslationProvider';
 
 export const initTranslationServices = async () => {
     // Register providers
@@ -17,6 +18,11 @@ export const initTranslationServices = async () => {
 
     const microsoftProvider = new MicrosoftTranslationProvider();
     translationService.registerProvider('microsoft', microsoftProvider);
+    // User refers to this as Bing
+    translationService.registerProvider('bing', microsoftProvider);
+
+    const baiduProvider = new BaiduTranslationProvider();
+    translationService.registerProvider('baidu', baiduProvider);
 
     // Load settings from config
     try {

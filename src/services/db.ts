@@ -1,4 +1,4 @@
-export const DB_NAME = 'LingaDB';
+export const DB_NAME = 'ESReaderDB';
 export const DB_VERSION = 5; // Version bump for categories
 export const STORE_BOOKS = 'books';
 export const STORE_BOOK_DATA = 'book_data';

@@ -4,10 +4,13 @@ import fs from 'fs';
 
 interface AppConfig {
     translationProvider: 'google' | 'microsoft' | 'deepseek' | 'ollama';
+    fastTranslationProvider: 'google' | 'bing' | 'baidu'; // Default 'google'
     proxy: string; // e.g., 'socks5://127.0.0.1:1080'
     apiKeys: {
         google?: string;
         deepseek?: string;
+        baiduAppId?: string;
+        baiduSecret?: string;
     };
     ollamaUrl?: string; // e.g., 'http://localhost:11434'
     ollamaModel?: string; // e.g., 'llama2'
@@ -61,6 +64,7 @@ Text: {{text}}`
 
 const defaultConfig: AppConfig = {
     translationProvider: 'google',
+    fastTranslationProvider: 'google',
     proxy: 'socks5://192.168.50.3:20170',
     apiKeys: {},
     ollamaUrl: 'http://localhost:11434',

@@ -10,7 +10,7 @@ use rust_stemmers::{Algorithm, Stemmer};
 use dictionary::{DICT, CEFRLevel};
 use pos::tag_sentence;
 use syntax::{SyntacticAnalyzer, SyntaxMetrics};
-use discourse::{DiscourseAnalyzer, DiscourseMetrics};
+use discourse::{DiscourseAnalyzer, DiscourseMetrics, is_common_name};
 
 // Weights for adjusted score
 const WEIGHT_CLAUSE_DENSITY: f64 = 0.5;
@@ -95,7 +95,25 @@ pub fn analyze(text: &str) -> JsValue {
             let mut lemma = token.word.to_lowercase();
             let is_phrase = false; 
             
-            // Lookup
+            // PRIORITY 1: Check if it's a common name (capitalized and in name database)
+            // Names should not be counted as "Unknown" words
+            let is_capitalized = token.word.chars().next().map_or(false, |c| c.is_uppercase());
+            if is_capitalized && is_common_name(&token.word) {
+                level_str = "Entity".to_string();
+                lemma = token.word.clone(); // Keep original form for names
+                // Don't add to scored_items - names don't affect CEFR level
+                unique_lemmas.insert(lemma.clone());
+                details.push(TokenDetail {
+                    text: token.word.clone(),
+                    lemma,
+                    pos: token.tag.clone(),
+                    level: level_str,
+                    is_phrase,
+                });
+                continue; // Skip dictionary lookup for names
+            }
+            
+            // PRIORITY 2: Dictionary lookup
             let mut found_in_dict = false;
             if let Some(entry) = DICT.lookup(&token.word, Some(&token.tag)) {
                 level_str = format!("{:?}", entry.level);
@@ -128,9 +146,14 @@ pub fn analyze(text: &str) -> JsValue {
                 }
             }
 
-            // Improve "Unknown" filtering
-            // If it's a number or overly simple stopword not in dict, maybe ignore?
-            // For now, keep as is.
+            // PRIORITY 3: Heuristic for proper nouns not in name database
+            // If still "Unknown" and capitalized, it's likely a proper noun (name/place/etc.)
+            // This catches names like "Sherlock", "Holmes", "Zanzibar" that aren't in our database
+            if level_str == "Unknown" && is_capitalized {
+                level_str = "Entity".to_string();
+                lemma = token.word.clone(); // Keep original form for entities
+                // Don't count as unknown - it's a proper noun
+            }
 
             unique_lemmas.insert(lemma.clone());
 

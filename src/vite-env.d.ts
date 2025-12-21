@@ -3,6 +3,7 @@
 interface ElectronAPI {
     translate: (text: string, targetLang: string) => Promise<{ success: boolean; translation?: string; error?: string; definitions?: string[] }>;
     translateMicrosoft: (text: string, targetLang: string) => Promise<{ success: boolean; translation?: string; error?: string }>;
+    translateBaidu: (text: string, targetLang: string) => Promise<{ success: boolean; translation?: string; error?: string }>;
     setProxy: (proxyRules: string) => Promise<{ success: boolean; error?: string }>;
     getSettings: () => Promise<any>;
     saveSettings: (settings: any) => Promise<{ success: boolean; error?: string }>;
@@ -47,6 +48,7 @@ interface CefrAnalysisResult {
     difficultyScore: number;
     primaryLevel: string;
     sampleUnknownWords: string[];
+    allUnknownWords?: string[]; // 所有的未知单词列表
     cefrDictionarySize: number;
     metrics?: {
         lexical_score?: number;

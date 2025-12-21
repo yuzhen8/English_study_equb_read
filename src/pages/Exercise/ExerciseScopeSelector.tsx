@@ -4,6 +4,7 @@ import { ArrowLeft, Zap, Layers, Type, MousePointerClick, Check, Headphones, Fil
 import { cn } from '../../lib/utils';
 import { WordStore } from '../../services/WordStore';
 import { GroupStore, WordGroup } from '../../services/GroupStore';
+import { useTheme } from '../../context/ThemeContext';
 
 // 练习模式图标和颜色映射 (Updated colors for dark mode)
 const modeConfig: Record<string, { icon: React.ElementType; color: string; title: string }> = {
@@ -14,6 +15,20 @@ const modeConfig: Record<string, { icon: React.ElementType; color: string; title
     'listening-choice': { icon: Headphones, color: 'text-pink-300', title: '听力选择' },
     'listening-spelling': { icon: Headphones, color: 'text-amber-300', title: '听力拼写' },
     'fill-blank': { icon: FileText, color: 'text-cyan-300', title: '选词填空' },
+};
+
+const getThemeGradient = (themeId: string) => {
+    const map: Record<string, string> = {
+        default: 'bg-gradient-to-r from-indigo-600 to-purple-600',
+        ocean: 'bg-gradient-to-r from-cyan-600 to-blue-600',
+        forest: 'bg-gradient-to-r from-emerald-600 to-teal-600',
+        sunset: 'bg-gradient-to-r from-orange-600 to-red-600',
+        nebula: 'bg-gradient-to-r from-fuchsia-600 to-purple-600',
+        midnight: 'bg-zinc-800',
+        grey: 'bg-gradient-to-r from-gray-600 to-zinc-600',
+        pink: 'bg-gradient-to-r from-rose-500 to-pink-500',
+    };
+    return map[themeId] || map.default;
 };
 
 // 范围选项类型
@@ -28,6 +43,7 @@ interface ScopeOption {
 }
 
 const ExerciseScopeSelector: React.FC = () => {
+    const { currentTheme } = useTheme();
     const { mode } = useParams<{ mode: string }>();
     const navigate = useNavigate();
 
@@ -203,7 +219,7 @@ const ExerciseScopeSelector: React.FC = () => {
             </div>
 
             {/* Scope Options */}
-            <div className="flex-1 px-4 py-4 space-y-6">
+            <div className="flex-1 px-4 py-4 pb-32 space-y-6">
                 {/* 随机范围 */}
                 <div className="space-y-2">
                     <div className="flex items-center justify-between px-1">
@@ -263,18 +279,18 @@ const ExerciseScopeSelector: React.FC = () => {
             </div>
 
             {/* Start Button - Sticky Footer */}
-            <div className="sticky bottom-0 left-0 right-0 p-4 bg-black/60 backdrop-blur-md border-t border-white/10 z-20">
+            <div className="sticky bottom-28 left-0 right-0 p-4 z-20 pointer-events-none">
                 <button
                     onClick={handleStart}
                     disabled={!canStart}
                     className={cn(
-                        "w-full py-4 rounded-2xl font-bold text-lg transition-all",
+                        "w-full py-4 rounded-2xl font-bold text-lg transition-all pointer-events-auto",
                         canStart
-                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:scale-[1.02] shadow-[0_0_20px_rgba(79,70,229,0.4)] border border-white/20"
+                            ? `${getThemeGradient(currentTheme.id)} text-white hover:scale-[1.02] shadow-[0_0_20px_rgba(79,70,229,0.4)] border border-white/20`
                             : "bg-white/10 text-white/20 cursor-not-allowed border border-white/5"
                     )}
                 >
-                    开始 ({selectedOption?.count || 0})
+                    开始
                 </button>
             </div>
         </div>
