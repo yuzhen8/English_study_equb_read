@@ -3,16 +3,17 @@ import path from 'path';
 import fs from 'fs-extra';
 import axios from 'axios';
 import crypto from 'crypto';
+import zlib from 'zlib';
 
-// Use userData for persistent storage (preserved across updates)
+// 使用 userData 进行持久存储 (跨更新保留)
 const AUDIO_CACHE_DIR = path.join(app.getPath('userData'), 'audio_cache');
 
-// Ensure cache directory exists immediately
+// 确保缓存目录立即存在
 try {
     fs.ensureDirSync(AUDIO_CACHE_DIR);
-    console.log('Audio cache directory:', AUDIO_CACHE_DIR);
+    console.log('音频缓存目录:', AUDIO_CACHE_DIR);
 } catch (e) {
-    console.error('Failed to create audio cache dir:', e);
+    console.error('创建音频缓存目录失败:', e);
 }
 
 export function setupDictionaryHandlers() {
@@ -20,23 +21,23 @@ export function setupDictionaryHandlers() {
         try {
             if (!url) throw new Error('No URL provided');
 
-            // Create a unique filename based on URL hash to handle same word different accents
+            // 基于 URL 哈希创建唯一文件名，以处理相同单词不同口音的情况
             const hash = crypto.createHash('md5').update(url).digest('hex');
-            // Some URLs might not have extension, default to .mp3
+            // 某些 URL 可能没有扩展名，默认为 .mp3
             const ext = path.extname(new URL(url).pathname) || '.mp3';
-            // Clean word for filename safe
+            // 清理单词以确保文件名安全
             const safeWord = word.replace(/[^a-z0-9]/gi, '_');
             const filename = `${safeWord}_${hash}${ext}`;
             const filePath = path.join(AUDIO_CACHE_DIR, filename);
 
-            // Check if file exists
+            // 检查文件是否存在
             if (await fs.pathExists(filePath)) {
                 return { success: true, path: filePath };
             }
 
-            console.log(`Downloading audio for ${word} from ${url}`);
+            console.log(`正在下载音频 ${word} 从 ${url}`);
 
-            // Download file
+            // 下载文件
             const response = await axios({
                 url,
                 method: 'GET',
@@ -49,74 +50,83 @@ export function setupDictionaryHandlers() {
             return new Promise((resolve, reject) => {
                 writer.on('finish', () => resolve({ success: true, path: filePath }));
                 writer.on('error', (err: any) => {
-                    console.error('Stream write error:', err);
-                    fs.unlink(filePath).catch(() => { }); // Cleanup on error
+                    console.error('流写入错误:', err);
+                    fs.unlink(filePath).catch(() => { }); // 出错时清理
                     resolve({ success: false, error: err.message });
                 });
             });
 
         } catch (error: any) {
-            console.error('Audio download error:', error);
+            console.error('音频下载错误:', error);
             return { success: false, error: error.message || String(error) };
         }
     });
 
     ipcMain.handle('dict:search-local', async (event, word) => {
         try {
-            // Lazy load DB? Or load at top? For now load here or use a singleton if we export it.
-            // Let's assume we open it once or open per request (fast enough for sqlite).
-            // Ideal: Open once.
+            const { lookupFstOffset } = require('./cefrAnalyzer');
 
-            const dbPath = path.join(app.getAppPath(), 'resources/dict.db');
-            // Check if DB exists
-            if (!await fs.pathExists(dbPath)) {
-                // Try dev path if not packed
-                const devDbPath = path.join(app.getAppPath(), '../resources/dict.db'); // This might vary based on how electron runs in dev
-                // Actually in dev, app.getAppPath() usually points to dist-electron or (.) 
-                // Let's try standard resource path logic.
+            // 1. 通过 WASM FST 查找偏移量
+            // 返回 BigInt (u64) 或 undefined
+            const offsetBigInt = await lookupFstOffset(word);
+
+            if (offsetBigInt === undefined) {
+                return { success: true, found: false };
             }
 
-            // For dev ease, let's look in expected location
-            const RESOURCES_PATH = app.isPackaged
-                ? path.join(process.resourcesPath, 'dict.db')
-                : path.join(app.getAppPath(), 'resources/dict.db');
+            // 2. 从 dict.data 读取数据
+            const isDev = !app.isPackaged;
+            let resourcesPath: string;
+            if (isDev) {
+                resourcesPath = path.join(process.cwd(), 'resources');
+            } else {
+                resourcesPath = process.resourcesPath || path.join(__dirname, '..', 'resources');
+            }
+            const dataPath = path.join(resourcesPath, 'dict.data');
 
-            // However, our script outputs to `windows/resources/dict.db`. 
-            // `app.getAppPath()` in dev usually is `windows`.
-
-            const dbLocation = RESOURCES_PATH;
-
-            if (!fs.existsSync(dbLocation)) {
-                console.warn(`Local dictionary DB not found at ${dbLocation}`);
+            // 检查是否存在
+            if (!await fs.pathExists(dataPath)) {
+                console.error('dict.data not found');
                 return { success: false, found: false };
             }
 
-            const db = require('better-sqlite3')(dbLocation, { readonly: true });
+            const offset = Number(offsetBigInt); // 安全转换为 number (文件大小 < 9PB)
 
-            const row = db.prepare('SELECT * FROM stardict WHERE word = ? COLLATE NOCASE').get(word);
-            db.close();
+            // Read Length (4 bytes u32 LE)
+            const fd = await fs.open(dataPath, 'r');
+            try {
+                const lenBuf = Buffer.alloc(4);
+                const { bytesRead } = await fs.read(fd, lenBuf, 0, 4, offset);
+                if (bytesRead < 4) throw new Error('Failed to read entry length');
 
-            if (row) {
+                const dataLen = lenBuf.readUInt32LE(0);
+
+                // 读取并解压数据
+                const compressedBuf = Buffer.alloc(dataLen);
+                await fs.read(fd, compressedBuf, 0, dataLen, offset + 4);
+
+                const decompressedBuf = zlib.inflateRawSync(compressedBuf);
+                const jsonStr = decompressedBuf.toString('utf-8');
+                const arr = JSON.parse(jsonStr); // Expect array
+
+                // Reconstruct object from [phonetic, definition, translation, tag, exchange]
+                const entry = {
+                    word: word,
+                    phonetic: arr[0],
+                    definition: arr[1],
+                    translation: arr[2],
+                    tag: arr[3],
+                    exchange: arr[4]
+                };
+
                 return {
                     success: true,
                     found: true,
-                    data: {
-                        word: row.word,
-                        phonetic: row.phonetic,
-                        definition: row.definition,
-                        translation: row.translation,
-                        pos: row.pos,
-                        collins: row.collins,
-                        oxford: row.oxford,
-                        tag: row.tag,
-                        bnc: row.bnc,
-                        frq: row.frq,
-                        exchange: row.exchange
-                    }
+                    data: entry
                 };
+            } finally {
+                await fs.close(fd);
             }
-
-            return { success: true, found: false };
 
         } catch (e: any) {
             console.error('Local dict search error:', e);

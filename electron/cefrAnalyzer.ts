@@ -1,17 +1,17 @@
 /**
- * CEFR Analyzer Module (WASM Version)
+ * CEFR 分析器模块 (WASM 版本)
  * 
- * Handles EPUB text extraction and Rust/WASM analyzer invocation.
- * Replaces the legacy Python analyzer.
+ * 处理 EPUB 文本提取和 Rust/WASM 分析器调用。
+ * 替代旧版 Python 分析器。
  */
 
 import { ipcMain, app } from 'electron';
 import path from 'path';
 import fs from 'fs/promises';
 
-// --- Interfaces ---
+// --- 接口 ---
 
-// The result format expected by the frontend (Legacy compatibility)
+// 前端期望的结果格式 (保留兼容性)
 export interface CefrAnalysisResult {
     totalWords: number;
     uniqueWords: number; // Not strictly calculated in WASM yet, can approximate
@@ -41,7 +41,7 @@ export interface CefrAnalysisResult {
     };
 }
 
-// The raw result from WASM
+// 来自 WASM 的原始结果
 interface WasmAnalysisResult {
     cefr_level: string;
     lexical_score: number;
@@ -63,12 +63,12 @@ interface WasmAnalysisResult {
     }>;
 }
 
-// Cache for the initialized WASM module
+// 已初始化 WASM 模块的缓存
 let wasmModuleCache: any = null;
 
 /**
- * Load and initialize the WASM module.
- * For wasm-pack --target web, we need to call init() first.
+ * 加载并初始化 WASM 模块。
+ * 对于 wasm-pack --target web，我们需要先调用 init()。
  */
 async function loadWasmModule(): Promise<any> {
     // Return cached module if already initialized
@@ -78,9 +78,9 @@ async function loadWasmModule(): Promise<any> {
 
     const isDev = !app.isPackaged;
 
-    // Path resolution logic
-    // Dev: cefr-core/pkg/ (relative to project root)
-    // Prod: resources/cefr-core/pkg/
+    // 路径解析逻辑
+    // 开发环境: cefr-core/pkg/ (相对于项目根目录)
+    // 生产环境: resources/cefr-core/pkg/
 
     let pkgPath: string;
     if (isDev) {
@@ -97,38 +97,91 @@ async function loadWasmModule(): Promise<any> {
         console.log(`[CEFR] Loading WASM JS from: ${jsPath}`);
         console.log(`[CEFR] Loading WASM binary from: ${wasmPath}`);
 
-        // Check if files exist
+        // 检查文件是否存在
         await fs.access(jsPath);
         await fs.access(wasmPath);
 
-        // Dynamic import the JS module
+        // 动态导入 JS 模块
         const wasmModule = require(jsPath);
 
-        // For wasm-pack --target web, we need to manually initialize with the WASM binary
-        // The module exports an `initSync` function for synchronous initialization
-        // or `default` (init) for async initialization
+        // 对于 wasm-pack --target web，我们需要手动使用 WASM 二进制文件进行初始化
+        // 模块导出 `initSync` 函数用于同步初始化
+        // 或 `default` (init) 用于异步初始化
         if (typeof wasmModule.initSync === 'function') {
-            // Read WASM binary and initialize synchronously
+            // 读取 WASM 二进制文件并同步初始化
             const wasmBinary = await fs.readFile(wasmPath);
             wasmModule.initSync(wasmBinary);
-            console.log(`[CEFR] WASM module initialized synchronously`);
+            console.log(`[CEFR] WASM 模块已同步初始化`);
         } else if (typeof wasmModule.default === 'function') {
-            // Async init with WASM path
+            // 使用 WASM 路径异步初始化
             const wasmBinary = await fs.readFile(wasmPath);
             await wasmModule.default(wasmBinary);
-            console.log(`[CEFR] WASM module initialized asynchronously`);
+            console.log(`[CEFR] WASM 模块已异步初始化`);
         } else {
-            // Already initialized or bundler-style target
-            console.log(`[CEFR] WASM module loaded (no explicit init needed)`);
+            // 已初始化或打包器风格目标
+            console.log(`[CEFR] WASM 模块已加载 (无需显式初始化)`);
         }
 
-        // Cache the module
+        // 缓存模块
         wasmModuleCache = wasmModule;
         return wasmModule;
     } catch (e) {
-        console.error(`[CEFR] Failed to load WASM module:`, e);
-        throw new Error(`Failed to load CEFR Engine. Please ensure wasm-pack build is run. Error: ${e instanceof Error ? e.message : String(e)}`);
+        console.error(`[CEFR] 加载 WASM 模块失败:`, e);
+        throw new Error(`加载 CEFR 引擎失败。请确保已运行 wasm-pack build。错误: ${e instanceof Error ? e.message : String(e)}`);
     }
+}
+
+/**
+ * Load the Dictionary FST Index into WASM.
+ * This should be called once before dictionary lookups.
+ */
+export async function loadDictionaryIndex(): Promise<void> {
+    const wasm = await loadWasmModule();
+
+    // Check if already loaded? WASM doesn't expose "is_loaded". 
+    // We can add a flag here or just re-load (low cost if small? FST is ~10MB).
+    // Better to cache promise.
+    if ((global as any).__fstLoaded) return;
+
+    const isDev = !app.isPackaged;
+    let resourcesPath: string;
+    if (isDev) {
+        resourcesPath = path.join(process.cwd(), 'resources');
+    } else {
+        resourcesPath = process.resourcesPath || path.join(__dirname, '..', 'resources');
+    }
+
+    const fstPath = path.join(resourcesPath, 'dict.fst');
+
+    try {
+        if (!await fs.stat(fstPath).then(() => true).catch(() => false)) {
+            console.warn('[FST] dict.fst not found at', fstPath);
+            return;
+        }
+
+        console.log(`[FST] Loading index from ${fstPath}...`);
+        const buffer = await fs.readFile(fstPath);
+
+        // 传递 Uint8Array 给 WASM
+        // buffer 是 Buffer，是 Uint8Array 的子类
+        wasm.load_fst_index(buffer);
+        console.log('[FST] 索引加载成功');
+        (global as any).__fstLoaded = true;
+    } catch (e) {
+        console.error('[FST] 加载索引失败:', e);
+        throw e;
+    }
+}
+
+/**
+ * Lookup offset in FST via WASM
+ */
+export async function lookupFstOffset(word: string): Promise<bigint | undefined> {
+    const wasm = await loadWasmModule();
+    // Ensure index is loaded
+    await loadDictionaryIndex();
+
+    return wasm.lookup_fst_offset(word);
 }
 
 /**
@@ -211,7 +264,7 @@ function mapWasmToResult(wasmResult: WasmAnalysisResult): CefrAnalysisResult {
 
 
 /**
- * Setup CEFR analyzer IPC handlers
+ * 设置 CEFR 分析器 IPC 处理程序
  */
 export function setupCefrAnalyzerHandlers(): void {
 
@@ -261,15 +314,15 @@ export function setupCefrAnalyzerHandlers(): void {
     });
 
     /**
-     * Check if analyzer is available
+     * 检查分析器是否可用
      */
     ipcMain.handle('cefr:check', async () => {
         try {
-            // Check if WASM can be loaded
+            // 检查 WASM 是否可加载
             await loadWasmModule();
             return {
                 success: true,
-                cefrDictPath: 'Embedded in WASM',
+                cefrDictPath: '内置于 WASM',
                 cefrDictSize: 'WASM'
             };
         } catch (error) {

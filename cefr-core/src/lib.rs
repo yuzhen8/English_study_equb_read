@@ -2,6 +2,7 @@ mod dictionary;
 mod pos;
 mod syntax;
 mod discourse;
+mod fst_dict;
 
 use std::collections::HashSet;
 use wasm_bindgen::prelude::*;

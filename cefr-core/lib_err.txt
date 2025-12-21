@@ -1,0 +1,32 @@
+    Checking cefr-core v0.1.0 (F:\equb_English_learning\windows\cefr-core)
+error[E0432]: unresolved import `phf`
+ --> src\discourse.rs:4:5
+  |
+4 | use phf::phf_set;
+  |     ^^^ use of unresolved module or unlinked crate `phf`
+  |
+  = help: if you wanted to use a crate named `phf`, use `cargo add phf` to add it to your `Cargo.toml`
+
+warning: unexpected `cfg` condition value: `console_error_panic_hook`
+   --> src\lib.rs:224:11
+    |
+224 |     #[cfg(feature = "console_error_panic_hook")]
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `console_error_panic_hook` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: `#[warn(unexpected_cfgs)]` on by default
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `phf`
+ --> src\names_code.rs:1:22
+  |
+1 | static COMMON_NAMES: phf::Set<&'static str> = phf_set! {
+  |                      ^^^ use of unresolved module or unlinked crate `phf`
+  |
+  = help: if you wanted to use a crate named `phf`, use `cargo add phf` to add it to your `Cargo.toml`
+
+Some errors have detailed explanations: E0432, E0433.
+For more information about an error, try `rustc --explain E0432`.
+warning: `cefr-core` (lib) generated 1 warning
+error: could not compile `cefr-core` (lib) due to 2 previous errors; 1 warning emitted

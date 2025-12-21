@@ -135,3 +135,5 @@ release/
 
 # 忽略 resources 目录下的可执行文件
 resources/*.exe
+
+resources/dict.data

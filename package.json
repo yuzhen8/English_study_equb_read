@@ -35,15 +35,13 @@
             "dist-electron/**/*",
             "package.json"
         ],
-        "asarUnpack": [
-            "**/node_modules/better-sqlite3"
-        ],
         "extraResources": [
             {
                 "from": "resources",
                 "to": ".",
                 "filter": [
-                    "**/*"
+                    "dict.fst",
+                    "dict.data"
                 ]
             },
             {
@@ -58,9 +56,7 @@
     "dependencies": {
         "@supabase/supabase-js": "^2.89.0",
         "@tailwindcss/postcss": "^4.1.18",
-        "@types/better-sqlite3": "^7.6.13",
         "axios": "^1.13.2",
-        "better-sqlite3": "^12.5.0",
         "clsx": "^2.1.1",
         "electron-squirrel-startup": "^1.0.1",
         "epubjs": "^0.3.93",

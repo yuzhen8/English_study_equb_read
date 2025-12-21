@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Link, ExternalLink } from 'lucide-react';
+import { Bot, Link } from 'lucide-react';
 import { translationService } from '../../../services/TranslationService';
 import { OllamaTranslationProvider } from '../../../services/OllamaTranslationProvider';
 
