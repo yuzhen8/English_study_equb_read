@@ -22,6 +22,7 @@ export interface RemoteAppSettings {
     ollamaEnabled?: boolean;
     deepseekEnabled?: boolean;
     proxy?: string;
+    appTheme?: string;
     apiKeys?: Record<string, string>;
     [key: string]: any;
 }

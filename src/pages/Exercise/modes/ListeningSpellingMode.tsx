@@ -118,6 +118,25 @@ const ListeningSpellingMode: React.FC<ListeningSpellingModeProps> = ({
         setShakeIndex(null);
     };
 
+    // Keyboard support
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (isComplete) return;
+
+            const key = e.key.toLowerCase();
+            if (/^[a-z]$/.test(key)) {
+                // Find if this letter is available in the pool
+                const index = availableLetters.findIndex(l => l.toLowerCase() === key);
+                if (index !== -1) {
+                    handleLetterClick(availableLetters[index], index);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [availableLetters, isComplete, handleLetterClick]);
+
     // 计算动态评分
     const calculateScore = (): number => {
         // 使用提示或重置 = 1分

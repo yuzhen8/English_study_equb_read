@@ -5,7 +5,8 @@ import './Reader.css';
 import {
     ChevronUp, ChevronDown, Settings, Minus, Plus,
     Sun, Moon, Palette, Highlighter, ChevronRight,
-    ChevronLeft, BookOpen, Layers
+    ChevronLeft, BookOpen, Layers,
+    FileText, Feather, Leaf, Crown
 } from 'lucide-react';
 
 import WordDetailPopup from './WordDetailPopup';
@@ -31,7 +32,7 @@ interface ReaderProps {
 interface ReaderSettings {
     fontSize: number;
     lineHeight: number;
-    theme: 'light' | 'dark' | 'sepia';
+    theme: 'light' | 'dark' | 'sepia' | 'paper' | 'ink' | 'green' | 'royal';
     highlightWords: boolean;
     highlightColor: string;
     highlightOpacity: number;
@@ -190,7 +191,11 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
             const themes: Record<string, { body: { background: string; color: string } }> = {
                 light: { body: { background: '#ffffff', color: '#1f2937' } },
                 dark: { body: { background: '#1f2937', color: '#f3f4f6' } },
-                sepia: { body: { background: '#f5f0e6', color: '#5c4b37' } }
+                sepia: { body: { background: '#f5f0e6', color: '#5c4b37' } },
+                paper: { body: { background: '#F7F4EB', color: '#2b2b2b' } },
+                ink: { body: { background: '#222222', color: '#c0c0c0' } },
+                green: { body: { background: '#EFF7F1', color: '#2D3A30' } },
+                royal: { body: { background: '#1E293B', color: '#94A3B8' } }
             };
             renditionRef.current.themes.register('custom', themes[newSettings.theme]);
             renditionRef.current.themes.select('custom');
@@ -974,7 +979,15 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
     const handlePrevPage = () => turnPage('prev');
     const handleNextPage = () => turnPage('next');
 
-    const bgColors = { light: 'bg-white', dark: 'bg-gray-800', sepia: 'bg-[#f5f0e6]' };
+    const bgColors = {
+        light: 'bg-white',
+        dark: 'bg-gray-800',
+        sepia: 'bg-[#f5f0e6]',
+        paper: 'bg-[#F7F4EB]',
+        ink: 'bg-[#222222]',
+        green: 'bg-[#EFF7F1]',
+        royal: 'bg-[#1E293B]'
+    };
 
     // --- 渲染菜单视图 ---
     const renderMenuView = () => {
@@ -1158,11 +1171,15 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                         {/* 主题选择 */}
                         <div className="space-y-3">
                             <span className="text-sm font-bold text-gray-700">色彩空间</span>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-4 gap-3">
                                 {[
                                     { id: 'light', icon: Sun, label: '透亮', bg: 'bg-white', text: 'text-gray-600', active: 'border-indigo-500 bg-indigo-50' },
                                     { id: 'dark', icon: Moon, label: '深邃', bg: 'bg-gray-900', text: 'text-gray-300', active: 'border-indigo-500 bg-gray-800' },
-                                    { id: 'sepia', icon: Palette, label: '护眼', bg: 'bg-[#f5f0e6]', text: 'text-[#5c4b37]', active: 'border-amber-500 bg-amber-50' }
+                                    { id: 'sepia', icon: Palette, label: '护眼', bg: 'bg-[#f5f0e6]', text: 'text-[#5c4b37]', active: 'border-amber-500 bg-amber-50' },
+                                    { id: 'paper', icon: FileText, label: '纸书', bg: 'bg-[#F7F4EB]', text: 'text-[#2b2b2b]', active: 'border-stone-500 bg-[#F7F4EB]' },
+                                    { id: 'ink', icon: Feather, label: '水墨', bg: 'bg-[#222222]', text: 'text-[#c0c0c0]', active: 'border-gray-500 bg-[#222222]' },
+                                    { id: 'green', icon: Leaf, label: '松石', bg: 'bg-[#EFF7F1]', text: 'text-[#2D3A30]', active: 'border-emerald-500 bg-[#EFF7F1]' },
+                                    { id: 'royal', icon: Crown, label: '雅蓝', bg: 'bg-[#1E293B]', text: 'text-[#94A3B8]', active: 'border-slate-500 bg-[#1E293B]' }
                                 ].map(the => (
                                     <button
                                         key={the.id}

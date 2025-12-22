@@ -144,6 +144,39 @@ const SpellingMode: React.FC<SpellingModeProps> = ({
         speechSynthesis.speak(utterance);
     };
 
+    // Keyboard support
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (isComplete) return;
+
+            const key = e.key.toLowerCase();
+
+            // Handle Backspace (Undo last slot)
+            if (e.key === 'Backspace') {
+                // Find last filled slot
+                for (let i = slots.length - 1; i >= 0; i--) {
+                    if (slots[i] !== null) {
+                        handleSlotClick(i);
+                        return;
+                    }
+                }
+                return;
+            }
+
+            // Handle Letters
+            if (/^[a-z]$/.test(key)) {
+                // Find if this letter is available in the pool
+                const index = availableLetters.findIndex(l => l.toLowerCase() === key);
+                if (index !== -1) {
+                    handleLetterClick(availableLetters[index], index);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [slots, availableLetters, isComplete, handleLetterClick]); // Dependencies are crucial here
+
     // Calculate progress
     const progress = slots.length > 0 ? slots.filter(s => s !== null).length / slots.length : 0;
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ReadingTimeStore } from '../../services/ReadingTimeStore';
-import { Store, Calendar, BookOpen, Clock } from 'lucide-react';
+import { Calendar, BookOpen, Clock } from 'lucide-react';
 import { CategoryStore } from '../../services/CategoryStore';
 import { Book } from '../../services/LibraryStore';
 

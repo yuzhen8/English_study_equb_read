@@ -499,6 +499,26 @@ app.on('ready', async () => {
         }
     });
 
+    // Reset App Storage Handler
+    ipcMain.handle('reset-app-storage', async () => {
+        try {
+            console.log('Clearing app storage...');
+            // Clear HTTP Cache
+            await session.defaultSession.clearCache();
+
+            // Clear Data Stores
+            await session.defaultSession.clearStorageData({
+                // 'cache' is not valid in TS definition, use 'cachestorage' for Cache API
+                storages: ['indexdb', 'localstorage', 'cookies', 'shadercache', 'websql', 'serviceworkers', 'cachestorage']
+            });
+            console.log('Storage cleared successfully');
+            return { success: true };
+        } catch (error) {
+            console.error('Failed to clear storage:', error);
+            return { success: false, error: String(error) };
+        }
+    });
+
     ipcMain.handle('backup:loadData', async () => {
         const { canceled, filePaths } = await dialog.showOpenDialog({
             title: '选择备份文件',

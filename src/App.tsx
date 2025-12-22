@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { initTranslationServices } from './services/init';
 import './App.css';
 
@@ -26,6 +26,8 @@ import { WordSyncService } from './services/WordSyncService';
 import { WordStore } from './services/WordStore';
 import { BookSyncService } from './services/BookSyncService';
 import { SettingsSyncService } from './services/SettingsSyncService';
+import { AlertTriangle, Database, RotateCcw } from 'lucide-react';
+import { resetDatabase } from './services/db';
 
 const AppContent = () => {
     const { currentTheme } = useTheme();
@@ -119,6 +121,97 @@ const AppContent = () => {
                 </Routes>
             </div>
         </div>
+
+    );
+};
+
+// 全局数据库错误处理 Modal
+const DbErrorModal = () => {
+    const [visible, setVisible] = useState(false);
+    const [errorDetails, setErrorDetails] = useState<any>(null);
+
+    useEffect(() => {
+        const handleDbError = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            console.error("Global DB Error Caught:", customEvent.detail);
+            setErrorDetails(customEvent.detail);
+            setVisible(true);
+        };
+
+        window.addEventListener('db-error', handleDbError);
+        return () => window.removeEventListener('db-error', handleDbError);
+    }, []);
+
+    if (!visible) return null;
+
+    const handleReset = async () => {
+        if (confirm('确定要重置数据库吗？这将深度清除应用存储（IndexedDB, LocalStorage, Cache），所有本地数据将丢失。')) {
+            try {
+                // Try aggressive reset via Main Process first
+                // @ts-ignore
+                if (window.electronAPI && window.electronAPI.resetAppStorage) {
+                    console.log('Attempting aggressive storage reset...');
+                    // @ts-ignore
+                    const result = await window.electronAPI.resetAppStorage();
+                    if (result.success) {
+                        alert('重置成功！应用正在重启...');
+                        window.location.reload();
+                        return;
+                    } else {
+                        throw new Error(result.error);
+                    }
+                }
+
+                // Fallback to renderer reset
+                await resetDatabase();
+                alert('重置成功，应用将重启。');
+                window.location.reload();
+            } catch (e: any) {
+                alert('重置失败: ' + (e.message || String(e)) + '\n请尝试手动删除应用数据文件夹。');
+                console.error(e);
+            }
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-slate-900 border border-red-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
+                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+                    <Database size={32} className="text-red-500" />
+                </div>
+                <h2 className="text-xl font-bold text-white text-center mb-2">数据库发生严重错误</h2>
+                <p className="text-slate-300 text-center text-sm mb-6">
+                    检测到 IndexedDB 内部错误。这通常是由于磁盘空间不足或数据损坏引起的。
+                    <br /><br />
+                    <span className="font-mono text-xs text-red-400 bg-black/30 p-1 rounded inline-block max-w-full truncate">
+                        {errorDetails?.error?.message || 'Unknown Internal Error'}
+                    </span>
+                </p>
+
+                <div className="space-y-3">
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+                    >
+                        <RotateCcw size={18} />
+                        尝试重启应用
+                    </button>
+                    <button
+                        onClick={handleReset}
+                        className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-red-900/20"
+                    >
+                        <AlertTriangle size={18} />
+                        重置数据库 (清除数据)
+                    </button>
+                    <button
+                        onClick={() => setVisible(false)}
+                        className="w-full py-2 text-slate-500 hover:text-slate-400 text-xs text-center"
+                    >
+                        暂时忽略 (应用可能不可用)
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 };
 
@@ -131,6 +224,7 @@ function App() {
         <ThemeProvider>
             <AuthProvider>
                 <AppContent />
+                <DbErrorModal />
             </AuthProvider>
         </ThemeProvider>
     );

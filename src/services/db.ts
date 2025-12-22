@@ -78,7 +78,14 @@ export const initDB = (retries = 3, delay = 100): Promise<IDBDatabase> => {
                     wait(delay).then(() => attemptOpen(remainingRetries - 1));
                 } else {
                     initPromise = null;
-                    reject(request.error || new Error('Unknown IndexedDB Error'));
+                    const error = request.error || new Error('Unknown IndexedDB Error');
+                    // Dispatch global event for fatal DB error
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('db-error', {
+                            detail: { error: error, type: 'open' }
+                        }));
+                    }
+                    reject(error);
                 }
             };
         };
@@ -97,7 +104,18 @@ export const dbOperations = {
             const store = transaction.objectStore(storeName);
             const request = store.getAll();
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
+            request.onerror = () => {
+                const error = request.error;
+                // Check if it's a fatal internal error
+                if (error && (error.name === 'UnknownError' || error.message?.includes('Internal error'))) {
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('db-error', {
+                            detail: { error: error, type: 'operation', store: storeName }
+                        }));
+                    }
+                }
+                reject(error);
+            };
         });
     },
 
@@ -108,7 +126,17 @@ export const dbOperations = {
             const store = transaction.objectStore(storeName);
             const request = store.get(key);
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
+            request.onerror = () => {
+                const error = request.error;
+                if (error && (error.name === 'UnknownError' || error.message?.includes('Internal error'))) {
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('db-error', {
+                            detail: { error: error, type: 'operation', store: storeName }
+                        }));
+                    }
+                }
+                reject(error);
+            };
         });
     },
 
@@ -120,7 +148,18 @@ export const dbOperations = {
             const store = transaction.objectStore(storeName);
             const request = key ? store.add(item, key) : store.add(item);
             request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
+
+            request.onerror = () => {
+                const error = request.error;
+                if (error && (error.name === 'UnknownError' || error.message?.includes('Internal error'))) {
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('db-error', {
+                            detail: { error: error, type: 'operation', store: storeName }
+                        }));
+                    }
+                }
+                reject(error);
+            };
         });
     },
 
@@ -131,7 +170,17 @@ export const dbOperations = {
             const store = transaction.objectStore(storeName);
             const request = key ? store.put(item, key) : store.put(item);
             request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
+            request.onerror = () => {
+                const error = request.error;
+                if (error && (error.name === 'UnknownError' || error.message?.includes('Internal error'))) {
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('db-error', {
+                            detail: { error: error, type: 'operation', store: storeName }
+                        }));
+                    }
+                }
+                reject(error);
+            };
         });
     },
 
@@ -142,7 +191,17 @@ export const dbOperations = {
             const store = transaction.objectStore(storeName);
             const request = store.delete(id);
             request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
+            request.onerror = () => {
+                const error = request.error;
+                if (error && (error.name === 'UnknownError' || error.message?.includes('Internal error'))) {
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('db-error', {
+                            detail: { error: error, type: 'operation', store: storeName }
+                        }));
+                    }
+                }
+                reject(error);
+            };
         });
     }
 };

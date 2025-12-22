@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveBackupData: (data: string) => ipcRenderer.invoke('backup:saveData', data),
     loadBackupData: () => ipcRenderer.invoke('backup:loadData'),
     exportBooks: () => ipcRenderer.invoke('backup:exportBooks'),
+    resetAppStorage: () => ipcRenderer.invoke('reset-app-storage'),
     aiFetch: (options: { url: string, method?: string, headers?: any, body?: any }) => ipcRenderer.invoke('ai:fetch', options),
 
     // Window Controls

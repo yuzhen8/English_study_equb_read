@@ -50,6 +50,12 @@ const Settings: React.FC = () => {
                     // Yes, consistency is key.
                     // @ts-ignore
                     await window.electronAPI.saveSettings(merged);
+                    await window.electronAPI.saveSettings(merged);
+                }
+
+                // [NEW] Apply synced theme
+                if (merged.appTheme && availableThemes.some(t => t.id === merged.appTheme)) {
+                    setTheme(merged.appTheme as any);
                 }
             }
 
@@ -341,7 +347,15 @@ const Settings: React.FC = () => {
                                     {availableThemes.map((theme) => (
                                         <button
                                             key={theme.id}
-                                            onClick={() => setTheme(theme.id)}
+                                            onClick={() => {
+                                                setTheme(theme.id);
+                                                // [NEW] Sync theme
+                                                if (user) {
+                                                    import('../../services/SettingsSyncService').then(({ SettingsSyncService }) => {
+                                                        SettingsSyncService.saveAppSettings(user.id, { appTheme: theme.id });
+                                                    });
+                                                }
+                                            }}
                                             className={`group relative p-3 rounded-xl border transition-all duration-300 overflow-hidden text-left ${currentTheme.id === theme.id
                                                 ? 'bg-white/10 border-white/40 shadow-lg scale-[1.02]'
                                                 : 'bg-black/20 border-white/5 hover:bg-white/5 hover:border-white/20'
@@ -433,16 +447,17 @@ const Settings: React.FC = () => {
                                                         const { WordSyncService } = await import('../../services/WordSyncService');
                                                         const { BookSyncService } = await import('../../services/BookSyncService');
                                                         const { SettingsSyncService } = await import('../../services/SettingsSyncService');
+                                                        const { ReadingTimeSyncService } = await import('../../services/ReadingTimeSyncService');
                                                         const { WordStore } = await import('../../services/WordStore');
 
                                                         await WordStore.cleanupDuplicates();
                                                         await Promise.all([
                                                             WordSyncService.sync(user.id),
                                                             BookSyncService.sync(user.id),
-                                                            SettingsSyncService.sync(user.id)
+                                                            SettingsSyncService.sync(user.id),
+                                                            ReadingTimeSyncService.sync(user.id)
                                                         ]);
-                                                        alert('同步完成！请检查数据是否更新。');
-                                                        // Force helper to reload if needed? Listeners should handle it.
+                                                        alert('同步完成！所有数据已更新。');
                                                     } catch (e) {
                                                         console.error(e);
                                                         alert('同步失败，请查看控制台日志');
