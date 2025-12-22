@@ -30,6 +30,13 @@ const DictionaryDashboard: React.FC = () => {
             setStats(data);
         };
         loadStats();
+
+        // Subscribe to changes (sync or local)
+        const unsubscribe = WordStore.subscribe(() => {
+            loadStats();
+        });
+
+        return () => unsubscribe();
     }, [timeFilter]);
 
     // 加载群组数据

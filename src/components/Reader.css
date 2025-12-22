@@ -9,6 +9,11 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
+    /* transition: transform 0.3s ease-out, opacity 0.3s ease-out; -- Handled via classes */
+    transform-style: preserve-3d;
+    perspective: 1500px;
+    backface-visibility: hidden;
+    transform-origin: center center;
 }
 
 /* Navigation Buttons */
@@ -78,4 +83,34 @@
     color: #333;
     min-width: 40px;
     text-align: right;
+}
+
+/* Page Transitions */
+
+/* Base settings for the container */
+.reader-content {
+    /* Ensure hardware acceleration for smooth animations */
+    will-change: opacity;
+    transform: translateZ(0);
+    /* Force GPU layer */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* Optimized Fade Effect - Smoother with better easing */
+.transition-fade-out {
+    opacity: 0 !important;
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    /* Material Design easing */
+}
+
+.transition-fade-in {
+    opacity: 1 !important;
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Reset class for cleanup */
+.transition-reset {
+    opacity: 1 !important;
+    transition: none !important;
 }

@@ -32,6 +32,11 @@ const WordList: React.FC = () => {
 
     useEffect(() => {
         loadWords();
+        // Subscribe to changes
+        const unsubscribe = WordStore.subscribe(() => {
+            loadWords();
+        });
+        return () => unsubscribe();
     }, []);
 
     const loadWords = async () => {

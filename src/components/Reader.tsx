@@ -13,6 +13,10 @@ import GrammarAnalysisPopup from './GrammarAnalysisPopup';
 
 import { LibraryStore } from '../services/LibraryStore';
 import { WordStore } from '../services/WordStore';
+import { useAuth } from '../contexts/AuthContext';
+import { SettingsSyncService } from '../services/SettingsSyncService';
+import { BookSyncService } from '../services/BookSyncService';
+import { useReadingTime } from '../hooks/useReadingTime';
 
 interface ReaderProps {
     data: ArrayBuffer | string;
@@ -36,6 +40,7 @@ interface ReaderSettings {
     highlightRounding: 'none' | 'small' | 'medium' | 'large' | 'full';
     flow: 'paginated' | 'scrolled'; // 'paginated' (Simulation/Slide) | 'scrolled' (Vertical Scroll)
     enableTapTurn: boolean;
+    pageTransition: 'none' | 'fade' | 'curl';
 }
 
 const defaultSettings: ReaderSettings = {
@@ -49,10 +54,54 @@ const defaultSettings: ReaderSettings = {
     highlightHeight: 1.0,
     highlightRounding: 'medium',
     flow: 'paginated',
-    enableTapTurn: true
+    enableTapTurn: true,
+    pageTransition: 'none'
 };
 
 type MenuViewState = 'main' | 'style' | 'highlight';
+
+// Helper: Hex to RGBA
+const hexToRgba = (hex: string, opacity: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+// Helper: Generate SVG data URL for highlight
+const getHighlightSvg = (newSettings: ReaderSettings) => {
+    const rgba = hexToRgba(newSettings.highlightColor, newSettings.highlightOpacity);
+    const radiusMap = { none: 0, small: 8, medium: 16, large: 28, full: 50 };
+    const r = radiusMap[newSettings.highlightRounding];
+
+    const h = newSettings.highlightHeight * 100;
+    const y = 100 - h;
+
+    let background = rgba;
+    let defs = '';
+
+    if (newSettings.highlightUseGradient) {
+        const rgba2 = hexToRgba(newSettings.highlightColor, newSettings.highlightOpacity * 0.4);
+        background = 'url(#grad)';
+        defs = `
+            <defs>
+                <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:${rgba};stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:${rgba2};stop-opacity:1" />
+                </linearGradient>
+            </defs>
+        `;
+    }
+
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+            ${defs}
+            <rect x="0" y="${y}" width="100" height="${h}" rx="${r}" ry="${r}" fill="${background}" />
+        </svg>
+    `.trim();
+
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
 
 const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bookCover, onClose }) => {
     const viewerRef = useRef<HTMLDivElement>(null);
@@ -92,6 +141,11 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
     // Animation State
     const [isClosing, setIsClosing] = useState(false);
     const isClosingRef = useRef(false); // To prevent multiple triggers
+    const [isTurning, setIsTurning] = useState(false);
+    const [showFadeOverlay, setShowFadeOverlay] = useState(false); // For smooth fade transitions
+
+    // [NEW] Sync Throttle
+    const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Popup state
     const [showPopup, setShowPopup] = useState(false);
@@ -109,54 +163,23 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
     const [menuView, setMenuView] = useState<MenuViewState>('main');
     const [settings, setSettings] = useState<ReaderSettings>(() => {
         const saved = localStorage.getItem('readerSettings');
-        return saved ? JSON.parse(saved) : defaultSettings;
+        return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
     });
 
-    // Helper: Hex to RGBA
-    const hexToRgba = (hex: string, opacity: number) => {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    };
+    // Keep a ref to settings to access the latest value in event listeners/callbacks without stale closures
+    const settingsRef = useRef(settings);
+    useEffect(() => {
+        settingsRef.current = settings;
+    }, [settings]);
 
-    // Helper: Generate SVG data URL for highlight
-    const getHighlightSvg = (newSettings: ReaderSettings) => {
-        const rgba = hexToRgba(newSettings.highlightColor, newSettings.highlightOpacity);
-        // 在 100x100 的坐标系中，半径需要大一些才能看出来
-        const radiusMap = { none: 0, small: 8, medium: 16, large: 28, full: 50 };
-        const r = radiusMap[newSettings.highlightRounding];
+    // [NEW] Auth & Sync
+    const { user } = useAuth();
 
-        const h = newSettings.highlightHeight * 100;
-        const y = 100 - h;
+    // [NEW] Reading Time Tracking
+    useReadingTime(user?.id || '', bookId || '');
 
-        let background = rgba;
-        let defs = '';
 
-        if (newSettings.highlightUseGradient) {
-            const rgba2 = hexToRgba(newSettings.highlightColor, newSettings.highlightOpacity * 0.4);
-            background = 'url(#grad)';
-            defs = `
-                <defs>
-                    <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style="stop-color:${rgba};stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:${rgba2};stop-opacity:1" />
-                    </linearGradient>
-                </defs>
-            `;
-        }
 
-        // 我们在 100x100 的空间内绘制厚度调整后的矩形。
-        // y 和 h 决定位置，且 CSS 不再缩放背景，圆角永不形变。
-        const svg = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                ${defs}
-                <rect x="0" y="${y}" width="100" height="${h}" rx="${r}" ry="${r}" fill="${background}" />
-            </svg>
-        `.trim();
-
-        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-    };
 
     // 应用设置到渲染器
     const applySettings = (newSettings: ReaderSettings) => {
@@ -191,15 +214,26 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
             // Enable native selection
             renditionRef.current.themes.override('user-select', 'auto');
             renditionRef.current.themes.override('-webkit-user-select', 'auto');
-
-            // Handle Flow Update (Requires re-init mostly, but let's see if we can just update flow? No, flow is init-only usually in epub.js)
-            // Ideally we should reload the book or re-render if flow changes.
-            // As a simple approach for now, we rely on the parent useEffect to re-run if we put settings.flow in dependency,
-            // or we manually handle it here.
-            // Actually, changing flow requires destroying and re-creating rendition.
-            // We will handle this by adding `key` or dependency to the useEffect.
         }
     };
+
+    // [NEW] Load Remote Settings
+    useEffect(() => {
+        if (user) {
+            SettingsSyncService.getSettings(user.id).then(remoteData => {
+                if (remoteData?.reader_settings && Object.keys(remoteData.reader_settings).length > 0) {
+                    setSettings(prev => {
+                        const merged = { ...prev, ...remoteData.reader_settings };
+                        localStorage.setItem('readerSettings', JSON.stringify(merged));
+                        if (renditionRef.current) {
+                            applySettings(merged);
+                        }
+                        return merged;
+                    });
+                }
+            });
+        }
+    }, [user]);
 
     // 更新设置
     const updateSetting = <K extends keyof ReaderSettings>(key: K, value: ReaderSettings[K]) => {
@@ -207,6 +241,11 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
         setSettings(newSettings);
         localStorage.setItem('readerSettings', JSON.stringify(newSettings));
         applySettings(newSettings);
+
+        // [NEW] Sync
+        if (user) {
+            SettingsSyncService.saveReaderSettings(user.id, { [key]: value });
+        }
     };
 
     useEffect(() => {
@@ -830,6 +869,19 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                     currentCfiRef.current = location.start.cfi;
                     if (bookId && newProgress >= 0) {
                         LibraryStore.updateProgress(bookId, newProgress, location.start.cfi);
+
+                        // [NEW] Real-time Sync (Debounced 5s)
+                        if (user && bookId) {
+                            if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+                            syncTimeoutRef.current = setTimeout(() => {
+                                LibraryStore.getBooks().then(books => {
+                                    const b = books.find(i => i.id === bookId);
+                                    if (b) {
+                                        BookSyncService.pushBookProgress(user.id, b);
+                                    }
+                                });
+                            }, 5000);
+                        }
                     }
                 }
             }
@@ -853,8 +905,8 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
         });
 
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowLeft') rendition.prev();
-            else if (e.key === 'ArrowRight') rendition.next();
+            if (e.key === 'ArrowLeft') turnPage('prev');
+            else if (e.key === 'ArrowRight') turnPage('next');
             else if (e.key === 'Escape') setShowMenu(false);
         };
         document.addEventListener('keydown', handleKeyDown);
@@ -864,14 +916,63 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
             document.removeEventListener('keydown', handleKeyDown);
             if (currentBookId && progressRef.current >= 0) {
                 LibraryStore.updateProgress(currentBookId, progressRef.current, currentCfiRef.current);
+                // Trigger last sync on unmount
+                if (user && currentBookId) {
+                    LibraryStore.getBooks().then(books => {
+                        const b = books.find(i => i.id === currentBookId);
+                        if (b) BookSyncService.pushBookProgress(user.id, b);
+                    });
+                }
             }
+            if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
             locationsReadyRef.current = false;
             if (book) book.destroy();
         };
     }, [data, bookId, settings.flow]);
 
-    const handlePrevPage = () => renditionRef.current?.prev();
-    const handleNextPage = () => renditionRef.current?.next();
+    const turnPage = async (direction: 'next' | 'prev') => {
+        if (isTurning || !renditionRef.current) return;
+
+        const currentSettings = settingsRef.current;
+        if (currentSettings.pageTransition === 'none' || currentSettings.flow === 'scrolled') {
+            if (direction === 'next') renditionRef.current.next();
+            else renditionRef.current.prev();
+            return;
+        }
+
+        setIsTurning(true);
+
+        if (currentSettings.pageTransition === 'fade') {
+            // 1. Show overlay (covers any white flash)
+            setShowFadeOverlay(true);
+
+            // 2. Wait for overlay to appear (CSS transition 70ms)
+            setTimeout(() => {
+                // 3. Turn the page while overlay is visible
+                if (direction === 'next') renditionRef.current.next();
+                else renditionRef.current.prev();
+
+                // 4. Wait for epub.js to render (70ms)
+                setTimeout(() => {
+                    // 5. Hide overlay (fade out)
+                    setShowFadeOverlay(false);
+
+                    // 6. Clean up after overlay fade (70ms)
+                    setTimeout(() => {
+                        setIsTurning(false);
+                    }, 70);
+                }, 70);
+            }, 70);
+        } else {
+            // Fallback: just turn page
+            if (direction === 'next') renditionRef.current.next();
+            else renditionRef.current.prev();
+            setIsTurning(false);
+        }
+    };
+
+    const handlePrevPage = () => turnPage('prev');
+    const handleNextPage = () => turnPage('next');
 
     const bgColors = { light: 'bg-white', dark: 'bg-gray-800', sepia: 'bg-[#f5f0e6]' };
 
@@ -1076,6 +1177,26 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                                 ))}
                             </div>
                         </div>
+
+                        {/* 翻页动画 */}
+                        <div className="space-y-3">
+                            <span className="text-sm font-bold text-gray-700">翻页效果</span>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { id: 'none', label: '默认', icon: BookOpen },
+                                    { id: 'fade', label: '淡入', icon: Layers }
+                                ].map(mode => (
+                                    <button
+                                        key={mode.id}
+                                        onClick={() => updateSetting('pageTransition', mode.id as any)}
+                                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all active:scale-95 ${settings.pageTransition === mode.id ? 'bg-indigo-50 border-indigo-500 text-indigo-600' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                                    >
+                                        <mode.icon size={18} />
+                                        <span className="text-[11px] font-bold">{mode.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             );
@@ -1258,7 +1379,20 @@ const Reader: React.FC<ReaderProps> = ({ data, bookId, bookTitle, bookAuthor, bo
                 }
             }}
         >
-            <div ref={viewerRef} className="reader-content absolute top-0 left-0 right-0 bottom-16" />
+            <div
+                ref={viewerRef}
+                className="reader-content absolute top-0 left-0 right-0 bottom-16"
+                style={{ backgroundColor: settings.theme === 'dark' ? '#1f2937' : settings.theme === 'sepia' ? '#f5f0e6' : '#ffffff' }}
+            />
+
+            {/* 淡入遮罩层 - 用于翻页时遮盖白色闪烁 */}
+            <div
+                className={cn(
+                    "absolute top-0 left-0 right-0 bottom-0 z-10 pointer-events-none transition-opacity duration-[70ms] ease-in-out",
+                    showFadeOverlay ? "opacity-100" : "opacity-0"
+                )}
+                style={{ backgroundColor: settings.theme === 'dark' ? '#1f2937' : settings.theme === 'sepia' ? '#f5f0e6' : '#ffffff' }}
+            />
 
             {/* 点击层 - 分区域交互 */}
             {/* 1. 左侧翻页 (极窄 4%) */}

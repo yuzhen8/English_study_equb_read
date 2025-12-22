@@ -18,6 +18,8 @@ export interface Book {
     categoryId?: string | null; // null = 未分类
     status?: BookStatus; // 阅读状态
     cefrAnalysis?: CefrAnalysisSummary; // CEFR 分析结果缓存
+    updatedAt?: number; // Last modification time (for sync)
+    isDeleted?: boolean; // Soft delete flag
 }
 
 // CEFR 分析结果摘要 (存储在 Book 中)
@@ -55,9 +57,11 @@ export interface CefrAnalysisSummary {
 }
 
 export const LibraryStore = {
-    getBooks: async (): Promise<Book[]> => {
+    getBooks: async (includeDeleted = false): Promise<Book[]> => {
         try {
-            return await dbOperations.getAll<Book>(STORE_BOOKS);
+            const allBooks = await dbOperations.getAll<Book>(STORE_BOOKS);
+            if (includeDeleted) return allBooks;
+            return allBooks.filter(b => !b.isDeleted);
         } catch (e) {
             console.error("Failed to load books", e);
             return [];
@@ -161,9 +165,18 @@ export const LibraryStore = {
     },
 
     deleteBook: async (id: string) => {
-        await dbOperations.delete(STORE_BOOKS, id);
-        // Also delete file from disk
-        await window.electronAPI.deleteBookFile(id);
+        // Soft Delete Logic
+        const book = await dbOperations.get<Book>(STORE_BOOKS, id);
+        if (book) {
+            book.isDeleted = true;
+            book.updatedAt = Date.now();
+            await dbOperations.put(STORE_BOOKS, book);
+
+            // Delete file from disk to save space
+            if (book.path) {
+                await window.electronAPI.deleteBookFile(id);
+            }
+        }
 
         // Clean up legacy data if exists
         try {
@@ -186,6 +199,9 @@ export const LibraryStore = {
                 } else if (progress >= 100) {
                     book.status = 'finished';
                 }
+
+                book.updatedAt = Date.now(); // Explicit update time for sync
+
                 await dbOperations.put(STORE_BOOKS, book);
                 console.log(`[Progress] Saved: ${book.title} - ${progress}% (CFI: ${lastCfi})`);
             } else {

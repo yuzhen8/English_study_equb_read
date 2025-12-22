@@ -5,11 +5,16 @@ import OllamaSettingsSection from './components/OllamaSettingsSection';
 import DeepSeekSettingsSection from './components/DeepSeekSettingsSection';
 import AIPromptSettingsSection from './components/AIPromptSettingsSection';
 import { translationService } from '../../services/TranslationService';
+import { useAuth } from '../../contexts/AuthContext';
+import { SettingsSyncService } from '../../services/SettingsSyncService';
 import { useTheme } from '../../context/ThemeContext';
 
 const Settings: React.FC = () => {
     const navigate = useNavigate();
     const { currentTheme, setTheme, availableThemes } = useTheme();
+    // [NEW] Use Auth
+    const { user } = useAuth();
+
     const [expandedSections, setExpandedSections] = useState({
         ai: false,
         network: false,
@@ -25,21 +30,42 @@ const Settings: React.FC = () => {
     const [baiduSecret, setBaiduSecret] = useState('');
 
     useEffect(() => {
+        // [MODIFIED] Load local settins first
         // @ts-ignore
-        window.electronAPI.getSettings().then((settings: any) => {
-            if (settings?.translationProvider) {
-                setActiveProvider(settings.translationProvider);
+        window.electronAPI.getSettings().then(async (settings: any) => {
+            let merged = { ...settings };
+
+            // [NEW] If user is logged in, fetch remote settings and merge
+            if (user) {
+                const remoteData = await SettingsSyncService.getSettings(user.id);
+                if (remoteData?.app_settings) {
+                    // Remote takes precedence or we merge? 
+                    // Usually for settings, we might want remote to win if it's "syncing down".
+                    // But if local has changed recently?
+                    // For simplicity, let's overlay remote on top of local for initial load
+                    // assuming the user wants to see their cloud settings.
+                    merged = { ...merged, ...remoteData.app_settings };
+
+                    // Also update local store to match remote? 
+                    // Yes, consistency is key.
+                    // @ts-ignore
+                    await window.electronAPI.saveSettings(merged);
+                }
             }
-            if (settings?.proxy) {
-                setProxy(settings.proxy);
+
+            if (merged?.translationProvider) {
+                setActiveProvider(merged.translationProvider);
             }
-            if (settings?.fastTranslationProvider) {
-                setFastProvider(settings.fastTranslationProvider);
+            if (merged?.proxy) {
+                setProxy(merged.proxy);
             }
-            if (settings?.apiKeys?.baiduAppId) setBaiduAppId(settings.apiKeys.baiduAppId);
-            if (settings?.apiKeys?.baiduSecret) setBaiduSecret(settings.apiKeys.baiduSecret);
+            if (merged?.fastTranslationProvider) {
+                setFastProvider(merged.fastTranslationProvider);
+            }
+            if (merged?.apiKeys?.baiduAppId) setBaiduAppId(merged.apiKeys.baiduAppId);
+            if (merged?.apiKeys?.baiduSecret) setBaiduSecret(merged.apiKeys.baiduSecret);
         });
-    }, []);
+    }, [user]); // Re-run if user logs in
 
     const toggleSection = (section: keyof typeof expandedSections) => {
         setExpandedSections(prev => ({
@@ -52,15 +78,22 @@ const Settings: React.FC = () => {
         const newProvider = e.target.value;
         setActiveProvider(newProvider);
 
+        const settingsUpdate = {
+            translationProvider: newProvider,
+            ollamaEnabled: newProvider === 'ollama',
+            deepseekEnabled: newProvider === 'deepseek'
+        };
+
         try {
             // @ts-ignore
-            await window.electronAPI.saveSettings({
-                translationProvider: newProvider,
-                ollamaEnabled: newProvider === 'ollama',
-                deepseekEnabled: newProvider === 'deepseek'
-            });
-
+            await window.electronAPI.saveSettings(settingsUpdate);
             translationService.setActiveProvider(newProvider);
+
+            // [NEW] Sync to Supabase
+            if (user) {
+                await SettingsSyncService.saveAppSettings(user.id, settingsUpdate);
+            }
+
         } catch (err) {
             console.error('Failed to save provider choice', err);
         }
@@ -69,9 +102,14 @@ const Settings: React.FC = () => {
     const handleFastProviderChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newProvider = e.target.value;
         setFastProvider(newProvider);
+        const settingsUpdate = { fastTranslationProvider: newProvider };
         try {
             // @ts-ignore
-            await window.electronAPI.saveSettings({ fastTranslationProvider: newProvider });
+            await window.electronAPI.saveSettings(settingsUpdate);
+            // [NEW] Sync to Supabase
+            if (user) {
+                await SettingsSyncService.saveAppSettings(user.id, settingsUpdate);
+            }
         } catch (err) {
             console.error('Failed to save fast provider', err);
         }
@@ -82,8 +120,15 @@ const Settings: React.FC = () => {
             // @ts-ignore
             const currentSettings = await window.electronAPI.getSettings();
             const newApiKeys = { ...currentSettings.apiKeys, baiduAppId, baiduSecret };
+            const settingsUpdate = { apiKeys: newApiKeys };
+
             // @ts-ignore
-            await window.electronAPI.saveSettings({ apiKeys: newApiKeys });
+            await window.electronAPI.saveSettings(settingsUpdate);
+            // [NEW] Sync to Supabase
+            if (user) {
+                await SettingsSyncService.saveAppSettings(user.id, settingsUpdate);
+            }
+
             alert('百度翻译配置已保存');
         } catch (err) {
             console.error('Failed to save baidu config', err);
@@ -94,8 +139,13 @@ const Settings: React.FC = () => {
     const handleSaveProxy = async () => {
         setIsSavingProxy(true);
         try {
+            const settingsUpdate = { proxy };
             // @ts-ignore
-            await window.electronAPI.saveSettings({ proxy });
+            await window.electronAPI.saveSettings(settingsUpdate);
+            // [NEW] Sync to Supabase
+            if (user) {
+                await SettingsSyncService.saveAppSettings(user.id, settingsUpdate);
+            }
             alert('代理设置已保存并生效');
         } catch (err) {
             console.error('Failed to save proxy', err);
@@ -372,6 +422,44 @@ const Settings: React.FC = () => {
                                             留空则使用系统默认连接。
                                         </p>
                                     </div>
+
+                                    {/* Manual Sync Trigger */}
+                                    <div className="pt-4 border-t border-white/10">
+                                        <button
+                                            onClick={async () => {
+                                                if (user) {
+                                                    alert('开始手动同步...');
+                                                    try {
+                                                        const { WordSyncService } = await import('../../services/WordSyncService');
+                                                        const { BookSyncService } = await import('../../services/BookSyncService');
+                                                        const { SettingsSyncService } = await import('../../services/SettingsSyncService');
+                                                        const { WordStore } = await import('../../services/WordStore');
+
+                                                        await WordStore.cleanupDuplicates();
+                                                        await Promise.all([
+                                                            WordSyncService.sync(user.id),
+                                                            BookSyncService.sync(user.id),
+                                                            SettingsSyncService.sync(user.id)
+                                                        ]);
+                                                        alert('同步完成！请检查数据是否更新。');
+                                                        // Force helper to reload if needed? Listeners should handle it.
+                                                    } catch (e) {
+                                                        console.error(e);
+                                                        alert('同步失败，请查看控制台日志');
+                                                    }
+                                                } else {
+                                                    alert('请先登录');
+                                                }
+                                            }}
+                                            className="w-full py-2.5 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl font-medium transition-colors shadow-lg shadow-indigo-500/20 border border-indigo-400/20 flex items-center justify-center gap-2"
+                                        >
+                                            <Globe size={18} />
+                                            <span>立即同步所有数据</span>
+                                        </button>
+                                        <p className="text-center text-xs text-white/30 mt-2">
+                                            手动触发一次完整的数据同步 (单词、进度、设置)
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -385,6 +473,34 @@ const Settings: React.FC = () => {
                         <div>
                             <p className="text-white/40 font-medium">更多设置项即将推出</p>
                             <p className="text-xs text-white/20 mt-1">我们将为您提供更丰富的个性化选项</p>
+                        </div>
+
+                        {/* Danger Zone */}
+                        <div className="bg-red-50/50 p-4 rounded-xl border border-red-100 mt-8 mb-8">
+                            <h3 className="font-medium text-red-900 mb-4">危险区域</h3>
+                            <p className="text-sm text-red-700 mb-4">
+                                如果遇到 "Internal Error" 或数据库损坏无法加载数据，可以尝试重置本地数据库。
+                                注意：将清除本地所有未同步的数据（如果已同步则安全）。
+                            </p>
+                            <button
+                                onClick={async () => {
+                                    if (confirm('确定要重置本地数据库吗？这将清除本地缓存并重新加载应用。\n请确保已尝试过重启应用。')) {
+                                        try {
+                                            // @ts-ignore
+                                            const { resetDatabase } = await import('../../services/db');
+                                            await resetDatabase();
+                                            alert('重置成功，即将刷新页面...');
+                                            window.location.reload();
+                                        } catch (e: any) {
+                                            alert('重置失败，请尝试在控制台运行 window.resetAppDB()');
+                                            console.error(e);
+                                        }
+                                    }
+                                }}
+                                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                            >
+                                重置本地数据库
+                            </button>
                         </div>
                     </div>
                 </div>

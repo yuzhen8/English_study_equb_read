@@ -4,6 +4,7 @@ import { User, Settings, Database, RefreshCw, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { WordSyncService } from '../../services/WordSyncService';
 import { BookSyncService } from '../../services/BookSyncService';
+import { SettingsSyncService } from '../../services/SettingsSyncService';
 
 const Profile: React.FC = () => {
     const navigate = useNavigate();
@@ -16,7 +17,8 @@ const Profile: React.FC = () => {
         try {
             await Promise.all([
                 WordSyncService.sync(user.id),
-                BookSyncService.sync(user.id)
+                BookSyncService.sync(user.id),
+                SettingsSyncService.sync(user.id)
             ]);
             // Optionally refresh page or show success
             console.log('Sync successful');

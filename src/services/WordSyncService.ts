@@ -2,93 +2,133 @@ import { supabase } from '../lib/supabase';
 import { WordStore, Word } from './WordStore';
 
 export const WordSyncService = {
+    isSyncing: false,
+
     sync: async (userId: string) => {
-        console.log('Starting sync for user:', userId);
-
-        // 1. Get all local words
-        const localWords = await WordStore.getWords();
-        // Create a map for faster lookup
-        const localMap = new Map<string, Word>();
-        localWords.forEach(w => localMap.set(w.text.toLowerCase(), w));
-
-        // 2. Get all remote words
-        const { data: remoteWords, error } = await supabase
-            .from('user_words')
-            .select('*');
-
-        if (error) {
-            console.error('Failed to fetch remote words:', error);
-            throw error;
+        if (WordSyncService.isSyncing) {
+            console.log('Word sync already in progress, skipping.');
+            return;
         }
+        WordSyncService.isSyncing = true;
 
-        const remoteMap = new Map<string, any>();
-        remoteWords?.forEach(w => remoteMap.set(w.text.toLowerCase(), w));
+        try {
+            console.log('Starting sync for user:', userId);
 
-        const toUpload: any[] = [];
-        const toUpdateLocal: Word[] = [];
-        const processedTexts = new Set<string>();
+            // 1. Get all local words (INCLUDING DELETED)
+            const localWords = await WordStore.getWords(true);
+            const localMap = new Map<string, Word>();
+            localWords.forEach(w => localMap.set(w.text.toLowerCase(), w));
 
-        // 3. Process remote words (Download or Conflict)
-        if (remoteWords) {
-            for (const remote of remoteWords) {
-                const text = remote.text.toLowerCase();
-                processedTexts.add(text);
-                const local = localMap.get(text);
+            // 2. Get all remote words (INCLUDING DELETED)
+            const { data: remoteWords, error } = await supabase
+                .from('user_words')
+                .select('*');
 
-                if (local) {
-                    // Conflict resolution: Last Write Wins
-                    // We rely on 'updated_at' timestamp.
-                    // Ideally local Word has updated_at. WordStore has 'addedAt', 'lastReviewedAt'.
-                    // Let's assume max(addedAt, lastReviewedAt) is the modification time if updated_at specific field is missing.
-                    // But wait, WordStore does not track explicit update time for all fields. 
-                    // Let's deduce local update time.
-                    const localTime = Math.max(local.addedAt, local.lastReviewedAt || 0);
-                    // Remote 'updated_at' is in ms (as we defined in schema bigint default epoch*1000)
-                    const remoteTime = remote.updated_at || 0;
+            if (error) {
+                console.error('Failed to fetch remote words:', error);
+                throw error;
+            }
 
-                    if (remoteTime > localTime) {
-                        // Remote is newer -> Update Local
-                        toUpdateLocal.push(mapRemoteToLocal(remote, local.id));
-                    } else if (localTime > remoteTime) {
-                        // Local is newer -> Update Remote
-                        toUpload.push(mapLocalToRemote(local, userId));
+            const toUpload: any[] = [];
+            const toUpdateLocal: Word[] = [];
+            const processedTexts = new Set<string>();
+
+            // 3. Process remote words (Download or Conflict)
+            if (remoteWords) {
+                for (const remote of remoteWords) {
+                    const text = remote.text.toLowerCase().trim();
+                    if (!text) continue;
+
+                    processedTexts.add(text);
+                    const local = localMap.get(text);
+
+                    // Conflict resolution: Last Write Wins based on explicit updatedAt
+                    if (local) {
+                        // Use explicit updatedAt if available, else fallback to old logic
+                        const localTime = local.updatedAt || Math.max(local.addedAt, local.lastReviewedAt || 0);
+                        const remoteTime = remote.updated_at ? new Date(remote.updated_at).getTime() : 0;
+
+                        if (remoteTime > localTime) {
+                            // Remote is newer -> Update Local
+                            // This handles "Remote Delete" (if remote.is_deleted is true)
+                            // AND "Remote Resurrection" (if remote.is_deleted is false)
+                            console.log(`Remote update wins for ${text}: Remote(${remoteTime}) > Local(${localTime})`);
+                            toUpdateLocal.push(mapRemoteToLocal(remote, local.id));
+                        } else if (localTime > remoteTime) {
+                            // Local is newer -> Update Remote
+                            // This handles "Local Delete" (if local.isDeleted is true)
+                            // AND "Local Resurrection" (if local.isDeleted is false)
+                            console.log(`Local update wins for ${text}: Local(${localTime}) > Remote(${remoteTime})`);
+                            toUpload.push(mapLocalToRemote(local, userId));
+                        }
+                        // If equal, do nothing
+                    } else {
+                        // Only in Remote -> Add to Local
+                        // Even if it is deleted in remote, we should add it locally as deleted 
+                        // so we know about it in future (to avoid Ghost Data if I re-add it locally without knowing it was deleted remotely).
+                        // However, if it's deleted remotely and we don't have it, do we really need to store it?
+                        // YES, otherwise next time we sync, we might "create" it locally if user adds it, and then conflict?
+                        // Actually if we simply import it as "isDeleted: true", user won't see it.
+                        // But wait, if remote is deleted and I don't have it, why clutter DB?
+                        // If I add it locally later, it will have new timestamp and overwrite remote.
+                        // So we can technically skip fetching "deleted" words required for "only in remote" case?
+                        // BUT user request says: "Future add back can sync".
+                        // Saving it as isDeleted = true is safer for consistency.
+                        toUpdateLocal.push(mapRemoteToLocal(remote));
                     }
-                    // If equal, do nothing
-                } else {
-                    // Only in Remote -> Add to Local
-                    toUpdateLocal.push(mapRemoteToLocal(remote));
                 }
             }
-        }
 
-        // 4. Process local words (Upload new ones)
-        for (const local of localWords) {
-            const text = local.text.toLowerCase();
-            if (!processedTexts.has(text)) {
-                // Only in Local -> Upload to Remote
-                toUpload.push(mapLocalToRemote(local, userId));
+            // 4. Process local words (Upload new ones)
+            for (const local of localWords) {
+                const text = local.text.toLowerCase().trim();
+                if (!text) continue;
+
+                if (!processedTexts.has(text)) {
+                    // Only in Local -> Upload to Remote
+                    toUpload.push(mapLocalToRemote(local, userId));
+                }
             }
-        }
 
-        // 5. Execute Batch Operations
-        if (toUpload.length > 0) {
-            console.log('Uploading changes:', toUpload.length);
-            const { error: uploadError } = await supabase
+            // 5. Execute Batch Operations
+            if (toUpload.length > 0) {
+                console.log('Uploading changes:', toUpload.length);
+                const { error: uploadError } = await supabase
+                    .from('user_words')
+                    .upsert(toUpload, { onConflict: 'user_id,text' });
+
+                if (uploadError) console.error('Upload failed:', uploadError);
+            }
+
+            if (toUpdateLocal.length > 0) {
+                console.log('Downloading changes:', toUpdateLocal.length);
+                for (const word of toUpdateLocal) {
+                    await dbOperations.put(STORE_WORDS, word);
+                    WordStore.notifyListeners(word, 'sync'); // Notify UI to update
+                }
+            }
+
+            console.log('Sync complete.');
+        } finally {
+            WordSyncService.isSyncing = false;
+        }
+    },
+
+    pushWord: async (userId: string, word: Word) => {
+        try {
+            const payload = mapLocalToRemote(word, userId);
+            const { error } = await supabase
                 .from('user_words')
-                .upsert(toUpload, { onConflict: 'user_id,text' }); // We rely on unique constraint
+                .upsert(payload, { onConflict: 'user_id,text' });
 
-            if (uploadError) console.error('Upload failed:', uploadError);
-        }
-
-        if (toUpdateLocal.length > 0) {
-            console.log('Downloading changes:', toUpdateLocal.length);
-            for (const word of toUpdateLocal) {
-                await dbOperations.put(STORE_WORDS, word);
+            if (error) {
+                console.error('Failed to push word:', error);
+            } else {
+                // console.log('Word pushed to remote:', word.text);
             }
-            // await saveLoalBatch(toUpdateLocal);
+        } catch (e) {
+            console.error('Error pushing word:', e);
         }
-
-        console.log('Sync complete.');
     }
 };
 
@@ -103,31 +143,33 @@ function mapLocalToRemote(local: Word, userId: string): any {
         translation: local.translation,
         context: local.context,
         status: local.status,
+        lemma: local.lemma,
         added_at: local.addedAt,
         next_review_at: local.nextReviewAt,
         last_reviewed_at: local.lastReviewedAt,
         review_count: local.reviewCount,
         ease_factor: local.easeFactor,
         interval: local.interval,
-        updated_at: Date.now() // Taking current time as update time for sync
+        updated_at: local.updatedAt || Date.now(), // Use explicit, fallback to now
+        is_deleted: !!local.isDeleted
     };
 }
 
 function mapRemoteToLocal(remote: any, existingId?: string): Word {
     return {
         id: existingId || crypto.randomUUID(), // If new, generate ID. If update, preserve ID.
-        text: remote.text,
+        text: remote.text.trim(), // Normalize: trim
         translation: remote.translation || '', // Handle nulls
         context: remote.context,
         status: remote.status || 'new',
+        lemma: remote.lemma,
         addedAt: remote.added_at || Date.now(),
         nextReviewAt: remote.next_review_at,
         lastReviewedAt: remote.last_reviewed_at,
         reviewCount: remote.review_count,
         easeFactor: remote.ease_factor,
-        interval: remote.interval,
-        lemma: undefined // Remote schema didn't have lemma? I should add it if I want.
-        // For now, lemma might be lost on download if I didn't sync it.
-        // It's not critical, can be re-analyzed.
+        interval: remote.interval || 0,
+        updatedAt: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now(),
+        isDeleted: !!remote.is_deleted
     };
 }

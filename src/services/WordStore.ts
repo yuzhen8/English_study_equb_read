@@ -16,12 +16,18 @@ export interface Word {
     reviewCount?: number; // Times reviewed
     easeFactor?: number; // Default 2.5
     interval?: number; // Days until next review
+
+    // Sync Fields
+    isDeleted?: boolean;
+    updatedAt?: number;
 }
 
 export const WordStore = {
-    getWords: async (): Promise<Word[]> => {
+    getWords: async (includeDeleted = false): Promise<Word[]> => {
         try {
-            return await dbOperations.getAll<Word>(STORE_WORDS);
+            const allWords = await dbOperations.getAll<Word>(STORE_WORDS);
+            if (includeDeleted) return allWords;
+            return allWords.filter(w => !w.isDeleted);
         } catch (e) {
             console.error("Failed to load words", e);
             return [];
@@ -40,13 +46,45 @@ export const WordStore = {
         }
     },
 
+    // Subscription for real-time sync
+    // source: 'local' (user action) or 'sync' (remote update)
+    _listeners: [] as ((word: Word, source: 'local' | 'sync') => void)[],
+
+    subscribe: (callback: (word: Word, source: 'local' | 'sync') => void) => {
+        WordStore._listeners.push(callback);
+        return () => {
+            WordStore._listeners = WordStore._listeners.filter(cb => cb !== callback);
+        };
+    },
+
+    notifyListeners: (word: Word, source: 'local' | 'sync' = 'local') => {
+        WordStore._listeners.forEach(cb => cb(word, source));
+    },
+
     addWord: async (text: string, translation: string, context?: string, sourceBookId?: string, lemma?: string): Promise<Word> => {
-        const words = await WordStore.getWords();
-        // Simple duplicate check (case-insensitive)
+        // Fetch ALL words to check for deleted ones too (Resurrection)
+        const words = await WordStore.getWords(true);
+
+        // Check for existing (case-insensitive)
         const existing = words.find(w => w.text.toLowerCase() === text.toLowerCase());
+
         if (existing) {
-            // Update context if new one provided? Or just return existing.
-            // Let's just return existing for now to avoid overwriting progress
+            if (existing.isDeleted) {
+                // RESURRECTION LOGIC
+                console.log(`Resurrecting word: ${text}`);
+                existing.isDeleted = false;
+                existing.updatedAt = Date.now();
+                existing.translation = translation; // Update with new info
+                if (context) existing.context = context;
+                if (sourceBookId) existing.sourceBookId = sourceBookId;
+                if (lemma) existing.lemma = lemma;
+
+                await dbOperations.put(STORE_WORDS, existing);
+                WordStore.notifyListeners(existing);
+                return existing;
+            }
+
+            // If exists and not deleted, just return it (maybe update context?)
             return existing;
         }
 
@@ -58,15 +96,26 @@ export const WordStore = {
             sourceBookId,
             lemma, // Base form of the word
             status: 'new',
-            addedAt: Date.now()
+            addedAt: Date.now(),
+            updatedAt: Date.now(),
+            isDeleted: false
         };
 
         await dbOperations.add(STORE_WORDS, newWord);
+        WordStore.notifyListeners(newWord);
         return newWord;
     },
 
     deleteWord: async (id: string) => {
-        await dbOperations.delete(STORE_WORDS, id);
+        const word = await WordStore.getWord(id);
+        if (word) {
+            // Soft Delete
+            word.isDeleted = true;
+            word.updatedAt = Date.now();
+            await dbOperations.put(STORE_WORDS, word);
+            WordStore.notifyListeners(word);
+        }
+        // await dbOperations.delete(STORE_WORDS, id); // OLD HARD DELETE
     },
 
     /**
@@ -75,6 +124,55 @@ export const WordStore = {
     deleteWords: async (ids: string[]) => {
         for (const id of ids) {
             await WordStore.deleteWord(id);
+        }
+    },
+
+    /**
+     * Clean up duplicate words (Fix for previous sync bug)
+     */
+    cleanupDuplicates: async () => {
+        const words = await WordStore.getWords(true); // Check all including deleted
+        const map = new Map<string, Word[]>();
+
+        words.forEach(w => {
+            const key = w.text.toLowerCase().trim();
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(w);
+        });
+
+        const toDelete: string[] = [];
+
+        map.forEach((duplicates) => {
+            if (duplicates.length > 1) {
+                // Keep the one with most info or most recent
+                // Sort by: has translation > has context > most recent addedAt
+                duplicates.sort((a, b) => {
+                    const hasTransA = !!a.translation;
+                    const hasTransB = !!b.translation;
+                    if (hasTransA !== hasTransB) return hasTransA ? -1 : 1;
+
+                    const hasContextA = !!a.context;
+                    const hasContextB = !!b.context;
+                    if (hasContextA !== hasContextB) return hasContextA ? -1 : 1;
+
+                    return b.addedAt - a.addedAt;
+                });
+
+                // Keep index 0, delete others (Hard delete duplicates to clean up DB, or soft delete?)
+                // If we hard delete duplicates, we might lose sync history for them but it's okay for cleanup.
+                // Let's use deleteWord (Soft Delete) to be safe with sync.
+                for (let i = 1; i < duplicates.length; i++) {
+                    toDelete.push(duplicates[i].id);
+                }
+            }
+        });
+
+        if (toDelete.length > 0) {
+            console.log(`Cleaning up ${toDelete.length} duplicate words.`);
+            // Actually for duplicates, we probably want to HARD delete the extras 
+            // otherwise they will just sync back as "deleted" items and clutter.
+            // But since we transitioned to Soft Delete, using deleteWord is safer for consistency.
+            await WordStore.deleteWords(toDelete);
         }
     },
 
@@ -109,11 +207,17 @@ export const WordStore = {
 
 
     updateStatus: async (id: string, status: Word['status']) => {
-        const words = await WordStore.getWords();
+        const words = await WordStore.getWords(true);
         const word = words.find(w => w.id === id);
         if (word) {
             word.status = status;
+            word.updatedAt = Date.now(); // Explicit update time
+            // If user updates status of a deleted word (unlikely), should we resurrect?
+            // Usually UI won't show deleted words.
+            if (word.isDeleted) word.isDeleted = false; // Just in case
+
             await dbOperations.put(STORE_WORDS, word);
+            WordStore.notifyListeners(word);
         }
     },
 
@@ -308,7 +412,9 @@ export const WordStore = {
 
         word.lastReviewedAt = now;
         word.reviewCount++;
+        word.updatedAt = now; // Explicit update time
 
         await dbOperations.put(STORE_WORDS, word);
+        WordStore.notifyListeners(word);
     }
 };

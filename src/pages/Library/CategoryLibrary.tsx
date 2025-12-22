@@ -12,6 +12,7 @@ import { Category, CategoryStore, SYSTEM_CATEGORY_ALL, SYSTEM_CATEGORY_READING, 
 import { Book, LibraryStore, CefrAnalysisSummary } from '../../services/LibraryStore';
 import { cn } from '../../lib/utils';
 import { CefrAnalysisPopup, CefrLevelBadge } from '../../components/CefrAnalysis';
+import BookStatsPopup from '../../components/BookStatsPopup';
 
 // 分类书库主组件
 const CategoryLibrary: React.FC = () => {
@@ -45,6 +46,9 @@ const CategoryLibrary: React.FC = () => {
     const [cefrBook, setCefrBook] = useState<Book | null>(null);
     const [cefrText, setCefrText] = useState<string>('');
     const [extractingText, setExtractingText] = useState(false);
+
+    // Stats Popup
+    const [statsBook, setStatsBook] = useState<Book | null>(null);
 
     // UI Interaction States
     const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
@@ -441,32 +445,35 @@ const CategoryLibrary: React.FC = () => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-                            {books.map(book => (
-                                <BookCard
-                                    key={book.id}
-                                    book={book}
-                                    onClick={() => openBook(book)}
-                                    showReadingBadge={selectedCategory === SYSTEM_CATEGORY_ALL}
-                                    isEditMode={editModeBookId === book.id}
-                                    onLongPress={() => setEditModeBookId(book.id)}
-                                    onAnalyze={(e) => {
-                                        if (book.cefrAnalysis) {
-                                            showCachedCefrResult(book, e);
-                                        } else {
-                                            startCefrAnalysis(book, e);
-                                        }
-                                    }}
-                                    onDelete={(e) => {
-                                        e.stopPropagation();
-                                        setEditingBook(book);
-                                        setShowDeleteBookModal(true);
-                                        setEditModeBookId(null);
-                                    }}
-                                    onDragStart={() => setIsDraggingBook(true)}
-                                    onDragEnd={() => setIsDraggingBook(false)}
-                                />
-
-                            ))}
+                            {books.map(book => {
+                                const hasAnalysisResult = !!book.cefrAnalysis;
+                                return (
+                                    <BookCard
+                                        key={book.id}
+                                        book={book}
+                                        isEditMode={editModeBookId === book.id}
+                                        onClick={() => openBook(book)}
+                                        showReadingBadge={selectedCategory === SYSTEM_CATEGORY_ALL || selectedCategory === SYSTEM_CATEGORY_UNCATEGORIZED}
+                                        onLongPress={() => setEditModeBookId(book.id)}
+                                        onAnalyze={(e) => {
+                                            if (hasAnalysisResult) {
+                                                showCachedCefrResult(book, e);
+                                            } else {
+                                                startCefrAnalysis(book, e);
+                                            }
+                                        }}
+                                        onShowStats={(e) => { e.stopPropagation(); setStatsBook(book); }}
+                                        onDelete={(e) => {
+                                            e.stopPropagation();
+                                            setEditingBook(book);
+                                            setShowDeleteBookModal(true);
+                                            setEditModeBookId(null);
+                                        }}
+                                        onDragStart={() => setIsDraggingBook(true)}
+                                        onDragEnd={() => setIsDraggingBook(false)}
+                                    />
+                                );
+                            })}
                             {/* Add Book Card */}
                             <div
                                 onClick={handleLocalImport}
@@ -638,6 +645,14 @@ const CategoryLibrary: React.FC = () => {
                     }}
                 />
             )}
+
+            {statsBook && (
+                <BookStatsPopup
+                    bookId={statsBook.id}
+                    bookTitle={statsBook.title}
+                    onClose={() => setStatsBook(null)}
+                />
+            )}
         </div>
     );
 };
@@ -686,9 +701,10 @@ interface BookCardProps {
     onDelete?: (e: React.MouseEvent) => void;
     onDragStart?: () => void;
     onDragEnd?: () => void;
+    onShowStats?: (e: React.MouseEvent) => void;
 }
 
-const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, isEditMode, onLongPress, onAnalyze, onDelete, onDragStart, onDragEnd }) => {
+const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, isEditMode, onLongPress, onAnalyze, onDelete, onDragStart, onDragEnd, onShowStats }) => {
     const hasCefrResult = !!book.cefrAnalysis;
     const timerRef = React.useRef<any>(null);
     const isLongPressRef = React.useRef(false);
@@ -807,24 +823,35 @@ const BookCard: React.FC<BookCardProps> = ({ book, onClick, showReadingBadge, is
                         </button>
                     </div>
                 )}
-
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
-
-                {/* Confirm Delete Button (Trash Can) - Top Right */}
-                {isEditMode && onDelete && (
-                    <div className="absolute top-2 right-2 z-30 animate-in zoom-in duration-200">
+                {/* Stats Button (Bottom Left) */}
+                {onShowStats && (
+                    <div className="absolute bottom-1 left-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
                         <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onDelete(e);
-                            }}
-                            className="w-8 h-8 rounded-full bg-red-500 text-white shadow-lg flex items-center justify-center hover:bg-red-600 hover:scale-110 transition-all border border-white/20"
+                            onClick={onShowStats}
+                            className="p-1 text-white/80 hover:text-white bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="阅读统计"
                         >
-                            <Trash2 size={16} />
+                            <BarChart3 size={12} />
                         </button>
                     </div>
                 )}
-            </div >
+            </div>
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+
+            {/* Confirm Delete Button (Trash Can) - Top Right */}
+            {isEditMode && onDelete && (
+                <div className="absolute top-2 right-2 z-30 animate-in zoom-in duration-200">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(e);
+                        }}
+                        className="w-8 h-8 rounded-full bg-red-500 text-white shadow-lg flex items-center justify-center hover:bg-red-600 hover:scale-110 transition-all border border-white/20"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            )}
 
             <h3 className="font-medium text-gray-900 text-xs truncate">{book.title}</h3>
             <p className="text-gray-400 text-[10px] truncate mt-0.5">{book.author}</p>
